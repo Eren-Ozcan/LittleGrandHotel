@@ -32,6 +32,9 @@ var stat_collects: int = 0
 var stat_collected_total: int = 0
 var stat_cleans: int = 0
 
+## Vardiya geçmişi (İstatistik ekranı): {"hours", "cost", "at"} — son 20 kayıt
+var shift_history: Array = []
+
 ## Uygulama açılışında sen-yokken kazanılan gelir (UI popup için; UI okur ve sıfırlar).
 var offline_earned: int = 0
 
@@ -92,6 +95,7 @@ func new_game() -> void:
 	stat_collects = 0
 	stat_collected_total = 0
 	stat_cleans = 0
+	shift_history = []
 	offline_earned = 0
 	state_changed.emit()
 
@@ -261,6 +265,9 @@ func start_shift(hours: int) -> bool:
 	coins -= cost
 	shift_end_unix = now() + hours * 3600.0 / time_scale
 	stat_shifts += 1
+	shift_history.append({"hours": hours, "cost": cost, "at": now()})
+	if shift_history.size() > 20:
+		shift_history.pop_front()
 	_check_quests()
 	state_changed.emit()
 	return true
@@ -558,6 +565,7 @@ func save_game(path: String = SAVE_PATH) -> void:
 		"stat_collects": stat_collects,
 		"stat_collected_total": stat_collected_total,
 		"stat_cleans": stat_cleans,
+		"shift_history": shift_history,
 		"time_scale": time_scale,
 		"sound_on": sound_on,
 		"music_on": music_on,
@@ -586,6 +594,7 @@ func load_game(path: String = SAVE_PATH) -> bool:
 	stat_collects = int(parsed.get("stat_collects", 0))
 	stat_collected_total = int(parsed.get("stat_collected_total", 0))
 	stat_cleans = int(parsed.get("stat_cleans", 0))
+	shift_history = parsed.get("shift_history", [])
 	# Vardiya bitişi gerçek saniye tutulur; ölçek geri yüklenmezse
 	# hızlı modda kaydedilen vardiya normal hızda 60/3600 kat kısalır.
 	time_scale = float(parsed.get("time_scale", 1.0))

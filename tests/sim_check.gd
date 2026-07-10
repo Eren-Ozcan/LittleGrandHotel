@@ -41,6 +41,7 @@ func _initialize() -> void:
 	# 3) Temizlik döngüsü: standart oda 3 oyun-saatinde kirlenir, gelir durur
 	g.time_scale = 3600.0
 	check(g.start_shift(8), "8 saatlik vardiya başladı")
+	check(g.shift_history.size() == 1 and int(g.shift_history[0].hours) == 8, "vardiya geçmişe yazıldı")
 	g.last_sim_unix -= 4.0  # 4 oyun-saati geçmiş gibi
 	g.simulate_to(g.now())
 	check(g.rooms[0].dirty and g.rooms[1].dirty, "odalar 3 saat sonra kirlendi")
@@ -140,6 +141,7 @@ func _initialize() -> void:
 	check(g2.coins == g.coins and g2.xp == g.xp and g2.rooms.size() == g.rooms.size(), "gidiş-dönüş verisi eşleşti")
 	check(g2.quest_index == g.quest_index and g2.floors == g.floors, "görev/kat durumu korundu")
 	check(g2.room_score(g2.rooms[0]) == 155, "oda eşyaları kayıtta korundu")
+	check(g2.shift_history.size() == g.shift_history.size(), "vardiya geçmişi kayıtta korundu")
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(save_path))
 
 	# 12) Oda taşıma / satma

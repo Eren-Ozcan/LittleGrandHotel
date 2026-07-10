@@ -272,6 +272,7 @@ func _build_ui() -> void:
 	for def in [
 		["res://assets/ui/icon_shop.svg", "Mağaza", _build_shop_popup],
 		["res://assets/ui/icon_quest.svg", "Görevler", _build_quests_popup],
+		["res://assets/ui/icon_stats.svg", "İstatistik", _build_stats_popup],
 		["res://assets/ui/icon_gear.svg", "Ayarlar", _build_settings_popup],
 	]:
 		var b := _bar_button(def[0], def[1])
@@ -979,6 +980,38 @@ func _add_manage_buttons(c: VBoxContainer) -> void:
 		else:
 			_show_toast("Son oda satılamaz!"))
 	row.add_child(sl)
+
+
+func _build_stats_popup(c: VBoxContainer) -> void:
+	var rows := [
+		["Toplam toplanan gelir", "%s coin" % _fmt(Game.stat_collected_total)],
+		["Toplama sayısı", str(Game.stat_collects)],
+		["Temizlenen oda", str(Game.stat_cleans)],
+		["Başlatılan vardiya", str(Game.stat_shifts)],
+		["Oda sayısı", "%d / %d yuva" % [Game.rooms.size(), Game.max_slots()]],
+		["Tesis çeşitliliği", "%d / 5" % Game.facility_diversity()],
+		["Yıldız derecesi", "%d / 5" % Game.star_rating()],
+		["Seviye", "%d (XP %s)" % [Game.level(), _fmt(Game.xp)]],
+		["Saatlik gelir (şu an)", "%.0f coin" % Game.hourly_income()],
+	]
+	for r in rows:
+		var row := HBoxContainer.new()
+		c.add_child(row)
+		var ll := _label(String(r[0]), 14, PALETTE.muted)
+		ll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(ll)
+		row.add_child(_label(String(r[1]), 14, PALETTE.text))
+	c.add_child(_spacer_y(6))
+	c.add_child(_label("Vardiya geçmişi (son %d):" % Game.shift_history.size(), 14, PALETTE.wood_dark))
+	if Game.shift_history.is_empty():
+		c.add_child(_label("Henüz vardiya başlatılmadı.", 13, PALETTE.muted))
+		return
+	var bias: int = int(Time.get_time_zone_from_system().bias) * 60
+	for i in range(Game.shift_history.size() - 1, -1, -1):
+		var h: Dictionary = Game.shift_history[i]
+		var dt := Time.get_datetime_dict_from_unix_time(int(float(h.at)) + bias)
+		c.add_child(_label("%02d.%02d %02d:%02d — %d saat · maliyet %s coin" % [
+			dt.day, dt.month, dt.hour, dt.minute, int(h.hours), _fmt(int(h.cost))], 13, PALETTE.text))
 
 
 func _build_settings_popup(c: VBoxContainer) -> void:
