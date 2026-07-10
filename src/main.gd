@@ -237,15 +237,6 @@ func _build_ui() -> void:
 		speed_b.text = "×%d" % int(SPEEDS[speed_index]))
 	bottom.add_child(speed_b)
 
-	# --- Toast
-	toast_panel = _panel(PALETTE.green_deep, PALETTE.gold)
-	toast_panel.visible = false
-	root.add_child(toast_panel)
-	toast_label = _label("", 16, PALETTE.cream_text)
-	toast_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	toast_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	toast_panel.add_child(toast_label)
-
 	# --- Popup katmanı
 	overlay = Control.new()
 	overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -283,6 +274,23 @@ func _build_ui() -> void:
 	popup_content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	popup_content.add_theme_constant_override("separation", 8)
 	pscroll.add_child(popup_content)
+
+	# --- Toast: alt barın üstünde yüzer, yerleşimi itmez; popup'ların da üstünde
+	toast_panel = _panel(PALETTE.green_deep, PALETTE.gold)
+	toast_panel.visible = false
+	toast_panel.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	toast_panel.offset_left = 40
+	toast_panel.offset_right = -40
+	toast_panel.offset_top = -156
+	toast_panel.offset_bottom = -84
+	toast_panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	toast_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(toast_panel)
+	toast_label = _label("", 16, PALETTE.cream_text)
+	toast_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	toast_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	toast_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	toast_panel.add_child(toast_label)
 
 
 func _panel(bg: Color, border: Color) -> PanelContainer:
@@ -368,8 +376,8 @@ func _update_live_labels() -> void:
 	xp_bar.max_value = need
 	xp_bar.value = cur_xp
 	if Game.shift_active():
-		shift_label.text = "Vardiya açık · kalan %.1f saat · %.0f coin/saat" % [
-			Game.shift_remaining_game_hours(), Game.hourly_income()]
+		shift_label.text = "Vardiya bitimine %s · %.0f coin/saat" % [
+			_fmt_hms(Game.shift_remaining_game_hours()), Game.hourly_income()]
 	else:
 		shift_label.text = "Vardiya kapalı — otel gelir üretmiyor."
 	collect_button.text = "TOPLA — %s" % _fmt(int(Game.pending_income))
@@ -647,7 +655,7 @@ func _rebuild_popup() -> void:
 
 func _build_shift_popup(c: VBoxContainer) -> void:
 	if Game.shift_active():
-		c.add_child(_label("Vardiya sürüyor — kalan %.1f oyun-saati." % Game.shift_remaining_game_hours(), 16, PALETTE.text))
+		c.add_child(_label("Vardiya sürüyor — bitimine %s." % _fmt_hms(Game.shift_remaining_game_hours()), 16, PALETTE.text))
 		c.add_child(_label("Birikimi istediğin an toplayabilirsin.", 14, PALETTE.muted))
 		return
 	c.add_child(_label("Süre seç — kısa vardiya saat başına daha ucuzdur:", 14, PALETTE.muted))
@@ -776,6 +784,11 @@ func _show_offline_popup(amount: int) -> void:
 	dlg.ok_button_text = "Harika"
 	add_child(dlg)
 	dlg.popup_centered()
+
+
+func _fmt_hms(game_hours: float) -> String:
+	var total := int(game_hours * 3600.0)
+	return "%02d:%02d:%02d" % [total / 3600, (total % 3600) / 60, total % 60]
 
 
 func _fmt(n: int) -> String:
