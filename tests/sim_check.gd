@@ -91,6 +91,31 @@ func _initialize() -> void:
 	g.add_xp(g.xp_for_level(g.level() + 1) - g.xp + 1)  # tam bir seviye atlat
 	check(g.gems > gems_before, "seviye atlama elmas verdi")
 
+	# 8b) Elmasla vardiya bitirme
+	if g.shift_active():
+		g.shift_end_unix = g.now()
+	check(not g.skip_shift(), "vardiya yokken elmasla bitirme reddedilir")
+	check(g.start_shift(24), "24 saatlik vardiya başladı (elmas testi)")
+	var skip_cost: int = g.skip_shift_gem_cost()
+	check(skip_cost >= 1 and skip_cost <= 12, "elmas bedeli makul (şu an %d)" % skip_cost)
+	g.gems = maxi(g.gems, skip_cost)
+	var gems_b: int = g.gems
+	var pend_b: float = g.pending_income
+	check(g.skip_shift(), "vardiya elmasla bitirildi")
+	check(g.gems == gems_b - skip_cost, "elmas bedeli düşüldü")
+	check(not g.shift_active(), "vardiya kapandı")
+	check(g.pending_income > pend_b, "kalan saatlerin geliri işlendi")
+
+	# 8c) Premium eşya elmasla alınır
+	var it_prem: Dictionary = g.item_def("statue_gold")
+	check(g.item_is_premium(it_prem), "Altın Heykel premium eşya")
+	g.gems = maxi(g.gems, int(it_prem.gem_price))
+	gems_b = g.gems
+	var coins_b: int = g.coins
+	check(g.buy_item(1, "statue_gold"), "premium eşya alındı")
+	check(g.gems == gems_b - int(it_prem.gem_price), "premium bedeli elmastan düşüldü")
+	check(g.coins == coins_b, "premium alım coin harcamadı")
+
 	# 9) Yuva/kat sınırları
 	var big_price: int = g.floor_price()
 	check(big_price == 15000, "3. kat fiyatı 15000")

@@ -10,6 +10,7 @@
   },
 
   "shift_rates": { "1": 8, "4": 10, "8": 11, "24": 13 },
+  "gem_skip_hours": 2,
   "occupancy_base": 0.7,
   "staff_per_room": 0.5,
   "auto_clean_hours": 0.5,
@@ -46,7 +47,9 @@
     { "id": "mirror_gold",  "name": "Varaklı Ayna",  "sp": 70, "price": 1100, "unlock_level": 10 },
     { "id": "sofa_velvet",  "name": "Kadife Kanepe", "sp": 90, "price": 1600, "unlock_level": 13 },
     { "id": "chandelier",   "name": "Kristal Avize", "sp": 120, "price": 2600, "unlock_level": 16 },
-    { "id": "bed_canopy",   "name": "Cibinlikli Yatak", "sp": 150, "price": 3800, "unlock_level": 19 }
+    { "id": "bed_canopy",   "name": "Cibinlikli Yatak", "sp": 150, "price": 3800, "unlock_level": 19 },
+    { "id": "statue_gold",    "name": "Altın Heykel",       "sp": 200, "price": 0, "gem_price": 15, "unlock_level": 6 },
+    { "id": "aquarium_royal", "name": "Kraliyet Akvaryumu", "sp": 280, "price": 0, "gem_price": 25, "unlock_level": 12 }
   ],
 
   "xp_curve": { "base": 100, "exp": 1.9 },

@@ -262,6 +262,29 @@ func start_shift(hours: int) -> bool:
 	return true
 
 
+## Vardiyanın kalan kısmını elmasla anında bitirmenin bedeli.
+func skip_shift_gem_cost() -> int:
+	if not shift_active():
+		return 0
+	return maxi(1, ceili(shift_remaining_game_hours() / float(eco.gem_skip_hours)))
+
+
+## Elmas harcayarak vardiyanın kalanını anında işler ve vardiyayı bitirir.
+func skip_shift() -> bool:
+	if not shift_active():
+		return false
+	var cost := skip_shift_gem_cost()
+	if gems < cost:
+		return false
+	simulate_to(now())
+	gems -= cost
+	_advance(shift_remaining_game_hours())
+	shift_end_unix = now()
+	_check_quests()
+	state_changed.emit()
+	return true
+
+
 func simulate_to(to_unix: float) -> void:
 	if last_sim_unix <= 0.0:
 		last_sim_unix = to_unix
@@ -358,14 +381,28 @@ func buy_room(type: String) -> bool:
 	return true
 
 
+## Eşyanın elmasla mı (premium) yoksa coin'le mi satıldığını söyler.
+func item_is_premium(it: Dictionary) -> bool:
+	return int(it.get("gem_price", 0)) > 0
+
+
+func can_afford_item(it: Dictionary) -> bool:
+	if item_is_premium(it):
+		return gems >= int(it.gem_price)
+	return coins >= int(it.price)
+
+
 func buy_item(room_index: int, item_id: String) -> bool:
 	if room_index < 0 or room_index >= rooms.size():
 		return false
 	var it := item_def(item_id)
-	if it.is_empty() or coins < int(it.price) or level() < int(it.get("unlock_level", 1)):
+	if it.is_empty() or not can_afford_item(it) or level() < int(it.get("unlock_level", 1)):
 		return false
 	simulate_to(now())
-	coins -= int(it.price)
+	if item_is_premium(it):
+		gems -= int(it.gem_price)
+	else:
+		coins -= int(it.price)
 	rooms[room_index].items.append(item_id)
 	_check_quests()
 	state_changed.emit()

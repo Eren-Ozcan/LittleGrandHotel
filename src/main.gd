@@ -657,6 +657,14 @@ func _build_shift_popup(c: VBoxContainer) -> void:
 	if Game.shift_active():
 		c.add_child(_label("Vardiya sürüyor — bitimine %s." % _fmt_hms(Game.shift_remaining_game_hours()), 16, PALETTE.text))
 		c.add_child(_label("Birikimi istediğin an toplayabilirsin.", 14, PALETTE.muted))
+		var gem_cost := Game.skip_shift_gem_cost()
+		var skip_b := _button("Elmasla şimdi bitir — %d elmas" % gem_cost, 15, PALETTE.green_deep, PALETTE.cream_text)
+		skip_b.disabled = Game.gems < gem_cost
+		skip_b.pressed.connect(func():
+			if Game.skip_shift():
+				_show_toast("Vardiya elmasla tamamlandı — birikim kasada!")
+				_close_popup())
+		c.add_child(skip_b)
 		return
 	c.add_child(_label("Süre seç — kısa vardiya saat başına daha ucuzdur:", 14, PALETTE.muted))
 	for hours: int in [1, 4, 8, 24]:
@@ -730,13 +738,15 @@ func _build_room_popup(c: VBoxContainer) -> void:
 		row.add_theme_constant_override("separation", 8)
 		c.add_child(row)
 		row.add_child(_icon("res://assets/items/%s.svg" % it.id, 40))
-		var b := _button("%s — SP +%d — %s coin" % [it.name, int(it.sp), _fmt(int(it.price))], 14, PALETTE.wood, PALETTE.cream_text)
+		var price_text: String = "%d elmas ◆" % int(it.get("gem_price", 0)) if Game.item_is_premium(it) else "%s coin" % _fmt(int(it.price))
+		var b := _button("%s — SP +%d — %s" % [it.name, int(it.sp), price_text], 14,
+			PALETTE.green_deep if Game.item_is_premium(it) else PALETTE.wood, PALETTE.cream_text)
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		if lv < int(it.get("unlock_level", 1)):
 			b.text = "%s — Seviye %d'de açılır" % [it.name, int(it.unlock_level)]
 			b.disabled = true
 		else:
-			b.disabled = Game.coins < int(it.price)
+			b.disabled = not Game.can_afford_item(it)
 			var iid: String = it.id
 			b.pressed.connect(func():
 				if Game.buy_item(selected_room, iid):
