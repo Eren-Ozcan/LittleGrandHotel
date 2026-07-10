@@ -62,13 +62,18 @@ var popup_builder: Callable = Callable()
 var selected_room := -1
 var _toast_timer := 0.0
 var _tex_cache: Dictionary = {}
+var _sfx_players: Dictionary = {}
+var music_player: AudioStreamPlayer
 
 
 func _ready() -> void:
 	_build_ui()
+	_init_sfx()
 	Game.state_changed.connect(_refresh)
 	Game.quest_completed.connect(_on_quest_completed)
-	Game.leveled_up.connect(func(lv): _show_toast("Seviye atladın! Seviye %d (+%d elmas)" % [lv, int(Game.eco.levelup_gems)]))
+	Game.leveled_up.connect(func(lv):
+		_play("level")
+		_show_toast("Seviye atladın! Seviye %d (+%d elmas)" % [lv, int(Game.eco.levelup_gems)]))
 	_refresh()
 	if Game.offline_earned > 0:
 		_show_offline_popup(Game.offline_earned)
@@ -81,6 +86,35 @@ func _process(delta: float) -> void:
 		_toast_timer -= delta
 		if _toast_timer <= 0.0:
 			toast_panel.visible = false
+
+
+func _init_sfx() -> void:
+	var defs := {
+		"tap": [[660.0, 0.05]],
+		"buy": [[440.0, 0.06], [880.0, 0.1]],
+		"collect": [[784.0, 0.07], [1047.0, 0.09], [1319.0, 0.12]],
+		"clean": [[1319.0, 0.08], [1760.0, 0.14]],
+		"shift": [[988.0, 0.1], [659.0, 0.2]],
+		"quest": [[784.0, 0.08], [988.0, 0.14]],
+		"level": [[523.0, 0.09], [659.0, 0.09], [784.0, 0.09], [1047.0, 0.22]],
+	}
+	for k in defs:
+		var p := AudioStreamPlayer.new()
+		p.stream = Sfx.tone_stream(defs[k])
+		p.volume_db = -6.0
+		add_child(p)
+		_sfx_players[k] = p
+	music_player = AudioStreamPlayer.new()
+	music_player.stream = Sfx.lobby_music()
+	music_player.volume_db = -14.0
+	add_child(music_player)
+	if Game.music_on:
+		music_player.play()
+
+
+func _play(kind: String) -> void:
+	if Game.sound_on and _sfx_players.has(kind):
+		_sfx_players[kind].play()
 
 
 func _tex(path: String) -> Texture2D:
@@ -237,6 +271,7 @@ func _build_ui() -> void:
 	for def in [
 		["res://assets/ui/icon_shop.svg", "Mağaza", _build_shop_popup],
 		["res://assets/ui/icon_quest.svg", "Görevler", _build_quests_popup],
+		["res://assets/ui/icon_gear.svg", "Ayarlar", _build_settings_popup],
 	]:
 		var b := _bar_button(def[0], def[1])
 		var builder: Callable = def[2]
@@ -377,6 +412,12 @@ func _bar_button(icon_path: String, text: String) -> Button:
 func _spacer_x(px: int) -> Control:
 	var c := Control.new()
 	c.custom_minimum_size = Vector2(px, 0)
+	return c
+
+
+func _spacer_y(px: int) -> Control:
+	var c := Control.new()
+	c.custom_minimum_size = Vector2(0, px)
 	return c
 
 
@@ -669,6 +710,7 @@ func _on_room_tapped(idx: int, btn: Control) -> void:
 		# Buton yeniden kurulumda yok olacağı için merkezi temizlemeden önce al
 		var center := btn.global_position + btn.size / 2.0
 		if Game.clean_room(idx):
+			_play("clean")
 			_spawn_sparkles(center)
 			_show_toast("Oda temizlendi (+2 XP)")
 		return
@@ -681,6 +723,7 @@ func _on_collect() -> void:
 	var from := collect_button.global_position + collect_button.size / 2.0
 	var got := Game.collect()
 	if got > 0:
+		_play("collect")
 		_fly_coins(from, got)
 		_show_toast("+%s coin toplandı" % _fmt(got))
 
@@ -748,6 +791,7 @@ func _cycle_speed() -> void:
 # --- Popuplar ----------------------------------------------------------
 
 func _open_popup(title: String, builder: Callable) -> void:
+	_play("tap")
 	popup_title.text = title
 	popup_builder = builder
 	overlay.visible = true
@@ -776,6 +820,7 @@ func _build_shift_popup(c: VBoxContainer) -> void:
 		skip_b.disabled = Game.gems < gem_cost
 		skip_b.pressed.connect(func():
 			if Game.skip_shift():
+				_play("buy")
 				_show_toast("Vardiya elmasla tamamlandı — birikim kasada!")
 				_close_popup())
 		c.add_child(skip_b)
@@ -788,6 +833,7 @@ func _build_shift_popup(c: VBoxContainer) -> void:
 		b.disabled = Game.coins < cost
 		b.pressed.connect(func():
 			if Game.start_shift(hours):
+				_play("shift")
 				_show_toast("%d saatlik vardiya başladı!" % hours)
 				_close_popup())
 		c.add_child(b)
@@ -823,6 +869,7 @@ func _build_shop_popup(c: VBoxContainer) -> void:
 			var t: String = type
 			b.pressed.connect(func():
 				if Game.buy_room(t):
+					_play("buy")
 					_show_toast("%s satın alındı!" % Game.room_def(t).name))
 		row.add_child(b)
 	if Game.floors < int(Game.eco.building.max_floors):
@@ -864,8 +911,43 @@ func _build_room_popup(c: VBoxContainer) -> void:
 			var iid: String = it.id
 			b.pressed.connect(func():
 				if Game.buy_item(selected_room, iid):
+					_play("buy")
 					_show_toast("%s yerleştirildi (+%d SP)" % [Game.item_def(iid).name, int(Game.item_def(iid).sp)]))
 		row.add_child(b)
+
+
+func _build_settings_popup(c: VBoxContainer) -> void:
+	var s_b := _button("Ses efektleri: %s" % ("Açık" if Game.sound_on else "Kapalı"), 15,
+		PALETTE.wood if Game.sound_on else PALETTE.wood_dark, PALETTE.cream_text)
+	s_b.pressed.connect(func():
+		Game.sound_on = not Game.sound_on
+		Game.save_game()
+		_play("tap")
+		_rebuild_popup())
+	c.add_child(s_b)
+
+	var m_b := _button("Lobi müziği: %s" % ("Açık" if Game.music_on else "Kapalı"), 15,
+		PALETTE.wood if Game.music_on else PALETTE.wood_dark, PALETTE.cream_text)
+	m_b.pressed.connect(func():
+		Game.music_on = not Game.music_on
+		music_player.playing = Game.music_on
+		Game.save_game()
+		_rebuild_popup())
+	c.add_child(m_b)
+
+	c.add_child(_spacer_y(8))
+	c.add_child(_label("Tehlikeli bölge:", 13, PALETTE.banner_red))
+	var r_b := _button("Kaydı sıfırla", 15, PALETTE.banner_red, PALETTE.cream_text)
+	r_b.pressed.connect(func():
+		if r_b.get_meta("armed", false):
+			Game.reset_game()
+			_close_popup()
+			_show_toast("Kayıt sıfırlandı — yeni oyun başladı!")
+		else:
+			r_b.set_meta("armed", true)
+			r_b.text = "Emin misin? Silmek için tekrar dokun")
+	c.add_child(r_b)
+	c.add_child(_label("Sıfırlama tüm ilerlemeyi kalıcı olarak siler.", 12, PALETTE.muted))
 
 
 func _build_quests_popup(c: VBoxContainer) -> void:
@@ -889,6 +971,7 @@ func _build_quests_popup(c: VBoxContainer) -> void:
 # --- Geri bildirim -----------------------------------------------------
 
 func _on_quest_completed(q: Dictionary) -> void:
+	_play("quest")
 	var msg := "Görev tamam: %s — +%s coin" % [q.name, _fmt(int(q.get("reward_coins", 0)))]
 	if int(q.get("reward_gems", 0)) > 0:
 		msg += ", +%d elmas" % int(q.reward_gems)

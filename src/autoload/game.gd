@@ -38,6 +38,10 @@ var offline_earned: int = 0
 ## Test hızlandırması: 1.0 = gerçek zaman, 3600.0 = 1 sn : 1 oyun-saati
 var time_scale: float = 1.0
 
+## Ayarlar (kayda dahil)
+var sound_on: bool = true
+var music_on: bool = true
+
 var _autosave_acc := 0.0
 var _rooms_changed_in_sim := false
 
@@ -486,6 +490,14 @@ func _check_quests() -> void:
 		quest_completed.emit(q)
 
 
+## Kaydı siler ve sıfırdan başlatır (Ayarlar → Kaydı sıfırla).
+func reset_game() -> void:
+	if FileAccess.file_exists(SAVE_PATH):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
+	new_game()
+	save_game()
+
+
 # --- Kayıt (GDD §10.1–10.2) --------------------------------------------
 
 func save_game(path: String = SAVE_PATH) -> void:
@@ -506,6 +518,8 @@ func save_game(path: String = SAVE_PATH) -> void:
 		"stat_collected_total": stat_collected_total,
 		"stat_cleans": stat_cleans,
 		"time_scale": time_scale,
+		"sound_on": sound_on,
+		"music_on": music_on,
 	}
 	var f := FileAccess.open(path, FileAccess.WRITE)
 	if f:
@@ -534,6 +548,8 @@ func load_game(path: String = SAVE_PATH) -> bool:
 	# Vardiya bitişi gerçek saniye tutulur; ölçek geri yüklenmezse
 	# hızlı modda kaydedilen vardiya normal hızda 60/3600 kat kısalır.
 	time_scale = float(parsed.get("time_scale", 1.0))
+	sound_on = bool(parsed.get("sound_on", true))
+	music_on = bool(parsed.get("music_on", true))
 	# Çevrimdışı kazanç tavanı (GDD §10.2 saat güvenliği)
 	var cap_real_seconds := float(eco.offline_cap_hours) * 3600.0 / time_scale
 	if now() - last_sim_unix > cap_real_seconds:
