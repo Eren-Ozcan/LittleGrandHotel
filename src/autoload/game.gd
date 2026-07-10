@@ -468,6 +468,7 @@ func save_game(path: String = SAVE_PATH) -> void:
 		"stat_collects": stat_collects,
 		"stat_collected_total": stat_collected_total,
 		"stat_cleans": stat_cleans,
+		"time_scale": time_scale,
 	}
 	var f := FileAccess.open(path, FileAccess.WRITE)
 	if f:
@@ -493,6 +494,9 @@ func load_game(path: String = SAVE_PATH) -> bool:
 	stat_collects = int(parsed.get("stat_collects", 0))
 	stat_collected_total = int(parsed.get("stat_collected_total", 0))
 	stat_cleans = int(parsed.get("stat_cleans", 0))
+	# Vardiya bitişi gerçek saniye tutulur; ölçek geri yüklenmezse
+	# hızlı modda kaydedilen vardiya normal hızda 60/3600 kat kısalır.
+	time_scale = float(parsed.get("time_scale", 1.0))
 	# Çevrimdışı kazanç tavanı (GDD §10.2 saat güvenliği)
 	var cap_real_seconds := float(eco.offline_cap_hours) * 3600.0 / time_scale
 	if now() - last_sim_unix > cap_real_seconds:

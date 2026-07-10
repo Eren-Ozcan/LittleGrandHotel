@@ -229,11 +229,12 @@ func _build_ui() -> void:
 		var title: String = def[0]
 		b.pressed.connect(func(): _open_popup(title, builder))
 		bottom.add_child(b)
-	var speed_b := _button("×1", 17, PALETTE.wood_dark, PALETTE.cream_text)
+	speed_index = maxi(0, SPEEDS.find(Game.time_scale))
+	var speed_b := _button("×%d" % int(SPEEDS[speed_index]), 17, PALETTE.wood_dark, PALETTE.cream_text)
 	speed_b.custom_minimum_size = Vector2(68, 54)
 	speed_b.pressed.connect(func():
 		_cycle_speed()
-		speed_b.text = "×%s" % ("1" if speed_index == 0 else ("60" if speed_index == 1 else "3600")))
+		speed_b.text = "×%d" % int(SPEEDS[speed_index]))
 	bottom.add_child(speed_b)
 
 	# --- Toast
