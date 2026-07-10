@@ -1,0 +1,21 @@
+{
+  "quests": [
+    { "id": "q01", "name": "Kapıları Aç", "desc": "İlk vardiyanı başlat.", "type": "start_shifts", "target": 1, "reward_coins": 300, "reward_gems": 0 },
+    { "id": "q02", "name": "İlk Hasat", "desc": "Kasadan gelir topla.", "type": "collects", "target": 1, "reward_coins": 300, "reward_gems": 2 },
+    { "id": "q03", "name": "Temiz İş", "desc": "3 oda temizle.", "type": "cleans", "target": 3, "reward_coins": 400, "reward_gems": 0 },
+    { "id": "q04", "name": "Konforlu Köşe", "desc": "Bir odayı Konforlu kademesine çıkar (SP 60+).", "type": "tier", "target": 1, "reward_coins": 600, "reward_gems": 3 },
+    { "id": "q05", "name": "Büyüyoruz", "desc": "3 odaya ulaş.", "type": "rooms", "target": 3, "reward_coins": 800, "reward_gems": 0 },
+    { "id": "q06", "name": "Kahve Molası", "desc": "Kafe aç.", "type": "own_type", "room": "cafe", "target": 1, "reward_coins": 1000, "reward_gems": 5 },
+    { "id": "q07", "name": "Görünmez El", "desc": "Temizlik Odası kur — odalar kendiliğinden temizlensin.", "type": "own_type", "room": "housekeeping", "target": 1, "reward_coins": 1200, "reward_gems": 0 },
+    { "id": "q08", "name": "Üç Yıldız", "desc": "3 yıldız derecesine ulaş.", "type": "star", "target": 3, "reward_coins": 1500, "reward_gems": 5 },
+    { "id": "q09", "name": "Şık Dokunuş", "desc": "Bir odayı Şık kademesine çıkar (SP 150+).", "type": "tier", "target": 2, "reward_coins": 2000, "reward_gems": 8 },
+    { "id": "q10", "name": "Nakit Akışı", "desc": "Toplamda 10.000 coin topla.", "type": "collect_total", "target": 10000, "reward_coins": 2500, "reward_gems": 0 },
+    { "id": "q11", "name": "Yükseliyoruz", "desc": "3. katı aç.", "type": "floors", "target": 3, "reward_coins": 3000, "reward_gems": 10 },
+    { "id": "q12", "name": "Spor Zamanı", "desc": "Spor Salonu aç.", "type": "own_type", "room": "gym", "target": 1, "reward_coins": 2000, "reward_gems": 5 },
+    { "id": "q13", "name": "Dört Yıldız", "desc": "4 yıldız derecesine ulaş.", "type": "star", "target": 4, "reward_coins": 5000, "reward_gems": 15 },
+    { "id": "q14", "name": "Lüks Hayat", "desc": "Bir odayı Lüks kademesine çıkar (SP 300+).", "type": "tier", "target": 3, "reward_coins": 6000, "reward_gems": 10 },
+    { "id": "q15", "name": "Havuz Keyfi", "desc": "Havuz aç.", "type": "own_type", "room": "pool", "target": 1, "reward_coins": 5000, "reward_gems": 10 },
+    { "id": "q16", "name": "İmparatorluk", "desc": "10 odaya ulaş.", "type": "rooms", "target": 10, "reward_coins": 8000, "reward_gems": 20 },
+    { "id": "q17", "name": "Beş Yıldız", "desc": "5 yıldız — şehrin en iyi oteli!", "type": "star", "target": 5, "reward_coins": 20000, "reward_gems": 50 }
+  ]
+}
