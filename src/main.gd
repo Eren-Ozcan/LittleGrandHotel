@@ -684,6 +684,11 @@ func _make_room_button(idx: int) -> Button:
 			var hint := _label("boş oda", 12, PALETTE.muted)
 			hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			strip.add_child(hint)
+			# Dekorasyon dürtmesi: en ucuz eşya karşılanabiliyorsa yanıp sönen rozet.
+			# Yıldızın oda/kat büyütmenin gölgesinde kalmaması için (TODO gözlemi).
+			var cheapest := Game.cheapest_item_price()
+			if cheapest > 0 and Game.coins >= cheapest:
+				b.add_child(_make_decorate_badge())
 		# Misafir (vardiya açık + temiz odada)
 		if Game.shift_active() and not is_dirty:
 			var g_idx := idx % 3
@@ -741,6 +746,35 @@ func _make_room_button(idx: int) -> Button:
 	b.add_child(plate)
 
 	return b
+
+
+## Boş misafir odasının sağ üstünde yanıp sönen altın "Dekore et!" rozeti.
+func _make_decorate_badge() -> Control:
+	var badge := PanelContainer.new()
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = PALETTE.gold
+	sb.set_corner_radius_all(4)
+	sb.content_margin_left = 6
+	sb.content_margin_right = 6
+	sb.content_margin_top = 1
+	sb.content_margin_bottom = 1
+	sb.border_color = PALETTE.wood_dark
+	sb.set_border_width_all(1)
+	badge.add_theme_stylebox_override("panel", sb)
+	badge.anchor_left = 1.0
+	badge.anchor_right = 1.0
+	badge.offset_left = -84
+	badge.offset_right = -4
+	badge.offset_top = 4
+	badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var l := _label("✦ Dekore et!", 11, PALETTE.text)
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	badge.add_child(l)
+	var tw := badge.create_tween().set_loops()
+	tw.tween_property(badge, "modulate:a", 0.55, 0.55).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	tw.tween_property(badge, "modulate:a", 1.0, 0.55).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	return badge
 
 
 func _on_room_tapped(idx: int, btn: Control) -> void:

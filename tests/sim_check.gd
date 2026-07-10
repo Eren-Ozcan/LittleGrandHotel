@@ -31,6 +31,7 @@ func _initialize() -> void:
 	check(g.rooms.size() == 2 and g.floors == 2, "başlangıç: 2 oda, 2 kat")
 	check(g.star_rating() == 2, "başlangıç yıldızı 2")
 	check(g.max_slots() == 8, "başlangıç yuva kapasitesi 8")
+	check(g.cheapest_item_price() == 80, "dürtme eşiği: en ucuz eşya 80 (Masa Lambası)")
 
 	# 2) Vardiya marjı (ideal koşullar): maliyet gelirin %5–35'i arasında.
 	# Saatlik oran tüm sürelerde bilerek eşit (bkz. shift_rates): otomatik

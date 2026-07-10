@@ -520,6 +520,19 @@ func item_is_premium(it: Dictionary) -> bool:
 	return int(it.get("gem_price", 0)) > 0
 
 
+## Dekorasyon dürtmesi için: seviye kilidi açık en ucuz coin'li eşyanın
+## fiyatı (-1 = alınabilir eşya yok). UI, boş odada bu tutar karşılanıyorsa
+## "Dekore et!" rozeti gösterir.
+func cheapest_item_price() -> int:
+	var best := -1
+	for it in eco.items:
+		if item_is_premium(it) or level() < int(it.get("unlock_level", 1)):
+			continue
+		if best < 0 or int(it.price) < best:
+			best = int(it.price)
+	return best
+
+
 func can_afford_item(it: Dictionary) -> bool:
 	if item_is_premium(it):
 		return gems >= int(it.gem_price)
