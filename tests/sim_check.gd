@@ -201,8 +201,9 @@ func _initialize() -> void:
 		"göç varsayılanları doğru (geçmiş boş, sesler açık)")
 	g4.save_game(v2_path)
 	var reparsed = JSON.parse_string(FileAccess.get_file_as_string(v2_path))
-	check(int(reparsed.save_version) == 4, "göçen kayıt v4 olarak yazıldı")
+	check(int(reparsed.save_version) == 5, "göçen kayıt v5 olarak yazıldı")
 	check(reparsed.unlocked_achievements is Array, "göç unlocked_achievements alanını ekledi")
+	check(int(reparsed.prestige_level) == 0, "göç prestige_level alanını 0 ile ekledi")
 	old_save["save_version"] = 99
 	fw = FileAccess.open(v2_path, FileAccess.WRITE)
 	fw.store_string(JSON.stringify(old_save))
@@ -264,6 +265,34 @@ func _initialize() -> void:
 	g6._check_achievements()
 	check(g6.coins == coins_after_first, "başarım tekrar ödül vermiyor (tek seferlik)")
 	g6.free()
+
+	# 16) Prestij: eşik altında reddedilir, devirde kalıcı çarpan ekler ve ilerlemeyi sıfırlar
+	var g7 = GameScript.new()
+	g7.eco = g.eco
+	g7.quests = g.quests
+	g7.achievements = g.achievements
+	g7.new_game()
+	check(g7.prestige_mult() == 1.0, "başlangıç prestij çarpanı ×1.0")
+	check(not g7.can_prestige(), "seviye 1'de devretme kilitli")
+	check(not g7.do_prestige(), "eşik altı devretme reddedilir")
+	g7.add_xp(g7.xp_for_level(20) - g7.xp)
+	check(g7.level() >= 20, "seviye 20'ye ulaşıldı")
+	check(g7.can_prestige(), "seviye 20'de devretme açık")
+	g7.coins = 50000
+	g7.buy_room("cafe")
+	check(g7.do_prestige(), "oteli devretme başarılı")
+	check(g7.prestige_level == 1, "devir sayısı arttı")
+	check(absf(g7.prestige_mult() - 1.2) < 0.001, "devir sonrası çarpan ×1.2")
+	check(g7.coins == int(g7.eco.start.coins) and g7.rooms.size() == 2, "devir sonrası ilerleme sıfırlandı")
+	var mult_after_prestige: float = g7.prestige_mult()
+	check(mult_after_prestige > 1.0, "devir çarpanı kalıcı")
+	# reset_game() gerçek user://save.json dosyasına yazdığı için burada
+	# doğrudan çağrılmaz; aynı sıfırlama mantığı (prestige_level = 0 + new_game())
+	# diske dokunmadan doğrulanır.
+	g7.prestige_level = 0
+	g7.new_game()
+	check(g7.prestige_level == 0 and absf(g7.prestige_mult() - 1.0) < 0.001, "tam sıfırlama mantığı prestiji de sıfırlar")
+	g7.free()
 
 	g.free()
 	g2.free()

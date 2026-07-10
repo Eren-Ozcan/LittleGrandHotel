@@ -1038,6 +1038,7 @@ func _build_stats_popup(c: VBoxContainer) -> void:
 		["Yıldız derecesi", "%d / 5" % Game.star_rating()],
 		["Seviye", "%d (XP %s)" % [Game.level(), _fmt(Game.xp)]],
 		["Saatlik gelir (şu an)", "%.0f coin" % Game.hourly_income()],
+		["Prestij çarpanı", "×%.2f (devir %d)" % [Game.prestige_mult(), Game.prestige_level]],
 	]
 	for r in rows:
 		var row := HBoxContainer.new()
@@ -1077,6 +1078,24 @@ func _build_settings_popup(c: VBoxContainer) -> void:
 		Game.save_game()
 		_rebuild_popup())
 	c.add_child(m_b)
+
+	c.add_child(_spacer_y(10))
+	c.add_child(_label("Prestij — çarpan ×%.2f (devir %d)" % [Game.prestige_mult(), Game.prestige_level], 15, PALETTE.wood_dark))
+	if Game.can_prestige():
+		var next_mult: float = Game.prestige_mult() + float(Game.eco.prestige.mult_gain)
+		var p_b := _button("Oteli devret — yeni çarpan ×%.2f" % next_mult, 15, PALETTE.green_deep, PALETTE.cream_text)
+		p_b.pressed.connect(func():
+			if p_b.get_meta("armed", false):
+				Game.do_prestige()
+				_close_popup()
+				_show_toast("Devrettin! Yeni gelir çarpanı: ×%.2f" % Game.prestige_mult())
+			else:
+				p_b.set_meta("armed", true)
+				p_b.text = "Emin misin? İlerleme sıfırlanacak, tekrar dokun")
+		c.add_child(p_b)
+		c.add_child(_label("Devretmek coin, oda, görev ve başarım ilerlemeni sıfırlar; çarpan kalıcıdır.", 12, PALETTE.muted))
+	else:
+		c.add_child(_label("Devretmek için Seviye %d gerekir (şu an %d)." % [int(Game.eco.prestige.min_level), Game.level()], 13, PALETTE.muted))
 
 	c.add_child(_spacer_y(8))
 	c.add_child(_label("Tehlikeli bölge:", 13, PALETTE.banner_red))

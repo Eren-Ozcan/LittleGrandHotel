@@ -57,5 +57,7 @@
 
   "xp_curve": { "base": 100, "exp": 1.9 },
   "levelup_gems": 5,
-  "offline_cap_hours": 48
+  "offline_cap_hours": 48,
+
+  "prestige": { "min_level": 20, "mult_gain": 0.2 }
 }

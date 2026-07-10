@@ -9,7 +9,7 @@ signal achievement_unlocked(achievement: Dictionary)
 signal leveled_up(new_level: int)
 
 const SAVE_PATH := "user://save.json"
-const SAVE_VERSION := 4
+const SAVE_VERSION := 5
 ## Göçle yükseltilebilen en eski kayıt sürümü
 const MIN_SAVE_VERSION := 2
 const ECO_PATH := "res://data/economy.json"
@@ -42,6 +42,9 @@ var shift_history: Array = []
 
 ## Açılmış başarım id'leri (kalıcı, tek seferlik ödüller).
 var unlocked_achievements: Array = []
+
+## Prestij: devretme sayısı. new_game() ile sıfırlanmaz — kalıcıdır.
+var prestige_level: int = 0
 
 ## Uygulama açılışında sen-yokken kazanılan gelir (UI popup için; UI okur ve sıfırlar).
 var offline_earned: int = 0
@@ -246,7 +249,7 @@ func hourly_income() -> float:
 			if hk:
 				rate *= float(d.stay_hours) / (float(d.stay_hours) + float(eco.auto_clean_hours))
 			total += rate
-	return total * smult * occ
+	return total * smult * occ * prestige_mult()
 
 
 func staff_count() -> int:
@@ -322,7 +325,7 @@ func simulate_to(to_unix: float) -> void:
 
 ## Vardiya penceresi içindeki game_hours kadar ilerlet.
 func _advance(game_hours: float) -> void:
-	var smult := float(eco.star_mult[str(star_rating())])
+	var smult := float(eco.star_mult[str(star_rating())]) * prestige_mult()
 	var occ := float(eco.occupancy_base)
 	var hk := housekeeping_active()
 	for r in rooms:
@@ -495,6 +498,27 @@ func add_xp(amount: int) -> void:
 		leveled_up.emit(level())
 
 
+# --- Prestij: kalıcı gelir çarpanı karşılığında devretme -----------------
+
+## Her prestij, gelire kalıcı bir çarpan ekler (bileşik değil, toplamsal).
+func prestige_mult() -> float:
+	return 1.0 + float(eco.prestige.mult_gain) * prestige_level
+
+
+func can_prestige() -> bool:
+	return level() >= int(eco.prestige.min_level)
+
+
+## Oteli devreder: prestige_level kalıcı olarak artar, ilerlemenin geri
+## kalanı (coin, oda, görev, başarım vb.) new_game() ile sıfırlanır.
+func do_prestige() -> bool:
+	if not can_prestige():
+		return false
+	prestige_level += 1
+	new_game()
+	return true
+
+
 # --- Görevler (GDD §4.7) -----------------------------------------------
 
 func current_quest() -> Dictionary:
@@ -572,10 +596,12 @@ func _check_progress() -> void:
 	_check_achievements()
 
 
-## Kaydı siler ve sıfırdan başlatır (Ayarlar → Kaydı sıfırla).
+## Kaydı siler ve sıfırdan başlatır (Ayarlar → Kaydı sıfırla). Prestij de dahil
+## tüm ilerlemeyi siler — do_prestige()'den farklı olarak çarpanı korumaz.
 func reset_game() -> void:
 	if FileAccess.file_exists(SAVE_PATH):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
+	prestige_level = 0
 	new_game()
 	save_game()
 
@@ -601,6 +627,7 @@ func save_game(path: String = SAVE_PATH) -> void:
 		"stat_cleans": stat_cleans,
 		"shift_history": shift_history,
 		"unlocked_achievements": unlocked_achievements,
+		"prestige_level": prestige_level,
 		"time_scale": time_scale,
 		"sound_on": sound_on,
 		"music_on": music_on,
@@ -628,6 +655,10 @@ func _migrate_save(data: Dictionary) -> Dictionary:
 				# v4: başarımlar eklendi
 				if not data.has("unlocked_achievements"):
 					data["unlocked_achievements"] = []
+			4:
+				# v5: prestij eklendi
+				if not data.has("prestige_level"):
+					data["prestige_level"] = 0
 		v += 1
 		data["save_version"] = v
 	return data
@@ -658,6 +689,7 @@ func load_game(path: String = SAVE_PATH) -> bool:
 	stat_cleans = int(parsed.get("stat_cleans", 0))
 	shift_history = parsed.get("shift_history", [])
 	unlocked_achievements = parsed.get("unlocked_achievements", [])
+	prestige_level = int(parsed.get("prestige_level", 0))
 	# Vardiya bitişi gerçek saniye tutulur; ölçek geri yüklenmezse
 	# hızlı modda kaydedilen vardiya normal hızda 60/3600 kat kısalır.
 	time_scale = float(parsed.get("time_scale", 1.0))
