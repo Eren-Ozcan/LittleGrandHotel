@@ -32,7 +32,14 @@ func _initialize() -> void:
 	check(g.star_rating() == 2, "başlangıç yıldızı 2")
 	check(g.max_slots() == 8, "başlangıç yuva kapasitesi 8")
 
-	# 2) Vardiya marjı (ideal koşullar): maliyet gelirin %5–35'i arasında
+	# 2) Vardiya marjı (ideal koşullar): maliyet gelirin %5–35'i arasında.
+	# Saatlik oran tüm sürelerde bilerek eşit (bkz. shift_rates): otomatik
+	# yenileme varken süreye göre farklı oranlar, oyuncuyu her zaman tek bir
+	# "en ucuz" süreye kilitleyen anlamsız bir seçime dönüşürdü (level design
+	# incelemesinde bulunan bir "tuzak seçenek" sorunu).
+	var rates: Dictionary = g.eco.shift_rates
+	for hours in [4, 8, 24]:
+		check(int(rates[str(hours)]) == int(rates["1"]), "vardiya oranı %d saat için 1 saatle eşit (tuzak seçenek yok)" % hours)
 	for hours in [1, 4, 8, 24]:
 		var cost: float = g.shift_cost(hours)
 		var income: float = g.hourly_income() * hours

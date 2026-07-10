@@ -908,7 +908,7 @@ func _build_shift_popup(c: VBoxContainer) -> void:
 				_close_popup())
 		c.add_child(skip_b)
 		return
-	c.add_child(_label("Süre seç — kısa vardiya saat başına daha ucuzdur:", 14, PALETTE.muted))
+	c.add_child(_label("Süre seç — saatlik maliyet hepsinde aynıdır:", 14, PALETTE.muted))
 	for hours: int in [1, 4, 8, 24]:
 		var cost := Game.shift_cost(hours)
 		var est: float = Game.hourly_income() * hours
@@ -921,6 +921,10 @@ func _build_shift_popup(c: VBoxContainer) -> void:
 				_show_toast("%d saatlik vardiya başladı!" % hours)
 				_close_popup())
 		c.add_child(b)
+	if Game.auto_renew_shift:
+		c.add_child(_label("Otomatik yenileme açık: vardiya bitince coin yeterse kendiliğinden devam eder.", 12, PALETTE.green_deep))
+	else:
+		c.add_child(_label("Otomatik yenileme kapalı: vardiya bitince elle yeniden başlatman gerekir (Ayarlar).", 12, PALETTE.muted))
 	c.add_child(_label("Not: temizlenmeyen odalar gelir üretmez. Uzun vardiyada Temizlik Odası şart!", 13, PALETTE.banner_red))
 
 

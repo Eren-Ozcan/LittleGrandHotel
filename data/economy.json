@@ -9,7 +9,7 @@
     "floor_mult": 2.2
   },
 
-  "shift_rates": { "1": 8, "4": 10, "8": 11, "24": 13 },
+  "shift_rates": { "1": 8, "4": 8, "8": 8, "24": 8 },
   "gem_skip_hours": 2,
   "occupancy_base": 0.7,
   "staff_per_room": 0.5,
