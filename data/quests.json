@@ -16,6 +16,9 @@
     { "id": "q14", "name": "Lüks Hayat", "desc": "Bir odayı Lüks kademesine çıkar (SP 300+).", "type": "tier", "target": 3, "reward_coins": 6000, "reward_gems": 10 },
     { "id": "q15", "name": "Havuz Keyfi", "desc": "Havuz aç.", "type": "own_type", "room": "pool", "target": 1, "reward_coins": 5000, "reward_gems": 10 },
     { "id": "q16", "name": "İmparatorluk", "desc": "10 odaya ulaş.", "type": "rooms", "target": 10, "reward_coins": 8000, "reward_gems": 20 },
-    { "id": "q17", "name": "Beş Yıldız", "desc": "5 yıldız — şehrin en iyi oteli!", "type": "star", "target": 5, "reward_coins": 20000, "reward_gems": 50 }
+    { "id": "q17", "name": "Beş Yıldız", "desc": "5 yıldız — şehrin en iyi oteli!", "type": "star", "target": 5, "reward_coins": 20000, "reward_gems": 50 },
+    { "id": "q18", "name": "Akşam Servisi", "desc": "Restoran aç — mutfak kokusu lobiye yayılsın.", "type": "own_type", "room": "restaurant", "target": 1, "reward_coins": 10000, "reward_gems": 20 },
+    { "id": "q19", "name": "Gökyüzü Bahçesi", "desc": "Çatı Bahçesi aç — şehir manzaralı huzur.", "type": "own_type", "room": "roof_garden", "target": 1, "reward_coins": 12000, "reward_gems": 25 },
+    { "id": "q20", "name": "Tam Kadro", "desc": "16 odaya ulaş — koca bir imparatorluk.", "type": "rooms", "target": 16, "reward_coins": 25000, "reward_gems": 40 }
   ]
 }

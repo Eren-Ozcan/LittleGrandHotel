@@ -205,6 +205,42 @@ func _initialize() -> void:
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(v2_path))
 	g4.free()
 
+	# 14) Geç oyun turu: yeni tesisler, 5 yıldız, 24 saat vardiya marjı
+	var g5 = GameScript.new()
+	g5.eco = g.eco
+	g5.quests = g.quests
+	g5.new_game()
+	g5.coins = 1500000
+	g5.add_xp(g5.xp_for_level(28) - g5.xp)
+	check(g5.level() >= 28, "seviye 28'e yükseltildi")
+	while g5.floors < int(g5.eco.building.max_floors):
+		check(g5.buy_floor(), "kat alındı (%d. kat)" % g5.floors)
+	check(g5.max_slots() == 24, "6 katta 24 yuva")
+	check(g5.buy_room("restaurant"), "Restoran alındı")
+	check(g5.buy_room("roof_garden"), "Çatı Bahçesi alındı")
+	for t in ["cafe", "gym", "pool", "housekeeping"]:
+		g5.buy_room(t)
+	check(g5.facility_diversity() == 5, "tesis çeşitliliği 5 (tavan)")
+	while g5.can_buy_room("suite"):
+		g5.buy_room("suite")
+	check(g5.rooms.size() == 24, "tüm yuvalar dolu")
+	for r in g5.rooms:
+		if g5.room_def(r.type).category == "guest" and r.type == "suite":
+			r["items"] = ["bed_canopy", "bed_canopy", "chandelier", "chandelier", "sofa_velvet"]  # SP 630
+			check(g5.room_tier(r) == 4, "süit İkonik kademede")
+			break
+	for r in g5.rooms:
+		if r.type == "suite":
+			r["items"] = ["bed_canopy", "bed_canopy", "chandelier", "chandelier", "sofa_velvet"]
+	check(g5.star_rating() == 5, "geç oyun oteli 5 yıldız (şu an %d)" % g5.star_rating())
+	var lg_cost: float = g5.shift_cost(24)
+	var lg_income: float = g5.hourly_income() * 24.0
+	var lg_margin := lg_cost / lg_income
+	print("       geç oyun: 24 saat maliyet %d · gelir %.0f · marj %%%.1f" % [int(lg_cost), lg_income, lg_margin * 100.0])
+	check(lg_margin > 0.01 and lg_margin < 0.35, "geç oyun vardiya marjı makul bantta")
+	check(g5.floor_price() >= 350000 or g5.floors == int(g5.eco.building.max_floors), "kat fiyat eğrisi tavana ulaştı")
+	g5.free()
+
 	g.free()
 	g2.free()
 	print("TÜM TESTLER GEÇTİ" if failures == 0 else "%d test BAŞARISIZ" % failures)

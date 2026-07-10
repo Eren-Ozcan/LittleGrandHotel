@@ -35,6 +35,8 @@ const WALLPAPERS := {
 	"pool": Color("dff2f7"),
 	"cinema": Color("e8e3ef"),
 	"spa": Color("eaf3e8"),
+	"restaurant": Color("f7e7d4"),
+	"roof_garden": Color("e4f2dd"),
 	"housekeeping": Color("efe9db"),
 }
 

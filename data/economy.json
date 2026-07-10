@@ -32,6 +32,8 @@
     "pool":     { "name": "Havuz", "category": "facility", "base_income": 90, "price": 12000, "unlock_level": 12 },
     "cinema":   { "name": "Sinema", "category": "facility", "base_income": 120, "price": 18000, "unlock_level": 16 },
     "spa":      { "name": "Spa", "category": "facility", "base_income": 150, "price": 26000, "unlock_level": 20 },
+    "restaurant":  { "name": "Restoran", "category": "facility", "base_income": 200, "price": 34000, "unlock_level": 24 },
+    "roof_garden": { "name": "Çatı Bahçesi", "category": "facility", "base_income": 260, "price": 45000, "unlock_level": 28 },
 
     "housekeeping": { "name": "Temizlik Odası", "category": "functional", "base_income": 0, "price": 2500, "unlock_level": 4 }
   },
