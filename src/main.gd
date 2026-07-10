@@ -564,7 +564,7 @@ func _make_room_button(idx: int) -> Button:
 		sb.set_border_width_all(3)
 		sb.set_corner_radius_all(3)
 		b.add_theme_stylebox_override(state, sb)
-	b.pressed.connect(func(): _on_room_tapped(idx))
+	b.pressed.connect(func(): _on_room_tapped(idx, b))
 
 	# Zemin şeridi
 	var floor_rect := ColorRect.new()
@@ -660,10 +660,13 @@ func _make_room_button(idx: int) -> Button:
 	return b
 
 
-func _on_room_tapped(idx: int) -> void:
+func _on_room_tapped(idx: int, btn: Control) -> void:
 	var room: Dictionary = Game.rooms[idx]
 	if room.dirty:
+		# Buton yeniden kurulumda yok olacağı için merkezi temizlemeden önce al
+		var center := btn.global_position + btn.size / 2.0
 		if Game.clean_room(idx):
+			_spawn_sparkles(center)
 			_show_toast("Oda temizlendi (+2 XP)")
 		return
 	if Game.room_def(room.type).category == "guest":
@@ -672,9 +675,46 @@ func _on_room_tapped(idx: int) -> void:
 
 
 func _on_collect() -> void:
+	var from := collect_button.global_position + collect_button.size / 2.0
 	var got := Game.collect()
 	if got > 0:
+		_fly_coins(from, got)
 		_show_toast("+%s coin toplandı" % _fmt(got))
+
+
+## Temizlik geri bildirimi: oda üzerinde büyüyüp sönen altın parıltılar.
+func _spawn_sparkles(center: Vector2) -> void:
+	for i in 7:
+		var s := _icon("res://assets/ui/sparkle.svg", 22)
+		s.position = center + Vector2(randf_range(-46.0, 46.0), randf_range(-40.0, 28.0))
+		s.pivot_offset = Vector2(11, 11)
+		s.scale = Vector2.ZERO
+		s.z_index = 60
+		add_child(s)
+		var tw := create_tween()
+		tw.tween_interval(i * 0.05)
+		tw.tween_property(s, "scale", Vector2.ONE * randf_range(0.8, 1.5), 0.2) \
+			.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		tw.parallel().tween_property(s, "rotation", randf_range(-0.7, 0.7), 0.4)
+		tw.tween_property(s, "modulate:a", 0.0, 0.3)
+		tw.tween_callback(s.queue_free)
+
+
+## Toplama geri bildirimi: kasadan coin sayacına uçan coin'ler.
+func _fly_coins(from: Vector2, amount: int) -> void:
+	var to := coins_label.global_position + coins_label.size / 2.0
+	var count := clampi(3 + amount / 200, 4, 10)
+	for i in count:
+		var cn := _icon("res://assets/ui/coin.svg", 24)
+		cn.position = from + Vector2(randf_range(-40.0, 40.0), randf_range(-12.0, 12.0))
+		cn.z_index = 60
+		add_child(cn)
+		var tw := create_tween()
+		tw.tween_interval(i * 0.045)
+		tw.tween_property(cn, "position", to, 0.45) \
+			.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+		tw.parallel().tween_property(cn, "modulate:a", 0.55, 0.45)
+		tw.tween_callback(cn.queue_free)
 
 
 func _cycle_speed() -> void:
