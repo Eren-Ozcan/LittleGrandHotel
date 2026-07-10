@@ -27,13 +27,13 @@
     "deluxe":   { "name": "Deluxe Oda", "category": "guest", "base_income": 75, "price": 6500, "unlock_level": 8, "stay_hours": 4 },
     "suite":    { "name": "Süit", "category": "guest", "base_income": 180, "price": 22000, "unlock_level": 18, "stay_hours": 5 },
 
-    "cafe":     { "name": "Kafe", "category": "facility", "base_income": 40, "price": 3000, "unlock_level": 3 },
-    "gym":      { "name": "Spor Salonu", "category": "facility", "base_income": 55, "price": 5200, "unlock_level": 6 },
-    "pool":     { "name": "Havuz", "category": "facility", "base_income": 90, "price": 12000, "unlock_level": 12 },
-    "cinema":   { "name": "Sinema", "category": "facility", "base_income": 120, "price": 18000, "unlock_level": 16 },
-    "spa":      { "name": "Spa", "category": "facility", "base_income": 150, "price": 26000, "unlock_level": 20 },
-    "restaurant":  { "name": "Restoran", "category": "facility", "base_income": 200, "price": 34000, "unlock_level": 24 },
-    "roof_garden": { "name": "Çatı Bahçesi", "category": "facility", "base_income": 260, "price": 45000, "unlock_level": 28 },
+    "cafe":     { "name": "Kafe", "category": "facility", "base_income": 40, "price": 3000, "unlock_level": 3, "capacity": 4 },
+    "gym":      { "name": "Spor Salonu", "category": "facility", "base_income": 55, "price": 5200, "unlock_level": 6, "capacity": 2 },
+    "pool":     { "name": "Havuz", "category": "facility", "base_income": 90, "price": 12000, "unlock_level": 12, "capacity": 3 },
+    "cinema":   { "name": "Sinema", "category": "facility", "base_income": 120, "price": 18000, "unlock_level": 16, "capacity": 5 },
+    "spa":      { "name": "Spa", "category": "facility", "base_income": 150, "price": 26000, "unlock_level": 20, "capacity": 3 },
+    "restaurant":  { "name": "Restoran", "category": "facility", "base_income": 200, "price": 34000, "unlock_level": 24, "capacity": 3 },
+    "roof_garden": { "name": "Çatı Bahçesi", "category": "facility", "base_income": 260, "price": 45000, "unlock_level": 28, "capacity": 4 },
 
     "housekeeping": { "name": "Temizlik Odası", "category": "functional", "base_income": 0, "price": 2500, "unlock_level": 4 }
   },
@@ -60,6 +60,16 @@
   "offline_cap_hours": 48,
 
   "prestige": { "min_level": 20, "mult_gain": 0.2 },
+
+  "infest": { "after_hours": 6, "clean_cost": 150 },
+  "poke": { "daily_cap": 20, "chance": 0.25, "base": 40, "per_star": 15 },
+  "catch": { "interval_real_seconds": 25, "bonus_hourly_frac": 0.15 },
+
+  "bundles": [
+    { "id": "cozy_set",  "name": "Konfor Paketi",   "items": ["bed_basic", "lamp_desk", "rug_wool", "plant_fern"], "discount": 0.1 },
+    { "id": "wood_set",  "name": "Ahşap Paketi",    "items": ["bed_wood", "wardrobe_oak", "chair_arm", "art_print"], "discount": 0.1 },
+    { "id": "royal_set", "name": "Kraliyet Paketi", "items": ["bed_canopy", "chandelier", "sofa_velvet", "mirror_gold"], "discount": 0.12 }
+  ],
 
   "daily_rewards": [
     { "coins": 200,  "gems": 0 },

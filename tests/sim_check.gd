@@ -215,7 +215,7 @@ func _initialize() -> void:
 		"göç varsayılanları doğru (geçmiş boş, sesler açık)")
 	g4.save_game(v2_path)
 	var reparsed = JSON.parse_string(FileAccess.get_file_as_string(v2_path))
-	check(int(reparsed.save_version) == 7, "göçen kayıt v7 olarak yazıldı")
+	check(int(reparsed.save_version) == int(g4.SAVE_VERSION), "göçen kayıt güncel sürümle yazıldı")
 	check(bool(reparsed.auto_renew_shift) == true and int(reparsed.last_shift_hours) == 0,
 		"göç otomatik yenileme alanlarını varsayılanla ekledi")
 	check(reparsed.unlocked_achievements is Array, "göç unlocked_achievements alanını ekledi")
@@ -442,6 +442,75 @@ func _initialize() -> void:
 	g13.claim_daily_reward()
 	check(g13.daily_streak == 1, "atlama sonrası seri gerçekten 1'e döndü")
 	g13.free()
+
+	# 22) İstila: kirli kalan oda eşikten sonra istilaya döner, temizlik paralı olur
+	var g14 = GameScript.new()
+	g14.eco = g.eco
+	g14.quests = g.quests
+	g14.achievements = g.achievements
+	g14.new_game()
+	g14.time_scale = 3600.0
+	# Coin delta kontrollerini görev/başarım ödülleri ve otomatik vardiya
+	# yenilemesi bozmasın diye üçü de bu testte devre dışı.
+	g14.quest_index = g14.quests.size()
+	g14.achievements = []
+	g14.auto_renew_shift = false
+	check(g14.start_shift(24), "istila testi: 24 saatlik vardiya başladı")
+	g14.last_sim_unix -= 12.0  # 12 oyun-saati geçmiş gibi: 3'te kirlenir, 9 saat kirli kalır
+	g14.simulate_to(g14.now())
+	check(g14.rooms[0].dirty, "oda kirlendi")
+	check(float(g14.rooms[0].dirty_hours) >= 6.0, "kirli saat birikti (şu an %.1f)" % float(g14.rooms[0].dirty_hours))
+	check(g14.room_infested(g14.rooms[0]), "oda istilaya döndü")
+	check(g14.clean_cost(0) == 150, "istila temizliği 150 coin")
+	var coins_inf: int = g14.coins
+	g14.coins = 0
+	check(not g14.clean_room(0), "coin yoksa istila temizlenemez")
+	g14.coins = coins_inf + 1000
+	check(g14.clean_room(0), "istila paralı temizlendi")
+	check(g14.coins == coins_inf + 1000 - 150, "temizlik bedeli düşüldü")
+	check(not g14.room_infested(g14.rooms[0]) and float(g14.rooms[0].dirty_hours) == 0.0, "istila sıfırlandı")
+	check(g14.clean_cost(1) == 0 or g14.rooms[1].dirty, "temiz/kirli normal oda için temizlik bedava")
+
+	# 23) Misafir dürtme: tavan, şans, yıldıza göre bonus
+	var cap: int = int(g14.eco.poke.daily_cap)
+	check(g14.pokes_left() == cap, "dürtme hakkı gün başında tam (%d)" % cap)
+	var poke_coins: int = g14.coins
+	var win: int = g14.poke_guest(0.0)  # kesin kazanç
+	var expect_bonus: int = int(g14.eco.poke.base) + int(g14.eco.poke.per_star) * g14.star_rating()
+	check(win == expect_bonus, "müfettiş bonusu yıldıza göre (%d)" % expect_bonus)
+	check(g14.coins == poke_coins + expect_bonus, "bonus coin'e işlendi")
+	check(g14.poke_guest(0.99) == 0, "şanssız dürtme bonus vermez")
+	check(g14.pokes_left() == cap - 2, "iki dürtme hakkı düştü")
+	g14.poke_count = cap
+	check(g14.pokes_left() == 0 and g14.poke_guest(0.0) == 0, "günlük tavan aşılamaz")
+
+	# 24) Kaçan misafiri yakalama: yalnızca vardiyada, saatlik gelirin kesri
+	var catch_coins: int = g14.coins
+	var got_catch: int = g14.catch_guest()
+	var expect_catch: int = maxi(5, int(g14.hourly_income() * float(g14.eco.catch.bonus_hourly_frac)))
+	check(got_catch == expect_catch and g14.coins == catch_coins + got_catch, "yakalama bonusu doğru (%d)" % got_catch)
+	g14.shift_end_unix = g14.now()  # vardiyayı bitir
+	check(g14.catch_guest() == 0, "vardiya yokken yakalama bonus vermez")
+
+	# 25) Hazır dekor paketleri: indirim, kilit, eşyaların yerleşmesi
+	var bnd: Dictionary = g14.bundle_def("cozy_set")
+	check(not bnd.is_empty(), "Konfor Paketi tanımlı")
+	var raw_total := 0.0
+	for iid in bnd.items:
+		raw_total += float(g14.item_def(iid).price)
+	check(g14.bundle_price(bnd) == int(round(raw_total * 0.9)), "paket fiyatı %%10 indirimli")
+	check(g14.bundle_unlock_level(bnd) == 5, "paket kilidi en yüksek eşyaya göre (Sv.5)")
+	var royal: Dictionary = g14.bundle_def("royal_set")
+	check(not g14.can_buy_bundle(royal), "seviye yetmeyince paket kilitli")
+	g14.add_xp(g14.xp_for_level(6) - g14.xp)
+	g14.coins = 10000
+	var items_before: int = g14.rooms[0].items.size()
+	var bundle_cost: int = g14.bundle_price(bnd)
+	check(g14.buy_bundle(0, "cozy_set"), "Konfor Paketi satın alındı")
+	check(g14.rooms[0].items.size() == items_before + 4, "4 eşya odaya yerleşti")
+	check(g14.coins == 10000 - bundle_cost, "paket bedeli düşüldü")
+	check(g14.eco.room_types.cafe.capacity == 4, "tesis kapasitesi tanımlı (kafe 4)")
+	g14.free()
 
 	g.free()
 	g2.free()

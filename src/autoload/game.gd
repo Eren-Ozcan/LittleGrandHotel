@@ -9,7 +9,7 @@ signal achievement_unlocked(achievement: Dictionary)
 signal leveled_up(new_level: int)
 
 const SAVE_PATH := "user://save.json"
-const SAVE_VERSION := 7
+const SAVE_VERSION := 8
 ## Göçle yükseltilebilen en eski kayıt sürümü
 const MIN_SAVE_VERSION := 2
 const ECO_PATH := "res://data/economy.json"
@@ -75,6 +75,11 @@ var auto_renew_spent: int = 0
 ## (-1 = hiç alınmadı). Sunucusuz, tamamen cihaz saatinden türer.
 var daily_streak: int = 0
 var last_daily_claim_day: int = -1
+
+## Uyuyan misafiri dürtme (gizli müfettiş) günlük sayacı — Hotel City'deki
+## "poke sleeping guests" mekaniği. Gün değişince sayaç sıfırlanır.
+var poke_day: int = -1
+var poke_count: int = 0
 
 var _autosave_acc := 0.0
 var _rooms_changed_in_sim := false
@@ -175,6 +180,8 @@ func new_game() -> void:
 	auto_renew_spent = 0
 	daily_streak = 0
 	last_daily_claim_day = -1
+	poke_day = -1
+	poke_count = 0
 	offline_earned = 0
 	state_changed.emit()
 
@@ -190,6 +197,7 @@ func make_room(type: String) -> Dictionary:
 		"items": [],
 		"dirty": false,
 		"clean_left": float(d.get("stay_hours", 0)),
+		"dirty_hours": 0.0,
 	}
 
 
@@ -441,16 +449,38 @@ func _advance(game_hours: float) -> void:
 				pending_income += rate * game_hours * duty
 				if r.dirty:
 					r.dirty = false
+					r["dirty_hours"] = 0.0
 					_rooms_changed_in_sim = true
 			else:
 				if r.dirty:
+					# Kirli bırakılan oda zamanla istilaya döner (Hotel City'deki
+					# hamamböceği): eşik aşımında temizlik paralı hale gelir.
+					var before_inf := room_infested(r)
+					r["dirty_hours"] = float(r.get("dirty_hours", 0.0)) + game_hours
+					if room_infested(r) != before_inf:
+						_rooms_changed_in_sim = true
 					continue
 				var earn_h := minf(game_hours, float(r.clean_left))
 				pending_income += rate * earn_h
 				r.clean_left = float(r.clean_left) - earn_h
 				if r.clean_left <= 0.0001:
 					r.dirty = true
+					# Tek büyük ilerletmede (çevrimdışı) kirlenme anından sonra
+					# kalan saatler de kirli geçmiştir — istila birikimine say.
+					r["dirty_hours"] = float(r.get("dirty_hours", 0.0)) + (game_hours - earn_h)
 					_rooms_changed_in_sim = true
+
+
+## Kirli oda eşik saatten uzun kirli kaldıysa istilaya dönmüştür:
+## temizlik artık bedava değildir (eco.infest.clean_cost).
+func room_infested(r: Dictionary) -> bool:
+	return bool(r.dirty) and float(r.get("dirty_hours", 0.0)) >= float(eco.infest.after_hours)
+
+
+func clean_cost(index: int) -> int:
+	if index < 0 or index >= rooms.size():
+		return 0
+	return int(eco.infest.clean_cost) if room_infested(rooms[index]) else 0
 
 
 func clean_room(index: int) -> bool:
@@ -460,13 +490,61 @@ func clean_room(index: int) -> bool:
 	if not r.dirty:
 		return false
 	simulate_to(now())
+	var cost := clean_cost(index)
+	if coins < cost:
+		return false
+	coins -= cost
 	r.dirty = false
+	r["dirty_hours"] = 0.0
 	r.clean_left = float(room_def(r.type).get("stay_hours", 0))
 	stat_cleans += 1
 	add_xp(2)
 	_check_progress()
 	state_changed.emit()
 	return true
+
+
+## Uyuyan misafiri dürtme: günlük tavanlı, şansa bağlı "gizli müfettiş"
+## bonusu. rng_override testler için deterministik zar (0..1 arası);
+## negatif bırakılırsa gerçek rastgele kullanılır.
+func pokes_left() -> int:
+	if poke_day != daily_day_index():
+		return int(eco.poke.daily_cap)
+	return maxi(0, int(eco.poke.daily_cap) - poke_count)
+
+
+func poke_guest(rng_override: float = -1.0) -> int:
+	if pokes_left() <= 0:
+		return 0
+	if poke_day != daily_day_index():
+		poke_day = daily_day_index()
+		poke_count = 0
+	poke_count += 1
+	var roll := rng_override if rng_override >= 0.0 else randf()
+	if roll >= float(eco.poke.chance):
+		state_changed.emit()
+		return 0
+	var bonus := int(eco.poke.base) + int(eco.poke.per_star) * star_rating()
+	coins += bonus
+	add_xp(1)
+	_check_progress()
+	state_changed.emit()
+	return bonus
+
+
+## Kaçan misafiri yakalama: vardiya sırasında sokakta yürüyüp giden misafire
+## dokununca saatlik gelirin bir kesri kadar bonus verir (Hotel City'deki
+## "müşteriyi resepsiyona sürükleme"). Hızı UI'daki doğuş aralığı sınırlar.
+func catch_guest() -> int:
+	if not shift_active():
+		return 0
+	simulate_to(now())
+	var bonus := maxi(5, int(hourly_income() * float(eco.catch.bonus_hourly_frac)))
+	coins += bonus
+	add_xp(1)
+	_check_progress()
+	state_changed.emit()
+	return bonus
 
 
 func collect() -> int:
@@ -551,6 +629,53 @@ func buy_item(room_index: int, item_id: String) -> bool:
 	else:
 		coins -= int(it.price)
 	rooms[room_index].items.append(item_id)
+	_check_progress()
+	state_changed.emit()
+	return true
+
+
+# --- Hazır dekor paketleri (Hotel City "pre-decorated rooms") -----------
+
+func bundle_def(id: String) -> Dictionary:
+	for b in eco.get("bundles", []):
+		if b.id == id:
+			return b
+	return {}
+
+
+## Paket fiyatı: eşyaların toplamı üzerinden indirim (tek tek almaktan ucuz).
+func bundle_price(b: Dictionary) -> int:
+	var total := 0.0
+	for iid in b.get("items", []):
+		total += float(item_def(iid).get("price", 0))
+	return int(round(total * (1.0 - float(b.get("discount", 0.0)))))
+
+
+## Paket kilidi: içindeki en yüksek seviyeli eşyanın kilidiyle aynı.
+func bundle_unlock_level(b: Dictionary) -> int:
+	var lv := 1
+	for iid in b.get("items", []):
+		lv = maxi(lv, int(item_def(iid).get("unlock_level", 1)))
+	return lv
+
+
+func can_buy_bundle(b: Dictionary) -> bool:
+	if b.is_empty():
+		return false
+	return level() >= bundle_unlock_level(b) \
+		and coins - bundle_price(b) >= min_shift_reserve()
+
+
+func buy_bundle(room_index: int, bundle_id: String) -> bool:
+	if room_index < 0 or room_index >= rooms.size():
+		return false
+	var b := bundle_def(bundle_id)
+	if not can_buy_bundle(b):
+		return false
+	simulate_to(now())
+	coins -= bundle_price(b)
+	for iid in b.items:
+		rooms[room_index].items.append(iid)
 	_check_progress()
 	state_changed.emit()
 	return true
@@ -757,6 +882,8 @@ func _save_dict() -> Dictionary:
 		"last_shift_hours": last_shift_hours,
 		"daily_streak": daily_streak,
 		"last_daily_claim_day": last_daily_claim_day,
+		"poke_day": poke_day,
+		"poke_count": poke_count,
 	}
 
 
@@ -803,6 +930,13 @@ func _migrate_save(data: Dictionary) -> Dictionary:
 					data["daily_streak"] = 0
 				if not data.has("last_daily_claim_day"):
 					data["last_daily_claim_day"] = -1
+			7:
+				# v8: misafir dürtme sayacı eklendi (istila için oda içi
+				# dirty_hours alanı .get varsayılanıyla geriye uyumludur).
+				if not data.has("poke_day"):
+					data["poke_day"] = -1
+				if not data.has("poke_count"):
+					data["poke_count"] = 0
 		v += 1
 		data["save_version"] = v
 	return data
@@ -864,6 +998,8 @@ func _load_from_dict(parsed) -> bool:
 	last_shift_hours = int(parsed.get("last_shift_hours", 0))
 	daily_streak = int(parsed.get("daily_streak", 0))
 	last_daily_claim_day = int(parsed.get("last_daily_claim_day", -1))
+	poke_day = int(parsed.get("poke_day", -1))
+	poke_count = int(parsed.get("poke_count", 0))
 	# Çevrimdışı kazanç tavanı (GDD §10.2 saat güvenliği)
 	var cap_real_seconds := float(eco.offline_cap_hours) * 3600.0 / time_scale
 	if now() - last_sim_unix > cap_real_seconds:
