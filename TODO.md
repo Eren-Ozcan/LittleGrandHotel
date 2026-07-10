@@ -40,17 +40,21 @@
 - [x] Yeni oda tipleri: Restoran (Sv.24) ve Çatı Bahçesi (Sv.28)
 - [x] Görev zinciri 20 göreve çıktı (q18–q20)
 
+### Uzun vade sürümü (Temmuz 2026)
+- [x] Misafir kuyruğunun kapıdan içeri "yürüme" sahnesi (konum bazlı animasyon)
+- [x] Kirli oda için parıltı yerine süpürge mini animasyonu (ardından parıltı)
+- [x] Başarımlar sistemi: 13 kalıcı hedef (`data/achievements.json`), Görevler popup'ında liste, kayıt v4
+- [x] Prestij sistemi: seviye 20'de oteli devredip kalıcı +%20 gelir çarpanı, kayıt v5
+- [x] Haftalık dekorasyon teması: sunucusuz, `Game.current_week_index()` ile deterministik (7 tema)
+- [x] Bulut kaydı yerine paylaşılabilir kayıt kodu (base64, Ayarlar'dan dışa/içe aktarma)
+- [x] Android dışa aktarma: `export_presets.cfg` + ETC2 sıkıştırma + yerel imzalı debug APK doğrulandı
+
 ## Yapılacaklar
 
-### Öncelikli
-- [ ] Android dışa aktarma + dokunmatik test (720×1280 dikey; export şablonları gerekir)
-
 ### Orta vade
-- [ ] Misafir kuyruğunun kapıdan içeri "yürüme" sahnesi (konum bazlı animasyon)
-- [ ] Kirli oda için parıltı yerine süpürge/kova mini animasyonu
-- [ ] Başarımlar (achievement) sistemi
+- [ ] Android'de gerçek cihaz/emülatörde dokunmatik test (şu ana kadar yalnızca headless export doğrulandı)
+- [ ] İkinci bina (prestij sonrası farklı bir bina teması) — şu an tek bina + çarpan modeliyle sınırlı
 
 ### Uzun vade
-- [ ] İkinci bina / prestij sistemi
-- [ ] Bulut kaydı / platform servisleri
-- [ ] Canlı etkinlikler (haftalık dekorasyon temaları)
+- [ ] Gerçek bulut kaydı / platform servisleri (Play Games, Game Center) — şu an cihazlar arası taşıma kod ile yapılıyor
+- [ ] Haftalık temaya görsel varyasyon (yalnızca renk değil, dekor/asset değişimi)
