@@ -23,6 +23,7 @@ const PALETTE := {
 	"locked": Color("41372c"),
 	"frame": Color("2f2418"),
 	"asphalt": Color("55504a"),
+	"bar_dark": Color("33261a"),
 }
 
 const WALLPAPERS := {
@@ -46,6 +47,7 @@ var star_icons: Array = []
 var level_label: Label
 var xp_bar: ProgressBar
 var shift_label: Label
+var shift_bar_label: Label
 var collect_button: Button
 var hotel_box: VBoxContainer
 var quest_hint: Label
@@ -213,28 +215,42 @@ func _build_ui() -> void:
 	hotel_box.add_theme_constant_override("separation", 0)
 	scroll.add_child(hotel_box)
 
-	# --- Alt bar
+	# --- Alt bar: koyu şerit üzerinde ikonlu kategoriler (Hotel City tarzı)
+	var bar_panel := PanelContainer.new()
+	var bar_sb := StyleBoxFlat.new()
+	bar_sb.bg_color = PALETTE.bar_dark
+	bar_sb.set_corner_radius_all(12)
+	bar_sb.set_content_margin_all(6)
+	bar_sb.border_color = PALETTE.gold
+	bar_sb.set_border_width_all(2)
+	bar_panel.add_theme_stylebox_override("panel", bar_sb)
+	root.add_child(bar_panel)
 	var bottom := HBoxContainer.new()
-	bottom.add_theme_constant_override("separation", 8)
-	root.add_child(bottom)
+	bottom.add_theme_constant_override("separation", 6)
+	bar_panel.add_child(bottom)
+
+	var shift_b := _bar_button("res://assets/ui/icon_clock.svg", "Vardiya")
+	shift_b.pressed.connect(func(): _open_popup("Vardiya", _build_shift_popup))
+	bottom.add_child(shift_b)
+	shift_bar_label = shift_b.get_meta("label")
+
 	for def in [
-		["Vardiya", _build_shift_popup],
-		["Mağaza", _build_shop_popup],
-		["Görevler", _build_quests_popup],
+		["res://assets/ui/icon_shop.svg", "Mağaza", _build_shop_popup],
+		["res://assets/ui/icon_quest.svg", "Görevler", _build_quests_popup],
 	]:
-		var b := _button(def[0], 17, PALETTE.wood, PALETTE.cream_text)
-		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		b.custom_minimum_size = Vector2(0, 54)
-		var builder: Callable = def[1]
-		var title: String = def[0]
+		var b := _bar_button(def[0], def[1])
+		var builder: Callable = def[2]
+		var title: String = def[1]
 		b.pressed.connect(func(): _open_popup(title, builder))
 		bottom.add_child(b)
+
 	speed_index = maxi(0, SPEEDS.find(Game.time_scale))
-	var speed_b := _button("×%d" % int(SPEEDS[speed_index]), 17, PALETTE.wood_dark, PALETTE.cream_text)
-	speed_b.custom_minimum_size = Vector2(68, 54)
+	var speed_b := _bar_button("", "×%d" % int(SPEEDS[speed_index]))
+	speed_b.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	speed_b.custom_minimum_size = Vector2(64, 66)
 	speed_b.pressed.connect(func():
 		_cycle_speed()
-		speed_b.text = "×%d" % int(SPEEDS[speed_index]))
+		speed_b.get_meta("label").text = "×%d" % int(SPEEDS[speed_index]))
 	bottom.add_child(speed_b)
 
 	# --- Popup katmanı
@@ -323,6 +339,41 @@ func _icon(path: String, px: int) -> TextureRect:
 	return t
 
 
+## Alt bar butonu: ikon üstte, etiket altta. Etikete b.get_meta("label") ile
+## erişilir (vardiya geri sayımı gibi canlı metinler için).
+func _bar_button(icon_path: String, text: String) -> Button:
+	var b := Button.new()
+	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	b.custom_minimum_size = Vector2(0, 66)
+	for state in ["normal", "hover", "pressed", "disabled"]:
+		var sb := StyleBoxFlat.new()
+		sb.bg_color = PALETTE.bar_dark
+		if state == "hover":
+			sb.bg_color = PALETTE.bar_dark.lightened(0.08)
+		elif state == "pressed":
+			sb.bg_color = PALETTE.bar_dark.darkened(0.2)
+		sb.set_corner_radius_all(9)
+		sb.set_content_margin_all(2)
+		b.add_theme_stylebox_override(state, sb)
+	var v := VBoxContainer.new()
+	v.set_anchors_preset(Control.PRESET_FULL_RECT)
+	v.alignment = BoxContainer.ALIGNMENT_CENTER
+	v.add_theme_constant_override("separation", 2)
+	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	b.add_child(v)
+	if icon_path != "":
+		var wrap := CenterContainer.new()
+		wrap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		wrap.add_child(_icon(icon_path, 30))
+		v.add_child(wrap)
+	var l := _label(text, 18 if icon_path == "" else 12, PALETTE.cream_text)
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	v.add_child(l)
+	b.set_meta("label", l)
+	return b
+
+
 func _spacer_x(px: int) -> Control:
 	var c := Control.new()
 	c.custom_minimum_size = Vector2(px, 0)
@@ -378,8 +429,12 @@ func _update_live_labels() -> void:
 	if Game.shift_active():
 		shift_label.text = "Vardiya bitimine %s · %.0f coin/saat" % [
 			_fmt_hms(Game.shift_remaining_game_hours()), Game.hourly_income()]
+		shift_bar_label.text = _fmt_hms(Game.shift_remaining_game_hours())
+		shift_bar_label.add_theme_color_override("font_color", PALETTE.gold_soft)
 	else:
 		shift_label.text = "Vardiya kapalı — otel gelir üretmiyor."
+		shift_bar_label.text = "Vardiya"
+		shift_bar_label.add_theme_color_override("font_color", PALETTE.cream_text)
 	collect_button.text = "TOPLA — %s" % _fmt(int(Game.pending_income))
 	collect_button.disabled = int(Game.pending_income) <= 0
 
