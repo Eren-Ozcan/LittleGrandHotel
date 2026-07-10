@@ -2,6 +2,7 @@
 
 Mobil otel yönetimi ve dekorasyon oyunu (Godot 4.7, GDScript).
 Tasarım dokümanı: GDD v1.1 — https://claude.ai/code/artifact/e65d0b6a-c8bd-4f01-ac1e-ea46c4a945cb
+Yapılanlar ve yol haritası: [TODO.md](TODO.md)
 
 ## Durum: MVP v2 — görsel sürüm
 
