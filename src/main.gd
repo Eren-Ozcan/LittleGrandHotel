@@ -75,6 +75,7 @@ func _ready() -> void:
 	_init_sfx()
 	Game.state_changed.connect(_refresh)
 	Game.quest_completed.connect(_on_quest_completed)
+	Game.achievement_unlocked.connect(_on_achievement_unlocked)
 	Game.leveled_up.connect(func(lv):
 		_play("level")
 		_show_toast("Seviye atladın! Seviye %d (+%d elmas)" % [lv, int(Game.eco.levelup_gems)]))
@@ -1109,6 +1110,24 @@ func _build_quests_popup(c: VBoxContainer) -> void:
 		c.add_child(_label(reward, 14, PALETTE.green_deep))
 	c.add_child(_label("Tamamlanan görev: %d / %d" % [Game.quest_index, Game.quests.size()], 13, PALETTE.muted))
 
+	c.add_child(_spacer_y(10))
+	c.add_child(_label("Başarımlar — %d / %d açıldı" % [Game.unlocked_achievements.size(), Game.achievements.size()], 16, PALETTE.wood_dark))
+	for a: Dictionary in Game.achievements:
+		var unlocked: bool = Game.unlocked_achievements.has(String(a.id))
+		var p: Array = Game.quest_progress(a)
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 8)
+		c.add_child(row)
+		var mark := _label("✓" if unlocked else "•", 15, PALETTE.green_deep if unlocked else PALETTE.muted)
+		mark.custom_minimum_size = Vector2(18, 0)
+		row.add_child(mark)
+		var col := VBoxContainer.new()
+		col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(col)
+		col.add_child(_label(String(a.name), 14, PALETTE.text if unlocked else PALETTE.muted))
+		if not unlocked:
+			col.add_child(_label("%s — %d / %d" % [String(a.desc), mini(p[0], p[1]), p[1]], 12, PALETTE.muted))
+
 
 # --- Geri bildirim -----------------------------------------------------
 
@@ -1117,6 +1136,14 @@ func _on_quest_completed(q: Dictionary) -> void:
 	var msg := "Görev tamam: %s — +%s coin" % [q.name, _fmt(int(q.get("reward_coins", 0)))]
 	if int(q.get("reward_gems", 0)) > 0:
 		msg += ", +%d elmas" % int(q.reward_gems)
+	_show_toast(msg)
+
+
+func _on_achievement_unlocked(a: Dictionary) -> void:
+	_play("quest")
+	var msg := "Başarım açıldı: %s — +%s coin" % [a.name, _fmt(int(a.get("reward_coins", 0)))]
+	if int(a.get("reward_gems", 0)) > 0:
+		msg += ", +%d elmas" % int(a.reward_gems)
 	_show_toast(msg)
 
 

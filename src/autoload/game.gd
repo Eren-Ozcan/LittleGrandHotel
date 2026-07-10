@@ -5,18 +5,21 @@ extends Node
 
 signal state_changed
 signal quest_completed(quest: Dictionary)
+signal achievement_unlocked(achievement: Dictionary)
 signal leveled_up(new_level: int)
 
 const SAVE_PATH := "user://save.json"
-const SAVE_VERSION := 3
+const SAVE_VERSION := 4
 ## Göçle yükseltilebilen en eski kayıt sürümü
 const MIN_SAVE_VERSION := 2
 const ECO_PATH := "res://data/economy.json"
 const QUESTS_PATH := "res://data/quests.json"
+const ACHIEVEMENTS_PATH := "res://data/achievements.json"
 const AUTOSAVE_INTERVAL := 30.0
 
 var eco: Dictionary = {}
 var quests: Array = []
+var achievements: Array = []
 
 var coins: int = 0
 var gems: int = 0
@@ -37,6 +40,9 @@ var stat_cleans: int = 0
 ## Vardiya geçmişi (İstatistik ekranı): {"hours", "cost", "at"} — son 20 kayıt
 var shift_history: Array = []
 
+## Açılmış başarım id'leri (kalıcı, tek seferlik ödüller).
+var unlocked_achievements: Array = []
+
 ## Uygulama açılışında sen-yokken kazanılan gelir (UI popup için; UI okur ve sıfırlar).
 var offline_earned: int = 0
 
@@ -54,6 +60,7 @@ var _rooms_changed_in_sim := false
 func _ready() -> void:
 	eco = load_json(ECO_PATH)
 	quests = load_json(QUESTS_PATH).get("quests", [])
+	achievements = load_json(ACHIEVEMENTS_PATH).get("achievements", [])
 	if not load_game():
 		new_game()
 
@@ -98,6 +105,7 @@ func new_game() -> void:
 	stat_collected_total = 0
 	stat_cleans = 0
 	shift_history = []
+	unlocked_achievements = []
 	offline_earned = 0
 	state_changed.emit()
 
@@ -136,7 +144,7 @@ func buy_floor() -> bool:
 	simulate_to(now())
 	coins -= floor_price()
 	floors += 1
-	_check_quests()
+	_check_progress()
 	state_changed.emit()
 	return true
 
@@ -270,7 +278,7 @@ func start_shift(hours: int) -> bool:
 	shift_history.append({"hours": hours, "cost": cost, "at": now()})
 	if shift_history.size() > 20:
 		shift_history.pop_front()
-	_check_quests()
+	_check_progress()
 	state_changed.emit()
 	return true
 
@@ -293,7 +301,7 @@ func skip_shift() -> bool:
 	gems -= cost
 	_advance(shift_remaining_game_hours())
 	shift_end_unix = now()
-	_check_quests()
+	_check_progress()
 	state_changed.emit()
 	return true
 
@@ -352,7 +360,7 @@ func clean_room(index: int) -> bool:
 	r.clean_left = float(room_def(r.type).get("stay_hours", 0))
 	stat_cleans += 1
 	add_xp(2)
-	_check_quests()
+	_check_progress()
 	state_changed.emit()
 	return true
 
@@ -367,7 +375,7 @@ func collect() -> int:
 	stat_collects += 1
 	stat_collected_total += amount
 	add_xp(maxi(1, int(amount / 10.0)))
-	_check_quests()
+	_check_progress()
 	state_changed.emit()
 	return amount
 
@@ -389,7 +397,7 @@ func buy_room(type: String) -> bool:
 	simulate_to(now())
 	coins -= int(room_def(type).price)
 	rooms.append(make_room(type))
-	_check_quests()
+	_check_progress()
 	state_changed.emit()
 	return true
 
@@ -417,7 +425,7 @@ func buy_item(room_index: int, item_id: String) -> bool:
 	else:
 		coins -= int(it.price)
 	rooms[room_index].items.append(item_id)
-	_check_quests()
+	_check_progress()
 	state_changed.emit()
 	return true
 
@@ -521,6 +529,8 @@ func quest_progress(q: Dictionary) -> Array:
 				if room_def(r.type).category == "guest":
 					best = maxi(best, room_tier(r))
 			return [best, target]
+		"level":
+			return [level(), target]
 	return [0, target]
 
 
@@ -538,6 +548,28 @@ func _check_quests() -> void:
 		gems += int(q.get("reward_gems", 0))
 		quest_index += 1
 		quest_completed.emit(q)
+
+
+# --- Başarımlar ----------------------------------------------------------
+
+## Görevlerden farklı olarak sırasız: her başarım bağımsız kontrol edilir
+## ve hedefine ulaşınca kalıcı olarak (bir kez) ödül verir.
+func _check_achievements() -> void:
+	for a: Dictionary in achievements:
+		var id := String(a.id)
+		if unlocked_achievements.has(id):
+			continue
+		var p := quest_progress(a)
+		if p[0] >= p[1]:
+			coins += int(a.get("reward_coins", 0))
+			gems += int(a.get("reward_gems", 0))
+			unlocked_achievements.append(id)
+			achievement_unlocked.emit(a)
+
+
+func _check_progress() -> void:
+	_check_quests()
+	_check_achievements()
 
 
 ## Kaydı siler ve sıfırdan başlatır (Ayarlar → Kaydı sıfırla).
@@ -568,6 +600,7 @@ func save_game(path: String = SAVE_PATH) -> void:
 		"stat_collected_total": stat_collected_total,
 		"stat_cleans": stat_cleans,
 		"shift_history": shift_history,
+		"unlocked_achievements": unlocked_achievements,
 		"time_scale": time_scale,
 		"sound_on": sound_on,
 		"music_on": music_on,
@@ -591,6 +624,10 @@ func _migrate_save(data: Dictionary) -> Dictionary:
 					data["sound_on"] = true
 				if not data.has("music_on"):
 					data["music_on"] = true
+			3:
+				# v4: başarımlar eklendi
+				if not data.has("unlocked_achievements"):
+					data["unlocked_achievements"] = []
 		v += 1
 		data["save_version"] = v
 	return data
@@ -620,6 +657,7 @@ func load_game(path: String = SAVE_PATH) -> bool:
 	stat_collected_total = int(parsed.get("stat_collected_total", 0))
 	stat_cleans = int(parsed.get("stat_cleans", 0))
 	shift_history = parsed.get("shift_history", [])
+	unlocked_achievements = parsed.get("unlocked_achievements", [])
 	# Vardiya bitişi gerçek saniye tutulur; ölçek geri yüklenmezse
 	# hızlı modda kaydedilen vardiya normal hızda 60/3600 kat kısalır.
 	time_scale = float(parsed.get("time_scale", 1.0))
@@ -632,5 +670,6 @@ func load_game(path: String = SAVE_PATH) -> bool:
 	var pending_before := pending_income
 	simulate_to(now())
 	offline_earned = int(pending_income - pending_before)
+	_check_achievements()  # yeni eklenen başarımlar için geriye dönük kontrol
 	state_changed.emit()
 	return true

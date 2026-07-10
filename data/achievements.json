@@ -1,0 +1,17 @@
+{
+  "achievements": [
+    { "id": "a01", "name": "Toz Bezini Dene", "desc": "İlk odayı temizle.", "type": "cleans", "target": 1, "reward_coins": 100, "reward_gems": 0 },
+    { "id": "a02", "name": "Elli Temizlik", "desc": "50 oda temizle.", "type": "cleans", "target": 50, "reward_coins": 1500, "reward_gems": 5 },
+    { "id": "a03", "name": "Yüz Toplama", "desc": "100 kez kasadan gelir topla.", "type": "collects", "target": 100, "reward_coins": 2000, "reward_gems": 5 },
+    { "id": "a04", "name": "Yüz Bin Coin", "desc": "Toplamda 100.000 coin topla.", "type": "collect_total", "target": 100000, "reward_coins": 5000, "reward_gems": 10 },
+    { "id": "a05", "name": "Milyoner Otelci", "desc": "Toplamda 1.000.000 coin topla.", "type": "collect_total", "target": 1000000, "reward_coins": 20000, "reward_gems": 30 },
+    { "id": "a06", "name": "Elli Vardiya", "desc": "50 vardiya başlat.", "type": "start_shifts", "target": 50, "reward_coins": 3000, "reward_gems": 10 },
+    { "id": "a07", "name": "Yüz Vardiya", "desc": "100 vardiya başlat.", "type": "start_shifts", "target": 100, "reward_coins": 8000, "reward_gems": 20 },
+    { "id": "a08", "name": "Sekiz Oda", "desc": "8 odaya ulaş.", "type": "rooms", "target": 8, "reward_coins": 2500, "reward_gems": 0 },
+    { "id": "a09", "name": "Yirmi Oda", "desc": "20 odaya ulaş.", "type": "rooms", "target": 20, "reward_coins": 15000, "reward_gems": 25 },
+    { "id": "a10", "name": "Çatıya Kadar", "desc": "Tüm katları aç.", "type": "floors", "target": 6, "reward_coins": 10000, "reward_gems": 20 },
+    { "id": "a11", "name": "Beş Yıldızlı Efsane", "desc": "5 yıldız derecesine ulaş.", "type": "star", "target": 5, "reward_coins": 10000, "reward_gems": 20 },
+    { "id": "a12", "name": "Seviye 20", "desc": "Seviye 20'ye ulaş.", "type": "level", "target": 20, "reward_coins": 5000, "reward_gems": 15 },
+    { "id": "a13", "name": "Seviye 30", "desc": "Seviye 30'a ulaş.", "type": "level", "target": 30, "reward_coins": 15000, "reward_gems": 30 }
+  ]
+}

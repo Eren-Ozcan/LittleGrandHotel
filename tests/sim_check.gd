@@ -20,8 +20,10 @@ func _initialize() -> void:
 	var g = GameScript.new()
 	g.eco = g.load_json("res://data/economy.json")
 	g.quests = g.load_json("res://data/quests.json").get("quests", [])
+	g.achievements = g.load_json("res://data/achievements.json").get("achievements", [])
 	check(not g.eco.is_empty(), "economy.json yüklendi")
 	check(g.quests.size() >= 15, "quests.json yüklendi")
+	check(g.achievements.size() >= 10, "achievements.json yüklendi")
 	g.new_game()
 
 	# 1) Başlangıç durumu
@@ -137,6 +139,7 @@ func _initialize() -> void:
 	var g2 = GameScript.new()
 	g2.eco = g.eco
 	g2.quests = g.quests
+	g2.achievements = g.achievements
 	check(g2.load_game(save_path), "kayıt dosyası yüklendi")
 	check(g2.coins == g.coins and g2.xp == g.xp and g2.rooms.size() == g.rooms.size(), "gidiş-dönüş verisi eşleşti")
 	check(g2.quest_index == g.quest_index and g2.floors == g.floors, "görev/kat durumu korundu")
@@ -169,6 +172,7 @@ func _initialize() -> void:
 	var g3 = GameScript.new()
 	g3.eco = g.eco
 	g3.quests = g.quests
+	g3.achievements = g.achievements
 	g3.new_game()
 	check(g3.sell_room(0), "yedek oda satılabilir")
 	check(not g3.sell_room(0), "son oda satılamaz")
@@ -178,6 +182,7 @@ func _initialize() -> void:
 	var g4 = GameScript.new()
 	g4.eco = g.eco
 	g4.quests = g.quests
+	g4.achievements = g.achievements
 	var v2_path := "user://test_v2.json"
 	var old_save := {
 		"save_version": 2,
@@ -196,7 +201,8 @@ func _initialize() -> void:
 		"göç varsayılanları doğru (geçmiş boş, sesler açık)")
 	g4.save_game(v2_path)
 	var reparsed = JSON.parse_string(FileAccess.get_file_as_string(v2_path))
-	check(int(reparsed.save_version) == 3, "göçen kayıt v3 olarak yazıldı")
+	check(int(reparsed.save_version) == 4, "göçen kayıt v4 olarak yazıldı")
+	check(reparsed.unlocked_achievements is Array, "göç unlocked_achievements alanını ekledi")
 	old_save["save_version"] = 99
 	fw = FileAccess.open(v2_path, FileAccess.WRITE)
 	fw.store_string(JSON.stringify(old_save))
@@ -209,6 +215,7 @@ func _initialize() -> void:
 	var g5 = GameScript.new()
 	g5.eco = g.eco
 	g5.quests = g.quests
+	g5.achievements = g.achievements
 	g5.new_game()
 	g5.coins = 1500000
 	g5.add_xp(g5.xp_for_level(28) - g5.xp)
@@ -240,6 +247,23 @@ func _initialize() -> void:
 	check(lg_margin > 0.01 and lg_margin < 0.35, "geç oyun vardiya marjı makul bantta")
 	check(g5.floor_price() >= 350000 or g5.floors == int(g5.eco.building.max_floors), "kat fiyat eğrisi tavana ulaştı")
 	g5.free()
+
+	# 15) Başarımlar: hedefe ulaşınca kalıcı, tek seferlik ödül veriyor
+	check(g.unlocked_achievements.has("a01"), "ilk temizlik başarımı otomatik açıldı")
+	var g6 = GameScript.new()
+	g6.eco = g.eco
+	g6.quests = g.quests
+	g6.achievements = g.achievements
+	g6.new_game()
+	g6.stat_cleans = 50
+	var coins_before6: int = g6.coins
+	g6._check_achievements()
+	check(g6.unlocked_achievements.has("a02"), "50 temizlik başarımı açıldı")
+	check(g6.coins > coins_before6, "başarım ödülü coin'e eklendi")
+	var coins_after_first: int = g6.coins
+	g6._check_achievements()
+	check(g6.coins == coins_after_first, "başarım tekrar ödül vermiyor (tek seferlik)")
+	g6.free()
 
 	g.free()
 	g2.free()
