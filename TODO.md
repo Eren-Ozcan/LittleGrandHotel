@@ -49,6 +49,13 @@
 - [x] Bulut kaydı yerine paylaşılabilir kayıt kodu (base64, Ayarlar'dan dışa/içe aktarma)
 - [x] Android dışa aktarma: `export_presets.cfg` + ETC2 sıkıştırma + yerel imzalı debug APK doğrulandı
 
+### Level design incelemesi + modern tüketim alışkanlıkları (Temmuz 2026)
+- [x] **Kritik ekonomi çıkmazı düzeltildi**: açgözlü oda/eşya alımı oyuncuyu en ucuz vardiyayı bile karşılayamayan, kurtulması imkansız bir duruma düşürebiliyordu (headless simülasyonla bulundu). `min_shift_reserve()` artık her alımdan sonra en az 1 saatlik vardiya bedelini garanti ediyor.
+- [x] **Otomatik vardiya yenileme**: vardiya bitince otel tamamen duruyordu, oyuncu günler sonra döndüğünde çoğu süre boşa gitmiş oluyordu — modern idle oyun beklentisiyle (uzaktayken de üretim sürer) çelişiyordu. Artık coin yeterse otomatik yenileniyor (kapatılabilir), "Hoş geldin" popup'ı şeffaflıkla bildiriyor.
+- [x] **Vardiya süre seçiminde tuzak seçenek düzeltildi**: kısa vardiya saat başına daha ucuzdu; otomatik yenilemeyle bu, oyuncuyu tek bir "doğru" seçime kilitleyen anlamsız bir tercihe dönüşüyordu. Saatlik oran artık tüm sürelerde eşit.
+- [x] **Günlük giriş serisi ödülü** eklendi: modern F2P'nin en standart tutundurma mekaniği eksikti. 7 günlük artan ödül döngüsü, sunucusuz/deterministik.
+- [ ] **Gözlem (henüz aksiyon alınmadı)**: açgözlü/deneyimsiz bir oyuncu profili simülasyonunda yıldız derecesi oyun boyunca hiç yükselmeyebiliyor (dekorasyon sistemi oda/kat büyütmenin gölgesinde kalabiliyor). Mevcut önlemler (q04 görevi, oda dokununca tek tıkla dekorasyon popup'ı, üstte yıldız ikonları) yeterli olabilir ama daha güçlü bir görsel/öğretici dürtme (ör. "dekore et" rozeti, ilk oda için otomatik popup önerisi) değerlendirilebilir.
+
 ## Yapılacaklar
 
 ### Orta vade
