@@ -391,13 +391,22 @@ func collect() -> int:
 
 # --- Satın alma --------------------------------------------------------
 
+## Oda sayısı arttıkça personel maliyeti de artar (staff_per_room). Bu, en
+## ucuz (1 saatlik) vardiyayı her zaman karşılayabilmek için tutulması
+## gereken coin miktarıdır — harcama bunun altına düşürmemelidir, yoksa
+## oyuncu hiç vardiya başlatamayan bir çıkmaza girebilir.
+func min_shift_reserve(extra_rooms: int = 0) -> int:
+	var staff := maxi(1, ceili((rooms.size() + extra_rooms) * float(eco.staff_per_room)))
+	return staff * int(eco.shift_rates["1"])
+
+
 func can_buy_room(type: String) -> bool:
 	var d := room_def(type)
 	if d.is_empty():
 		return false
 	return rooms.size() < max_slots() \
 		and level() >= int(d.unlock_level) \
-		and coins >= int(d.price)
+		and coins - int(d.price) >= min_shift_reserve(1)
 
 
 func buy_room(type: String) -> bool:
@@ -419,7 +428,7 @@ func item_is_premium(it: Dictionary) -> bool:
 func can_afford_item(it: Dictionary) -> bool:
 	if item_is_premium(it):
 		return gems >= int(it.gem_price)
-	return coins >= int(it.price)
+	return coins - int(it.price) >= min_shift_reserve()
 
 
 func buy_item(room_index: int, item_id: String) -> bool:

@@ -314,6 +314,34 @@ func _initialize() -> void:
 	check(not g8.import_save_code(""), "boş kod reddedilir")
 	g8.free()
 
+	# 19) Ekonomi güvenlik ağı: açgözlü harcama oyuncuyu vardiya başlatamaz
+	# duruma düşürmemeli (level design incelemesinde bulunan gerçek bir çıkmaz).
+	var g9 = GameScript.new()
+	g9.eco = g.eco
+	g9.quests = g.quests
+	g9.achievements = g.achievements
+	g9.new_game()
+	g9.coins = 200000
+	g9.add_xp(g9.xp_for_level(20) - g9.xp)  # çoğu oda tipini aç
+	var g9_room_types: Array = g9.eco.room_types.keys()
+	var stuck_check := true
+	for _round_i in 60:
+		var any_bought := false
+		if g9.can_buy_floor():
+			g9.buy_floor()
+		for t in g9_room_types:
+			if g9.can_buy_room(t):
+				g9.buy_room(t)
+				any_bought = true
+		if g9.coins < g9.min_shift_reserve():
+			stuck_check = false
+		if not any_bought:
+			break
+	check(stuck_check, "art arda oda/kat alımı asla rezervin altına düşmedi")
+	check(g9.coins >= g9.min_shift_reserve(), "alım turu sonunda hâlâ rezerv kadar coin var")
+	check(g9.start_shift(1), "açgözlü alım turu sonrasında 1 saatlik vardiya hâlâ başlatılabiliyor")
+	g9.free()
+
 	g.free()
 	g2.free()
 	print("TÜM TESTLER GEÇTİ" if failures == 0 else "%d test BAŞARISIZ" % failures)
