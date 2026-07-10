@@ -92,9 +92,11 @@ func _ready() -> void:
 		_play("level")
 		_show_toast("Seviye atladın! Seviye %d (+%d elmas)" % [lv, int(Game.eco.levelup_gems)]))
 	_refresh()
-	if Game.offline_earned > 0:
-		_show_offline_popup(Game.offline_earned)
+	if Game.offline_earned > 0 or Game.auto_renew_count > 0:
+		_show_offline_popup(Game.offline_earned, Game.auto_renew_count, Game.auto_renew_spent)
 		Game.offline_earned = 0
+		Game.auto_renew_count = 0
+		Game.auto_renew_spent = 0
 
 
 func _process(delta: float) -> void:
@@ -1102,6 +1104,16 @@ func _build_settings_popup(c: VBoxContainer) -> void:
 		_rebuild_popup())
 	c.add_child(m_b)
 
+	var ar_b := _button("Vardiya otomatik yenilensin: %s" % ("Açık" if Game.auto_renew_shift else "Kapalı"), 15,
+		PALETTE.wood if Game.auto_renew_shift else PALETTE.wood_dark, PALETTE.cream_text)
+	ar_b.pressed.connect(func():
+		Game.auto_renew_shift = not Game.auto_renew_shift
+		Game.save_game()
+		_play("tap")
+		_rebuild_popup())
+	c.add_child(ar_b)
+	c.add_child(_label("Açıkken bir vardiya bitince, coin yeterse aynı süreyle otomatik yenilenir — otel sen yokken de üretime devam eder.", 12, PALETTE.muted))
+
 	c.add_child(_spacer_y(10))
 	c.add_child(_label("Prestij — çarpan ×%.2f (devir %d)" % [Game.prestige_mult(), Game.prestige_level], 15, PALETTE.wood_dark))
 	if Game.can_prestige():
@@ -1227,10 +1239,17 @@ func _show_toast(msg: String) -> void:
 	_toast_timer = 3.0
 
 
-func _show_offline_popup(amount: int) -> void:
+func _show_offline_popup(amount: int, renew_count: int = 0, renew_spent: int = 0) -> void:
 	var dlg := AcceptDialog.new()
 	dlg.title = "Hoş geldin!"
-	dlg.dialog_text = "Sen yokken otelin çalıştı ve %s coin birikti.\nKasadan toplamayı unutma!" % _fmt(amount)
+	var text := ""
+	if amount > 0:
+		text += "Sen yokken otelin çalıştı ve %s coin birikti.\nKasadan toplamayı unutma!" % _fmt(amount)
+	if renew_count > 0:
+		if not text.is_empty():
+			text += "\n\n"
+		text += "Vardiyan bitince otel boş durmadı: %d kez otomatik yenilendi (personel maliyeti %s coin)." % [renew_count, _fmt(renew_spent)]
+	dlg.dialog_text = text
 	dlg.ok_button_text = "Harika"
 	add_child(dlg)
 	dlg.popup_centered()

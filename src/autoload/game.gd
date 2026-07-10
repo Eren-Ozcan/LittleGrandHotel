@@ -9,7 +9,7 @@ signal achievement_unlocked(achievement: Dictionary)
 signal leveled_up(new_level: int)
 
 const SAVE_PATH := "user://save.json"
-const SAVE_VERSION := 5
+const SAVE_VERSION := 6
 ## Göçle yükseltilebilen en eski kayıt sürümü
 const MIN_SAVE_VERSION := 2
 const ECO_PATH := "res://data/economy.json"
@@ -55,6 +55,20 @@ var time_scale: float = 1.0
 ## Ayarlar (kayda dahil)
 var sound_on: bool = true
 var music_on: bool = true
+
+## Otomatik vardiya yenileme: bir vardiya bitince ve coin yetiyorsa, oyuncu
+## geri dönmeden aynı süreyle otomatik olarak yeni bir vardiya başlar. Modern
+## boşta-bekleme (idle) oyunlarında beklenen "uzaktayken de üretim sürer"
+## hissini korur — aksi halde vardiya bitince otel tamamen durur ve oyuncu
+## günler sonra geri döndüğünde büyük bir kısmı boşa geçmiş olur. İlk
+## vardiyayı elle başlatmak hâlâ gerekir (last_shift_hours == 0 iken devre dışı).
+var auto_renew_shift: bool = true
+var last_shift_hours: int = 0
+
+## Bu oturumda (son state_changed'den bu yana) otomatik yenilenen vardiya
+## sayısı ve harcanan coin — "Hoş geldin" popup'ında şeffaflık için.
+var auto_renew_count: int = 0
+var auto_renew_spent: int = 0
 
 var _autosave_acc := 0.0
 var _rooms_changed_in_sim := false
@@ -115,6 +129,9 @@ func new_game() -> void:
 	stat_cleans = 0
 	shift_history = []
 	unlocked_achievements = []
+	last_shift_hours = 0
+	auto_renew_count = 0
+	auto_renew_spent = 0
 	offline_earned = 0
 	state_changed.emit()
 
@@ -283,6 +300,7 @@ func start_shift(hours: int) -> bool:
 	simulate_to(now())
 	coins -= cost
 	shift_end_unix = now() + hours * 3600.0 / time_scale
+	last_shift_hours = hours
 	stat_shifts += 1
 	shift_history.append({"hours": hours, "cost": cost, "at": now()})
 	if shift_history.size() > 20:
@@ -319,14 +337,48 @@ func simulate_to(to_unix: float) -> void:
 	if last_sim_unix <= 0.0:
 		last_sim_unix = to_unix
 		return
-	var accrue_end := minf(to_unix, shift_end_unix)
-	if accrue_end > last_sim_unix:
-		var game_hours := (accrue_end - last_sim_unix) * time_scale / 3600.0
-		_advance(game_hours)
+	# Vardiya biterken hâlâ ilerlenecek zaman kaldıysa (uzun süre uzakta
+	# kalınmış olabilir) ve otomatik yenileme açıksa, art arda yeni vardiyalar
+	# başlatarak boşta geçen süreyi engelle. guard, coin biterse veya yenileme
+	# kapalıysa sonsuz döngüye girmeden çıkışı garanti eder.
+	var guard := 0
+	while true:
+		var accrue_end := minf(to_unix, shift_end_unix)
+		if accrue_end > last_sim_unix:
+			var game_hours := (accrue_end - last_sim_unix) * time_scale / 3600.0
+			_advance(game_hours)
+			last_sim_unix = accrue_end
+		if last_sim_unix >= to_unix or shift_end_unix > to_unix:
+			break
+		guard += 1
+		if guard > 2000 or not _try_auto_renew():
+			break
 	last_sim_unix = maxf(last_sim_unix, to_unix)
 	if _rooms_changed_in_sim:
 		_rooms_changed_in_sim = false
 		state_changed.emit()
+
+
+## Bir vardiya süresi dolduğunda (ve hâlâ ilerlenecek zaman varsa) otomatik
+## olarak aynı süreyle bir yenisini başlatmayı dener. Yalnızca en az bir kez
+## elle vardiya başlatılmışsa (last_shift_hours > 0) devreye girer.
+func _try_auto_renew() -> bool:
+	if not auto_renew_shift or last_shift_hours <= 0:
+		return false
+	var cost := shift_cost(last_shift_hours)
+	if coins < cost:
+		return false
+	coins -= cost
+	var started_at := shift_end_unix
+	shift_end_unix += last_shift_hours * 3600.0 / time_scale
+	stat_shifts += 1
+	auto_renew_count += 1
+	auto_renew_spent += cost
+	shift_history.append({"hours": last_shift_hours, "cost": cost, "at": started_at, "auto": true})
+	if shift_history.size() > 20:
+		shift_history.pop_front()
+	_check_progress()
+	return true
 
 
 ## Vardiya penceresi içindeki game_hours kadar ilerlet.
@@ -645,6 +697,8 @@ func _save_dict() -> Dictionary:
 		"time_scale": time_scale,
 		"sound_on": sound_on,
 		"music_on": music_on,
+		"auto_renew_shift": auto_renew_shift,
+		"last_shift_hours": last_shift_hours,
 	}
 
 
@@ -677,6 +731,14 @@ func _migrate_save(data: Dictionary) -> Dictionary:
 				# v5: prestij eklendi
 				if not data.has("prestige_level"):
 					data["prestige_level"] = 0
+			5:
+				# v6: otomatik vardiya yenileme eklendi. last_shift_hours
+				# bilerek 0 bırakılır — mevcut oyuncular güncellemeden sonra
+				# vardiyayı bir kez daha elle başlatınca zincir devreye girer.
+				if not data.has("auto_renew_shift"):
+					data["auto_renew_shift"] = true
+				if not data.has("last_shift_hours"):
+					data["last_shift_hours"] = 0
 		v += 1
 		data["save_version"] = v
 	return data
@@ -734,11 +796,15 @@ func _load_from_dict(parsed) -> bool:
 	time_scale = float(parsed.get("time_scale", 1.0))
 	sound_on = bool(parsed.get("sound_on", true))
 	music_on = bool(parsed.get("music_on", true))
+	auto_renew_shift = bool(parsed.get("auto_renew_shift", true))
+	last_shift_hours = int(parsed.get("last_shift_hours", 0))
 	# Çevrimdışı kazanç tavanı (GDD §10.2 saat güvenliği)
 	var cap_real_seconds := float(eco.offline_cap_hours) * 3600.0 / time_scale
 	if now() - last_sim_unix > cap_real_seconds:
 		last_sim_unix = now() - cap_real_seconds
 	var pending_before := pending_income
+	auto_renew_count = 0
+	auto_renew_spent = 0
 	simulate_to(now())
 	offline_earned = int(pending_income - pending_before)
 	_check_achievements()  # yeni eklenen başarımlar için geriye dönük kontrol

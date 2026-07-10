@@ -108,6 +108,12 @@ func _initialize() -> void:
 	check(g.gems == gems_b - skip_cost, "elmas bedeli düşüldü")
 	check(not g.shift_active(), "vardiya kapandı")
 	check(g.pending_income > pend_b, "kalan saatlerin geliri işlendi")
+	# Vardiya tam da şimdi bittiği için sıradaki simulate_to() çağrıları
+	# (ör. buy_item içindeki) otomatik yenilemeyi anlık olarak tetikleyebilir
+	# ve sonraki denetimlerin zamanlamaya bağlı hale gelmesine yol açabilir.
+	# Otomatik yenileme kendi bölümünde (20) ayrıca test ediliyor; burada
+	# kapatarak geri kalan denetimleri ondan izole ediyoruz.
+	g.auto_renew_shift = false
 
 	# 8c) Premium eşya elmasla alınır
 	var it_prem: Dictionary = g.item_def("statue_gold")
@@ -201,7 +207,9 @@ func _initialize() -> void:
 		"göç varsayılanları doğru (geçmiş boş, sesler açık)")
 	g4.save_game(v2_path)
 	var reparsed = JSON.parse_string(FileAccess.get_file_as_string(v2_path))
-	check(int(reparsed.save_version) == 5, "göçen kayıt v5 olarak yazıldı")
+	check(int(reparsed.save_version) == 6, "göçen kayıt v6 olarak yazıldı")
+	check(bool(reparsed.auto_renew_shift) == true and int(reparsed.last_shift_hours) == 0,
+		"göç otomatik yenileme alanlarını varsayılanla ekledi")
 	check(reparsed.unlocked_achievements is Array, "göç unlocked_achievements alanını ekledi")
 	check(int(reparsed.prestige_level) == 0, "göç prestige_level alanını 0 ile ekledi")
 	old_save["save_version"] = 99
@@ -341,6 +349,63 @@ func _initialize() -> void:
 	check(g9.coins >= g9.min_shift_reserve(), "alım turu sonunda hâlâ rezerv kadar coin var")
 	check(g9.start_shift(1), "açgözlü alım turu sonrasında 1 saatlik vardiya hâlâ başlatılabiliyor")
 	g9.free()
+
+	# 20) Otomatik vardiya yenileme: vardiya "gerçekten" bitmiş (shift_end_unix
+	# şimdiden önce) ve uzun süre simüle edilmemiş gibi kurulur — tıpkı
+	# uygulamanın kapalıyken saatlerce beklediği gerçek senaryo gibi.
+	var g10 = GameScript.new()
+	g10.eco = g.eco
+	g10.quests = g.quests
+	g10.achievements = g.achievements
+	g10.new_game()
+	g10.time_scale = 3600.0
+	g10.coins = 100000
+	check(g10.start_shift(1), "1 saatlik vardiya başladı (yenileme testi)")
+	var shifts_before: int = g10.stat_shifts
+	var real_now10: float = g10.now()
+	g10.last_sim_unix = real_now10 - 6.5
+	g10.shift_end_unix = real_now10 - 5.5
+	g10.simulate_to(g10.now())
+	check(g10.stat_shifts >= shifts_before + 5, "vardiya birden fazla kez otomatik yenilendi (şu an %d)" % g10.stat_shifts)
+	check(g10.shift_active(), "yenileme sonrası vardiya hâlâ aktif")
+	check(g10.auto_renew_count >= 5, "yenileme sayacı doğru izleniyor (şu an %d)" % g10.auto_renew_count)
+	check(g10.auto_renew_spent == g10.auto_renew_count * g10.shift_cost(1), "yenileme harcaması doğru toplanıyor")
+	check(g10.pending_income > 0.0, "kesintisiz üretimden gelir birikti")
+	g10.free()
+
+	var g11 = GameScript.new()
+	g11.eco = g.eco
+	g11.quests = g.quests
+	g11.achievements = g.achievements
+	g11.new_game()
+	g11.time_scale = 3600.0
+	g11.coins = 100000
+	g11.auto_renew_shift = false
+	check(g11.start_shift(1), "1 saatlik vardiya başladı (kapalı yenileme testi)")
+	var real_now11: float = g11.now()
+	g11.last_sim_unix = real_now11 - 6.5
+	g11.shift_end_unix = real_now11 - 5.5
+	g11.simulate_to(g11.now())
+	check(not g11.shift_active(), "yenileme kapalıyken vardiya bitik kalır")
+	check(g11.auto_renew_count == 0, "yenileme kapalıyken hiç tetiklenmez")
+	g11.free()
+
+	var g12 = GameScript.new()
+	g12.eco = g.eco
+	g12.quests = g.quests
+	g12.achievements = g.achievements
+	g12.new_game()
+	g12.time_scale = 3600.0
+	check(g12.start_shift(1), "1 saatlik vardiya başladı (coin tükenme testi)")
+	g12.coins = g12.shift_cost(1) * 2  # yalnızca 2 yenilemelik coin bırak
+	var real_now12: float = g12.now()
+	g12.last_sim_unix = real_now12 - 20.5
+	g12.shift_end_unix = real_now12 - 19.5
+	g12.simulate_to(g12.now())
+	check(g12.coins == 0, "coin tam olarak tükendi, negatife düşmedi")
+	check(g12.auto_renew_count == 2, "coin tükenince yenileme kendiliğinden durdu (şu an %d)" % g12.auto_renew_count)
+	check(not g12.shift_active(), "coin bitince vardiya nihayetinde durur")
+	g12.free()
 
 	g.free()
 	g2.free()
