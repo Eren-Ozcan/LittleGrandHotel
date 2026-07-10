@@ -52,6 +52,7 @@ var shift_label: Label
 var shift_bar_label: Label
 var collect_button: Button
 var hotel_box: VBoxContainer
+var street_node: PanelContainer
 var quest_hint: Label
 var toast_panel: PanelContainer
 var toast_label: Label
@@ -537,6 +538,7 @@ func _rebuild_hotel() -> void:
 	ssb.content_margin_bottom = 2
 	street.add_theme_stylebox_override("panel", ssb)
 	hotel_box.add_child(street)
+	street_node = street
 	var queue := HBoxContainer.new()
 	queue.add_theme_constant_override("separation", 4)
 	street.add_child(queue)
@@ -725,7 +727,7 @@ func _on_room_tapped(idx: int, btn: Control) -> void:
 		var center := btn.global_position + btn.size / 2.0
 		if Game.clean_room(idx):
 			_play("clean")
-			_spawn_sparkles(center)
+			_spawn_clean_anim(center)
 			_show_toast("Oda temizlendi (+2 XP)")
 		return
 	selected_room = idx
@@ -760,7 +762,46 @@ func _animate_guest(g: TextureRect, seed_i: int, walking: bool) -> void:
 		tw.tween_property(g, "scale", Vector2.ONE, dur * 2.5).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 
 
-## Temizlik geri bildirimi: oda üzerinde büyüyüp sönen altın parıltılar.
+## Vardiya açılış sahnesi: misafirler sağ kenardan sokak boyunca kapıya
+## yürür, kapıda küçülerek içeri girer. Overlay olduğu için yerleşimi bozmaz.
+func _guest_walk_in() -> void:
+	await get_tree().process_frame  # yeni yerleşim otursun
+	if street_node == null or not is_instance_valid(street_node):
+		return
+	var walk_y := street_node.global_position.y - 26.0
+	var door_x := size.x / 2.0
+	for i in 4:
+		var gicon := _icon("res://assets/guests/guest_%s.svg" % ["a", "b", "c"][i % 3], 36)
+		gicon.position = Vector2(size.x + 24.0 + i * 34.0, walk_y)
+		gicon.pivot_offset = Vector2(18, 36)
+		gicon.z_index = 55
+		add_child(gicon)
+		_animate_guest(gicon, i, true)
+		var tw := gicon.create_tween()
+		tw.tween_property(gicon, "position:x", door_x, 1.5 + i * 0.18) \
+			.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+		tw.tween_property(gicon, "scale", Vector2(0.3, 0.3), 0.25)
+		tw.parallel().tween_property(gicon, "modulate:a", 0.0, 0.25)
+		tw.tween_callback(gicon.queue_free)
+
+
+## Temizlik geri bildirimi: önce süpürge sağa sola süpürür, ardından parıltılar.
+func _spawn_clean_anim(center: Vector2) -> void:
+	var broom := _icon("res://assets/ui/broom.svg", 48)
+	broom.position = center + Vector2(-24.0, -34.0)
+	broom.pivot_offset = Vector2(24, 44)
+	broom.z_index = 61
+	add_child(broom)
+	var tw := create_tween()
+	for i in 3:
+		tw.tween_property(broom, "rotation", 0.45, 0.11).set_trans(Tween.TRANS_SINE)
+		tw.tween_property(broom, "rotation", -0.45, 0.11).set_trans(Tween.TRANS_SINE)
+	tw.tween_property(broom, "modulate:a", 0.0, 0.18)
+	tw.tween_callback(broom.queue_free)
+	get_tree().create_timer(0.5).timeout.connect(func(): _spawn_sparkles(center))
+
+
+## Oda üzerinde büyüyüp sönen altın parıltılar.
 func _spawn_sparkles(center: Vector2) -> void:
 	for i in 7:
 		var s := _icon("res://assets/ui/sparkle.svg", 22)
@@ -850,6 +891,7 @@ func _build_shift_popup(c: VBoxContainer) -> void:
 		b.pressed.connect(func():
 			if Game.start_shift(hours):
 				_play("shift")
+				_guest_walk_in()
 				_show_toast("%d saatlik vardiya başladı!" % hours)
 				_close_popup())
 		c.add_child(b)
