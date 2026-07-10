@@ -214,11 +214,13 @@ func _initialize() -> void:
 		"göç varsayılanları doğru (geçmiş boş, sesler açık)")
 	g4.save_game(v2_path)
 	var reparsed = JSON.parse_string(FileAccess.get_file_as_string(v2_path))
-	check(int(reparsed.save_version) == 6, "göçen kayıt v6 olarak yazıldı")
+	check(int(reparsed.save_version) == 7, "göçen kayıt v7 olarak yazıldı")
 	check(bool(reparsed.auto_renew_shift) == true and int(reparsed.last_shift_hours) == 0,
 		"göç otomatik yenileme alanlarını varsayılanla ekledi")
 	check(reparsed.unlocked_achievements is Array, "göç unlocked_achievements alanını ekledi")
 	check(int(reparsed.prestige_level) == 0, "göç prestige_level alanını 0 ile ekledi")
+	check(int(reparsed.daily_streak) == 0 and int(reparsed.last_daily_claim_day) == -1,
+		"göç günlük seri alanlarını varsayılanla ekledi")
 	old_save["save_version"] = 99
 	fw = FileAccess.open(v2_path, FileAccess.WRITE)
 	fw.store_string(JSON.stringify(old_save))
@@ -413,6 +415,32 @@ func _initialize() -> void:
 	check(g12.auto_renew_count == 2, "coin tükenince yenileme kendiliğinden durdu (şu an %d)" % g12.auto_renew_count)
 	check(not g12.shift_active(), "coin bitince vardiya nihayetinde durur")
 	g12.free()
+
+	# 21) Günlük giriş serisi: ardışık gün uzatır, atlanan gün sıfırlar,
+	# aynı gün ikinci kez ödül vermez.
+	var g13 = GameScript.new()
+	g13.eco = g.eco
+	g13.quests = g.quests
+	g13.achievements = g.achievements
+	g13.new_game()
+	var cycle: Array = g13.eco.daily_rewards
+	check(cycle.size() == 7, "7 günlük ödül döngüsü tanımlı")
+	check(g13.daily_reward_available(), "yeni oyunda günlük ödül alınabilir")
+	var r1: Dictionary = g13.claim_daily_reward()
+	check(not r1.is_empty() and g13.daily_streak == 1, "ilk gün ödülü alındı, seri 1")
+	check(int(r1.coins) == int(cycle[0].coins), "ilk gün ödülü döngünün ilk girdisiyle eşleşir")
+	check(not g13.daily_reward_available(), "aynı gün tekrar alınamaz")
+	check(g13.claim_daily_reward().is_empty(), "aynı gün ikinci talep boş döner")
+	var di: int = g13.daily_day_index()
+	g13.last_daily_claim_day = di - 1  # dün alınmış gibi
+	check(g13.daily_next_streak() == 2, "ardışık gün seriyi 1 uzatır")
+	g13.claim_daily_reward()
+	check(g13.daily_streak == 2, "ikinci gün ödülü alındı, seri 2")
+	g13.last_daily_claim_day = di - 5  # 5 gün atlanmış gibi
+	check(g13.daily_next_streak() == 1, "gün atlanınca seri sıfırlanır")
+	g13.claim_daily_reward()
+	check(g13.daily_streak == 1, "atlama sonrası seri gerçekten 1'e döndü")
+	g13.free()
 
 	g.free()
 	g2.free()

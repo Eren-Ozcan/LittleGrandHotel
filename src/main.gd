@@ -92,6 +92,13 @@ func _ready() -> void:
 		_play("level")
 		_show_toast("Seviye atladın! Seviye %d (+%d elmas)" % [lv, int(Game.eco.levelup_gems)]))
 	_refresh()
+	if Game.daily_reward_available():
+		_show_daily_reward_popup(_maybe_show_offline_popup)
+	else:
+		_maybe_show_offline_popup()
+
+
+func _maybe_show_offline_popup() -> void:
 	if Game.offline_earned > 0 or Game.auto_renew_count > 0:
 		_show_offline_popup(Game.offline_earned, Game.auto_renew_count, Game.auto_renew_spent)
 		Game.offline_earned = 0
@@ -1068,6 +1075,7 @@ func _build_stats_popup(c: VBoxContainer) -> void:
 		["Seviye", "%d (XP %s)" % [Game.level(), _fmt(Game.xp)]],
 		["Saatlik gelir (şu an)", "%.0f coin" % Game.hourly_income()],
 		["Prestij çarpanı", "×%.2f (devir %d)" % [Game.prestige_mult(), Game.prestige_level]],
+		["Günlük giriş serisi", "%d gün" % Game.daily_streak],
 	]
 	for r in rows:
 		var row := HBoxContainer.new()
@@ -1255,6 +1263,39 @@ func _show_offline_popup(amount: int, renew_count: int = 0, renew_spent: int = 0
 		text += "Vardiyan bitince otel boş durmadı: %d kez otomatik yenilendi (personel maliyeti %s coin)." % [renew_count, _fmt(renew_spent)]
 	dlg.dialog_text = text
 	dlg.ok_button_text = "Harika"
+	add_child(dlg)
+	dlg.popup_centered()
+
+
+## Uygulama açılışında (bugün henüz alınmadıysa) otomatik gösterilen günlük
+## ödül popup'ı. on_closed, popup ne şekilde kapanırsa kapansın (Al ya da
+## X/ESC) çağrılır — böylece "Hoş geldin" popup'ı üst üste binmeden sırayla açılır.
+func _show_daily_reward_popup(on_closed: Callable = Callable()) -> void:
+	var streak: int = Game.daily_next_streak()
+	var cycle: Array = Game.eco.get("daily_rewards", [])
+	if cycle.is_empty():
+		if on_closed.is_valid():
+			on_closed.call()
+		return
+	var reward: Dictionary = cycle[(streak - 1) % cycle.size()]
+	var reward_text := "%s coin" % _fmt(int(reward.get("coins", 0)))
+	if int(reward.get("gems", 0)) > 0:
+		reward_text += " + %d elmas" % int(reward.gems)
+	var dlg := AcceptDialog.new()
+	dlg.title = "Günlük Ödül"
+	dlg.dialog_text = "%d. gün serisi!\nÖdülün: %s" % [streak, reward_text]
+	dlg.ok_button_text = "Al"
+	dlg.confirmed.connect(func():
+		var granted := Game.claim_daily_reward()
+		if not granted.is_empty():
+			_play("quest")
+			_show_toast("Günlük ödül alındı — gün %d serisi!" % Game.daily_streak))
+	dlg.visibility_changed.connect(func():
+		if dlg.visible:
+			return
+		dlg.queue_free()
+		if on_closed.is_valid():
+			on_closed.call())
 	add_child(dlg)
 	dlg.popup_centered()
 

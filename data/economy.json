@@ -59,5 +59,15 @@
   "levelup_gems": 5,
   "offline_cap_hours": 48,
 
-  "prestige": { "min_level": 20, "mult_gain": 0.2 }
+  "prestige": { "min_level": 20, "mult_gain": 0.2 },
+
+  "daily_rewards": [
+    { "coins": 200,  "gems": 0 },
+    { "coins": 350,  "gems": 0 },
+    { "coins": 300,  "gems": 3 },
+    { "coins": 600,  "gems": 0 },
+    { "coins": 500,  "gems": 5 },
+    { "coins": 900,  "gems": 0 },
+    { "coins": 1200, "gems": 15 }
+  ]
 }

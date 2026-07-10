@@ -9,7 +9,7 @@ signal achievement_unlocked(achievement: Dictionary)
 signal leveled_up(new_level: int)
 
 const SAVE_PATH := "user://save.json"
-const SAVE_VERSION := 6
+const SAVE_VERSION := 7
 ## Göçle yükseltilebilen en eski kayıt sürümü
 const MIN_SAVE_VERSION := 2
 const ECO_PATH := "res://data/economy.json"
@@ -70,6 +70,12 @@ var last_shift_hours: int = 0
 var auto_renew_count: int = 0
 var auto_renew_spent: int = 0
 
+## Günlük giriş serisi: modern mobil oyunlarda en standart tutundurma
+## mekaniği. last_daily_claim_day: en son ödül alınan gün indeksi
+## (-1 = hiç alınmadı). Sunucusuz, tamamen cihaz saatinden türer.
+var daily_streak: int = 0
+var last_daily_claim_day: int = -1
+
 var _autosave_acc := 0.0
 var _rooms_changed_in_sim := false
 
@@ -108,6 +114,41 @@ func current_week_index() -> int:
 	return int(now() / (7.0 * 86400.0))
 
 
+## Günlük giriş serisi için gün indeksi (haftalık temayla aynı yöntem).
+func daily_day_index() -> int:
+	return int(now() / 86400.0)
+
+
+func daily_reward_available() -> bool:
+	return last_daily_claim_day != daily_day_index()
+
+
+## Şu an talep edilirse seri kaçıncı güne çıkar (henüz durumu değiştirmez).
+## Bir gün atlanırsa seri 1'e sıfırlanır; art arda gelinirse +1 uzar.
+func daily_next_streak() -> int:
+	var di := daily_day_index()
+	if last_daily_claim_day == di - 1:
+		return daily_streak + 1
+	return 1
+
+
+## Günlük ödülü talep eder ve verilen ödül dict'ini döner; bugün zaten
+## alınmışsa veya ödül tablosu boşsa boş dict döner (yan etkisiz).
+func claim_daily_reward() -> Dictionary:
+	if not daily_reward_available():
+		return {}
+	var cycle: Array = eco.get("daily_rewards", [])
+	if cycle.is_empty():
+		return {}
+	daily_streak = daily_next_streak()
+	last_daily_claim_day = daily_day_index()
+	var reward: Dictionary = cycle[(daily_streak - 1) % cycle.size()]
+	coins += int(reward.get("coins", 0))
+	gems += int(reward.get("gems", 0))
+	state_changed.emit()
+	return reward
+
+
 func load_json(path: String) -> Dictionary:
 	var parsed = JSON.parse_string(FileAccess.get_file_as_string(path))
 	return parsed if typeof(parsed) == TYPE_DICTIONARY else {}
@@ -132,6 +173,8 @@ func new_game() -> void:
 	last_shift_hours = 0
 	auto_renew_count = 0
 	auto_renew_spent = 0
+	daily_streak = 0
+	last_daily_claim_day = -1
 	offline_earned = 0
 	state_changed.emit()
 
@@ -699,6 +742,8 @@ func _save_dict() -> Dictionary:
 		"music_on": music_on,
 		"auto_renew_shift": auto_renew_shift,
 		"last_shift_hours": last_shift_hours,
+		"daily_streak": daily_streak,
+		"last_daily_claim_day": last_daily_claim_day,
 	}
 
 
@@ -739,6 +784,12 @@ func _migrate_save(data: Dictionary) -> Dictionary:
 					data["auto_renew_shift"] = true
 				if not data.has("last_shift_hours"):
 					data["last_shift_hours"] = 0
+			6:
+				# v7: günlük giriş serisi eklendi.
+				if not data.has("daily_streak"):
+					data["daily_streak"] = 0
+				if not data.has("last_daily_claim_day"):
+					data["last_daily_claim_day"] = -1
 		v += 1
 		data["save_version"] = v
 	return data
@@ -798,6 +849,8 @@ func _load_from_dict(parsed) -> bool:
 	music_on = bool(parsed.get("music_on", true))
 	auto_renew_shift = bool(parsed.get("auto_renew_shift", true))
 	last_shift_hours = int(parsed.get("last_shift_hours", 0))
+	daily_streak = int(parsed.get("daily_streak", 0))
+	last_daily_claim_day = int(parsed.get("last_daily_claim_day", -1))
 	# Çevrimdışı kazanç tavanı (GDD §10.2 saat güvenliği)
 	var cap_real_seconds := float(eco.offline_cap_hours) * 3600.0 / time_scale
 	if now() - last_sim_unix > cap_real_seconds:
