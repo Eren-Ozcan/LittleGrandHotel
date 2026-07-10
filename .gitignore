@@ -7,3 +7,7 @@ tools/
 # Yerel dışa aktarım çıktıları
 build/
 export_presets.cfg.local
+
+# Android imzalama anahtarı (yerelde üretilir, bkz. README "Android dışa aktarma")
+android/debug.keystore
+android/*.jks
