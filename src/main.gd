@@ -497,7 +497,9 @@ func _rebuild_hotel() -> void:
 	street.add_child(queue)
 	if Game.shift_active():
 		for gi in mini(3 + Game.rooms.size() / 2, 8):
-			queue.add_child(_icon("res://assets/guests/guest_%s.svg" % ["a", "b", "c"][gi % 3], 34))
+			var gicon := _icon("res://assets/guests/guest_%s.svg" % ["a", "b", "c"][gi % 3], 34)
+			queue.add_child(gicon)
+			_animate_guest(gicon, gi, true)
 	else:
 		var street_l := _label("· · · sokak sakin — vardiya başlat · · ·", 12, PALETTE.cream)
 		queue.add_child(street_l)
@@ -608,6 +610,7 @@ func _make_room_button(idx: int) -> Button:
 			var gpath := "res://assets/guests/guest_%s.svg" % ["a", "b", "c"][g_idx]
 			var guest := _icon(gpath, 44)
 			strip.add_child(guest)
+			_animate_guest(guest, idx, false)
 	else:
 		var art := _icon("res://assets/rooms/%s.svg" % room.type, 64)
 		art.anchor_left = 0.5
@@ -680,6 +683,22 @@ func _on_collect() -> void:
 	if got > 0:
 		_fly_coins(from, got)
 		_show_toast("+%s coin toplandı" % _fmt(got))
+
+
+## Misafir canlandırması: kuyruktakiler paytak yürür, odadakiler kıpırdanır.
+## Container yerleşimine dokunmamak için yalnızca rotation/scale kullanılır;
+## tween misafir düğümüne bağlıdır, düğüm silinince kendiliğinden ölür.
+func _animate_guest(g: TextureRect, seed_i: int, walking: bool) -> void:
+	g.pivot_offset = Vector2(g.custom_minimum_size.x / 2.0, g.custom_minimum_size.y)
+	var dur := 0.32 + 0.06 * (seed_i % 4)
+	var tw := g.create_tween().set_loops()
+	if walking:
+		tw.tween_property(g, "rotation", 0.09, dur).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		tw.tween_property(g, "rotation", -0.09, dur * 2.0).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		tw.tween_property(g, "rotation", 0.0, dur).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	else:
+		tw.tween_property(g, "scale", Vector2(1.04, 0.95), dur * 2.5).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		tw.tween_property(g, "scale", Vector2.ONE, dur * 2.5).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 
 
 ## Temizlik geri bildirimi: oda üzerinde büyüyüp sönen altın parıltılar.
