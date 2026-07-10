@@ -1120,6 +1120,38 @@ func _build_settings_popup(c: VBoxContainer) -> void:
 	else:
 		c.add_child(_label("Devretmek için Seviye %d gerekir (şu an %d)." % [int(Game.eco.prestige.min_level), Game.level()], 13, PALETTE.muted))
 
+	c.add_child(_spacer_y(10))
+	c.add_child(_label("Kaydı taşı — bulut yerine paylaşılabilir kod:", 15, PALETTE.wood_dark))
+	var export_code := Game.export_save_code()
+	var export_field := LineEdit.new()
+	export_field.text = export_code
+	export_field.editable = false
+	c.add_child(export_field)
+	var copy_b := _button("Kodu panoya kopyala", 14, PALETTE.wood, PALETTE.cream_text)
+	copy_b.pressed.connect(func():
+		DisplayServer.clipboard_set(export_code)
+		_show_toast("Kayıt kodu panoya kopyalandı"))
+	c.add_child(copy_b)
+
+	c.add_child(_spacer_y(6))
+	c.add_child(_label("Başka bir kaydı içe aktar:", 14, PALETTE.text))
+	var import_field := LineEdit.new()
+	import_field.placeholder_text = "Kayıt kodunu buraya yapıştır…"
+	c.add_child(import_field)
+	var import_b := _button("İçe aktar — mevcut kaydın üzerine yazar", 14, PALETTE.banner_red, PALETTE.cream_text)
+	import_b.pressed.connect(func():
+		if not import_b.get_meta("armed", false):
+			import_b.set_meta("armed", true)
+			import_b.text = "Emin misin? Üzerine yazmak için tekrar dokun"
+			return
+		if Game.import_save_code(import_field.text):
+			Game.save_game()
+			_close_popup()
+			_show_toast("Kayıt içe aktarıldı!")
+		else:
+			_show_toast("Kod geçersiz — kontrol edip tekrar dene"))
+	c.add_child(import_b)
+
 	c.add_child(_spacer_y(8))
 	c.add_child(_label("Tehlikeli bölge:", 13, PALETTE.banner_red))
 	var r_b := _button("Kaydı sıfırla", 15, PALETTE.banner_red, PALETTE.cream_text)

@@ -299,6 +299,21 @@ func _initialize() -> void:
 	var week_b: int = g.current_week_index()
 	check(week_a == week_b and week_a >= 0, "hafta indeksi deterministik ve negatif değil")
 
+	# 18) Kayıt dışa/içe aktarma: bulut yerine paylaşılabilir kod
+	var code: String = g.export_save_code()
+	check(not code.is_empty(), "dışa aktarma kodu üretildi")
+	var g8 = GameScript.new()
+	g8.eco = g.eco
+	g8.quests = g.quests
+	g8.achievements = g.achievements
+	g8.new_game()
+	check(g8.import_save_code(code), "kod içe aktarıldı")
+	check(g8.coins == g.coins and g8.prestige_level == g.prestige_level, "içe aktarılan veri eşleşti")
+	check(g8.unlocked_achievements.size() == g.unlocked_achievements.size(), "içe aktarılan başarımlar eşleşti")
+	check(not g8.import_save_code("bu-gecerli-bir-kod-degil"), "bozuk kod reddedilir")
+	check(not g8.import_save_code(""), "boş kod reddedilir")
+	g8.free()
+
 	g.free()
 	g2.free()
 	print("TÜM TESTLER GEÇTİ" if failures == 0 else "%d test BAŞARISIZ" % failures)

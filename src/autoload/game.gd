@@ -614,9 +614,8 @@ func reset_game() -> void:
 
 # --- Kayıt (GDD §10.1–10.2) --------------------------------------------
 
-func save_game(path: String = SAVE_PATH) -> void:
-	simulate_to(now())
-	var data := {
+func _save_dict() -> Dictionary:
+	return {
 		"save_version": SAVE_VERSION,
 		"coins": coins,
 		"gems": gems,
@@ -638,9 +637,13 @@ func save_game(path: String = SAVE_PATH) -> void:
 		"sound_on": sound_on,
 		"music_on": music_on,
 	}
+
+
+func save_game(path: String = SAVE_PATH) -> void:
+	simulate_to(now())
 	var f := FileAccess.open(path, FileAccess.WRITE)
 	if f:
-		f.store_string(JSON.stringify(data))
+		f.store_string(JSON.stringify(_save_dict()))
 
 
 ## Eski kayıtları adım adım güncel sürüme taşır. Her case tek bir sürüm
@@ -674,6 +677,27 @@ func load_game(path: String = SAVE_PATH) -> bool:
 	if not FileAccess.file_exists(path):
 		return false
 	var parsed = JSON.parse_string(FileAccess.get_file_as_string(path))
+	return _load_from_dict(parsed)
+
+
+## Kaydı bulut yerine paylaşılabilir bir metin koduna dönüştürür (Ayarlar →
+## Kaydı dışa aktar). Diske yazmadan aynı alan kümesini base64'e sarar.
+func export_save_code() -> String:
+	simulate_to(now())
+	return Marshalls.utf8_to_base64(JSON.stringify(_save_dict()))
+
+
+## Dışa aktarılan bir kodu geçerli oyun durumuna geri yükler (Ayarlar →
+## Kaydı içe aktar). Bozuk/geçersiz kodlarda dokunmadan false döner.
+func import_save_code(code: String) -> bool:
+	var json_text := Marshalls.base64_to_utf8(code.strip_edges())
+	if json_text.is_empty():
+		return false
+	var parsed = JSON.parse_string(json_text)
+	return _load_from_dict(parsed)
+
+
+func _load_from_dict(parsed) -> bool:
 	if typeof(parsed) != TYPE_DICTIONARY:
 		return false
 	var v := int(parsed.get("save_version", 0))
