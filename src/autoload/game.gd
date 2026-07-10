@@ -88,6 +88,12 @@ func now() -> float:
 	return Time.get_unix_time_from_system()
 
 
+## Sunucusuz "haftalık etkinlik" için deterministik hafta indeksi: her yerde
+## (ve her cihazda) aynı anda aynı sayıyı üretir, yalnızca takvimden türer.
+func current_week_index() -> int:
+	return int(now() / (7.0 * 86400.0))
+
+
 func load_json(path: String) -> Dictionary:
 	var parsed = JSON.parse_string(FileAccess.get_file_as_string(path))
 	return parsed if typeof(parsed) == TYPE_DICTIONARY else {}

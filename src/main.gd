@@ -43,6 +43,18 @@ const WALLPAPERS := {
 const SPEEDS: Array[float] = [1.0, 60.0, 3600.0]
 var speed_index := 0
 
+## Haftalık dekorasyon teması: sunucusuz, Game.current_week_index()'e göre
+## deterministik seçilir — çatı tabelasını hafta boyunca tek renkte boyar.
+const WEEKLY_THEMES := [
+	{ "name": "Klasik Kırmızı", "accent": Color("a83e35") },
+	{ "name": "Yaz Esintisi", "accent": Color("1f8a8c") },
+	{ "name": "Altın Çağ", "accent": Color("b8860b") },
+	{ "name": "Lavanta Molası", "accent": Color("6a4c93") },
+	{ "name": "Orman Nefesi", "accent": Color("2f7a4f") },
+	{ "name": "Mercan Gün Batımı", "accent": Color("c9622a") },
+	{ "name": "Kış Masalı", "accent": Color("2f6fa8") },
+]
+
 var coins_label: Label
 var gems_label: Label
 var star_icons: Array = []
@@ -486,6 +498,10 @@ func _update_live_labels() -> void:
 	collect_button.disabled = int(Game.pending_income) <= 0
 
 
+func _current_theme() -> Dictionary:
+	return WEEKLY_THEMES[Game.current_week_index() % WEEKLY_THEMES.size()]
+
+
 func _rebuild_hotel() -> void:
 	for c in hotel_box.get_children():
 		hotel_box.remove_child(c)
@@ -497,12 +513,19 @@ func _rebuild_hotel() -> void:
 	top_gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hotel_box.add_child(top_gap)
 
-	# Çatı tabelası (kırmızı tente)
-	var roof := _panel(PALETTE.banner_red, PALETTE.gold)
+	# Çatı tabelası (haftalık temaya göre renklenen tente)
+	var theme: Dictionary = _current_theme()
+	var roof := _panel(theme.accent, PALETTE.gold)
 	hotel_box.add_child(roof)
+	var roof_col := VBoxContainer.new()
+	roof_col.add_theme_constant_override("separation", 2)
+	roof.add_child(roof_col)
 	var roof_l := _label("★  LITTLE GRAND HOTEL  ★", 18, PALETTE.gold_soft)
 	roof_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	roof.add_child(roof_l)
+	roof_col.add_child(roof_l)
+	var theme_l := _label("Haftanın teması: %s" % String(theme.name), 12, PALETTE.cream_text)
+	theme_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	roof_col.add_child(theme_l)
 
 	var spf := int(Game.eco.building.slots_per_floor)
 	for f: int in range(Game.floors, 0, -1):

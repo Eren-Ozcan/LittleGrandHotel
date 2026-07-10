@@ -294,6 +294,11 @@ func _initialize() -> void:
 	check(g7.prestige_level == 0 and absf(g7.prestige_mult() - 1.0) < 0.001, "tam sıfırlama mantığı prestiji de sıfırlar")
 	g7.free()
 
+	# 17) Haftalık tema indeksi: deterministik ve kararlı
+	var week_a: int = g.current_week_index()
+	var week_b: int = g.current_week_index()
+	check(week_a == week_b and week_a >= 0, "hafta indeksi deterministik ve negatif değil")
+
 	g.free()
 	g2.free()
 	print("TÜM TESTLER GEÇTİ" if failures == 0 else "%d test BAŞARISIZ" % failures)
