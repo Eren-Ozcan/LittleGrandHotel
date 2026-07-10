@@ -1,0 +1,10 @@
+# Godot
+.godot/
+*.import
+
+# Motor ikili dosyaları (repo'ya girmez, tools/ altına indirilir)
+tools/
+
+# Yerel dışa aktarım çıktıları
+build/
+export_presets.cfg.local
