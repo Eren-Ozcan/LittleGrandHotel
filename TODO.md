@@ -13,9 +13,9 @@
 - [x] Dekorasyon: eşya → Stil Puanı → kademe (Basit → İkonik)
 - [x] Yıldız derecesi (kademe %50 + tesis çeşitliliği %30 + hizmet %20)
 - [x] XP / seviye eğrisi + seviye atlama elması
-- [x] 17 görevlik zincir (`data/quests.json`)
+- [x] Görev zinciri (`data/quests.json`)
 - [x] Kayıt/yükleme + çevrimdışı kazanç (48 saat tavan)
-- [x] 40 birim test (`tests/sim_check.gd`) — headless ekonomi doğrulaması
+- [x] Birim testler (`tests/sim_check.gd`) — headless ekonomi doğrulaması
 
 ### Görsel sürüm — Hotel City esintili
 - [x] Kesit "dollhouse" görünüm: gökyüzü, silüet, bulutlar, kırmızı çatı tabelası
@@ -25,24 +25,32 @@
 - [x] Yüzen toast (yerleşim zıplaması yok), canlı SS:DD:sn vardiya geri sayımı
 - [x] Hız ölçeği (time_scale) kayda dahil — hızlı moddan çıkışta vardiya bozulmaz
 
+### Cila sürümü — tam çekirdek + geç oyun (Temmuz 2026)
+- [x] Alt bar yeniden tasarımı: koyu şerit, saat ikonlu canlı vardiya geri sayımı, kategori ikonları
+- [x] Kirli odaya dokunma geri bildirimi: altın parıltı animasyonu
+- [x] Coin toplama animasyonu (kasadan sayaca uçan coin'ler)
+- [x] Elmas harcama: vardiyayı elmasla anında bitirme + premium eşyalar (Altın Heykel, Kraliyet Akvaryumu)
+- [x] Ses efektleri (prosedürel WAV sentezi — dış dosya yok) + lobi müziği
+- [x] Misafir animasyonları: kuyrukta paytak yürüyüş, odada kıpırdanma
+- [x] Oda taşıma / satma (%50 iade, premium eşya iadesi elmasla, onaylı satış)
+- [x] İstatistik ekranı (toplam gelir, temizlik, vardiya geçmişi — son 20)
+- [x] Ayarlar: ses/müzik aç-kapa, onaylı kayıt sıfırlama
+- [x] Kayıt sürümü göçü altyapısı (v2 → v3, adım adım migrasyon zinciri)
+- [x] Geç oyun denge turu (seviye 28 senaryosu, 6 kat, marj testi)
+- [x] Yeni oda tipleri: Restoran (Sv.24) ve Çatı Bahçesi (Sv.28)
+- [x] Görev zinciri 20 göreve çıktı (q18–q20)
+
 ## Yapılacaklar
 
 ### Öncelikli
-- [ ] Alt bar yeniden tasarımı: koyu şerit, saat ikonlu vardiya geri sayımı, kategori ikonları (Hotel City tarzı)
-- [ ] Kirli odaya dokunma geri bildirimi: temizlik animasyonu / parıltı efekti
-- [ ] Coin toplama animasyonu (kasadan uçan coin'ler)
-- [ ] Elmas harcama yerleri: vardiya hızlandırma, premium eşya
+- [ ] Android dışa aktarma + dokunmatik test (720×1280 dikey; export şablonları gerekir)
 
 ### Orta vade
-- [ ] Ses efektleri (dokunma, toplama, seviye atlama) + lobi müziği
-- [ ] Misafir animasyonları: kuyruğun içeri girmesi, odada hareket
-- [ ] Oda taşıma / satma
-- [ ] İstatistik ekranı (toplam gelir, temizlik sayısı, vardiya geçmişi)
-- [ ] Ayarlar: ses açık/kapalı, kayıt sıfırlama
+- [ ] Misafir kuyruğunun kapıdan içeri "yürüme" sahnesi (konum bazlı animasyon)
+- [ ] Kirli oda için parıltı yerine süpürge/kova mini animasyonu
+- [ ] Başarımlar (achievement) sistemi
 
 ### Uzun vade
-- [ ] Android dışa aktarma + dokunmatik test (720×1280 dikey)
-- [ ] Geç oyun denge turu (seviye 15+ ekonomisi, kat 5–6 fiyatlandırması)
-- [ ] Yeni oda tipleri ve eşya setleri (restoran, çatı bahçesi…)
-- [ ] Kayıt sürümü göçü (save migration) altyapısı
 - [ ] İkinci bina / prestij sistemi
+- [ ] Bulut kaydı / platform servisleri
+- [ ] Canlı etkinlikler (haftalık dekorasyon temaları)
