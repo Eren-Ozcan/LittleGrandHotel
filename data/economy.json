@@ -13,6 +13,7 @@
   "gem_skip_hours": 2,
   "occupancy_base": 0.7,
   "staff_per_room": 0.5,
+  "sell_refund": 0.5,
   "auto_clean_hours": 0.5,
 
   "star_mult": { "1": 0.85, "2": 0.95, "3": 1.0, "4": 1.15, "5": 1.3 },

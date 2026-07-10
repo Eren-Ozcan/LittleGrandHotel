@@ -60,6 +60,7 @@ var popup_content: VBoxContainer
 var popup_builder: Callable = Callable()
 
 var selected_room := -1
+var move_from := -1
 var _toast_timer := 0.0
 var _tex_cache: Dictionary = {}
 var _sfx_players: Dictionary = {}
@@ -705,6 +706,16 @@ func _make_room_button(idx: int) -> Button:
 
 
 func _on_room_tapped(idx: int, btn: Control) -> void:
+	# Taşıma modu: hedef odaya dokununca yer değiştir, aynı odaya dokununca iptal
+	if move_from >= 0:
+		var from := move_from
+		move_from = -1
+		if from == idx:
+			_show_toast("Taşıma iptal edildi")
+		elif Game.move_room(from, idx):
+			_play("buy")
+			_show_toast("Odalar yer değiştirdi")
+		return
 	var room: Dictionary = Game.rooms[idx]
 	if room.dirty:
 		# Buton yeniden kurulumda yok olacağı için merkezi temizlemeden önce al
@@ -714,9 +725,11 @@ func _on_room_tapped(idx: int, btn: Control) -> void:
 			_spawn_sparkles(center)
 			_show_toast("Oda temizlendi (+2 XP)")
 		return
+	selected_room = idx
 	if Game.room_def(room.type).category == "guest":
-		selected_room = idx
 		_open_popup("Oda Dekorasyonu", _build_room_popup)
+	else:
+		_open_popup("Tesis", _build_facility_popup)
 
 
 func _on_collect() -> void:
@@ -914,6 +927,58 @@ func _build_room_popup(c: VBoxContainer) -> void:
 					_play("buy")
 					_show_toast("%s yerleştirildi (+%d SP)" % [Game.item_def(iid).name, int(Game.item_def(iid).sp)]))
 		row.add_child(b)
+	_add_manage_buttons(c)
+
+
+func _build_facility_popup(c: VBoxContainer) -> void:
+	if selected_room < 0 or selected_room >= Game.rooms.size():
+		return
+	var room: Dictionary = Game.rooms[selected_room]
+	var d: Dictionary = Game.room_def(room.type)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+	c.add_child(row)
+	row.add_child(_icon("res://assets/rooms/%s.svg" % room.type, 48))
+	row.add_child(_label(String(d.name), 17, PALETTE.text))
+	if d.category == "facility":
+		c.add_child(_label("Saatlik +%d coin taban gelir · yıldız çeşitliliğine katkı" % int(d.base_income), 13, PALETTE.muted))
+	else:
+		c.add_child(_label("Kirlenen odaları kendiliğinden temizler — gelir hiç durmaz.", 13, PALETTE.muted))
+	_add_manage_buttons(c)
+
+
+## Oda popup'larının ortak yönetim satırı: Taşı + onaylı Sat.
+func _add_manage_buttons(c: VBoxContainer) -> void:
+	c.add_child(_spacer_y(6))
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	c.add_child(row)
+	var ridx := selected_room
+	var mv := _button("Taşı", 14, PALETTE.wood_dark, PALETTE.cream_text)
+	mv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	mv.pressed.connect(func():
+		move_from = ridx
+		_close_popup()
+		_show_toast("Hedef odaya dokun — iptal için aynı odaya dokun"))
+	row.add_child(mv)
+	var sell_text := "Sat — +%s coin" % _fmt(Game.room_sell_value(ridx))
+	var sell_gems := Game.room_sell_gem_value(ridx)
+	if sell_gems > 0:
+		sell_text += " +%d elmas" % sell_gems
+	var sl := _button(sell_text, 14, PALETTE.banner_red, PALETTE.cream_text)
+	sl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	sl.pressed.connect(func():
+		if not sl.get_meta("armed", false):
+			sl.set_meta("armed", true)
+			sl.text = "Emin misin? Satmak için tekrar dokun"
+			return
+		if Game.sell_room(ridx):
+			_play("buy")
+			_close_popup()
+			_show_toast("Oda satıldı — iade kasada")
+		else:
+			_show_toast("Son oda satılamaz!"))
+	row.add_child(sl)
 
 
 func _build_settings_popup(c: VBoxContainer) -> void:

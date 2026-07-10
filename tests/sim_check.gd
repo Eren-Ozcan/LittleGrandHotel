@@ -142,6 +142,36 @@ func _initialize() -> void:
 	check(g2.room_score(g2.rooms[0]) == 155, "oda eşyaları kayıtta korundu")
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(save_path))
 
+	# 12) Oda taşıma / satma
+	var idx_cafe := -1
+	for i in g.rooms.size():
+		if g.rooms[i].type == "cafe":
+			idx_cafe = i
+	check(idx_cafe > 0, "kafe bulundu")
+	var t_a: String = g.rooms[0].type
+	check(g.move_room(0, idx_cafe), "odalar yer değişti")
+	check(g.rooms[idx_cafe].type == t_a and g.rooms[0].type == "cafe", "taşıma dizilimi doğru")
+	check(not g.move_room(0, 0), "aynı odaya taşıma reddedilir")
+	g.move_room(0, idx_cafe)  # geri al
+	var sv: int = g.room_sell_value(idx_cafe)
+	check(sv == int(3000 * 0.5), "kafe iade bedeli %%50 (şu an %d)" % sv)
+	var idx_statue := -1
+	for i in g.rooms.size():
+		if g.rooms[i].items.has("statue_gold"):
+			idx_statue = i
+	check(idx_statue >= 0 and g.room_sell_gem_value(idx_statue) == 7, "premium eşya iadesi elmasla (%50)")
+	var coins_s: int = g.coins
+	var rooms_s: int = g.rooms.size()
+	check(g.sell_room(idx_cafe), "kafe satıldı")
+	check(g.rooms.size() == rooms_s - 1 and g.coins >= coins_s + sv, "iade coin'e işlendi")
+	var g3 = GameScript.new()
+	g3.eco = g.eco
+	g3.quests = g.quests
+	g3.new_game()
+	check(g3.sell_room(0), "yedek oda satılabilir")
+	check(not g3.sell_room(0), "son oda satılamaz")
+	g3.free()
+
 	g.free()
 	g2.free()
 	print("TÜM TESTLER GEÇTİ" if failures == 0 else "%d test BAŞARISIZ" % failures)

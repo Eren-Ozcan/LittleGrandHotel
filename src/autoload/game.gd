@@ -413,6 +413,47 @@ func buy_item(room_index: int, item_id: String) -> bool:
 	return true
 
 
+# --- Oda taşıma / satma -------------------------------------------------
+
+## Satış iadesi: oda + coin'li eşya bedellerinin sell_refund oranı.
+func room_sell_value(index: int) -> int:
+	var r: Dictionary = rooms[index]
+	var total := float(room_def(r.type).price)
+	for iid in r.items:
+		total += float(item_def(iid).get("price", 0))
+	return int(total * float(eco.sell_refund))
+
+
+## Premium (elmaslı) eşyaların iadesi elmas olarak yapılır.
+func room_sell_gem_value(index: int) -> int:
+	var total := 0.0
+	for iid in rooms[index].items:
+		total += float(item_def(iid).get("gem_price", 0))
+	return int(total * float(eco.sell_refund))
+
+
+func sell_room(index: int) -> bool:
+	if index < 0 or index >= rooms.size() or rooms.size() <= 1:
+		return false
+	simulate_to(now())
+	coins += room_sell_value(index)
+	gems += room_sell_gem_value(index)
+	rooms.remove_at(index)
+	state_changed.emit()
+	return true
+
+
+## İki odanın bina içindeki yerini değiştirir (yerleşim düzenleme).
+func move_room(a: int, b: int) -> bool:
+	if a == b or a < 0 or b < 0 or a >= rooms.size() or b >= rooms.size():
+		return false
+	var tmp: Dictionary = rooms[a]
+	rooms[a] = rooms[b]
+	rooms[b] = tmp
+	state_changed.emit()
+	return true
+
+
 # --- XP / seviye (GDD §5.3) --------------------------------------------
 
 func xp_for_level(n: int) -> int:
