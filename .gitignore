@@ -1,6 +1,5 @@
 # Godot
 .godot/
-*.import
 
 # Motor ikili dosyaları (repo'ya girmez, tools/ altına indirilir)
 tools/
