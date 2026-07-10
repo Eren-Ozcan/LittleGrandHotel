@@ -174,6 +174,37 @@ func _initialize() -> void:
 	check(not g3.sell_room(0), "son oda satılamaz")
 	g3.free()
 
+	# 13) Kayıt sürüm göçü: v2 kaydı v3'e taşınır, bilinmeyen sürüm reddedilir
+	var g4 = GameScript.new()
+	g4.eco = g.eco
+	g4.quests = g.quests
+	var v2_path := "user://test_v2.json"
+	var old_save := {
+		"save_version": 2,
+		"coins": 1234, "gems": 7, "xp": 50, "floors": 2,
+		"rooms": [g4.make_room("standard")],
+		"shift_end_unix": 0.0, "pending_income": 0.0,
+		"last_sim_unix": Time.get_unix_time_from_system(),
+		"quest_index": 1, "stat_shifts": 1, "stat_collects": 0,
+		"stat_collected_total": 0, "stat_cleans": 0, "time_scale": 1.0,
+	}
+	var fw := FileAccess.open(v2_path, FileAccess.WRITE)
+	fw.store_string(JSON.stringify(old_save))
+	fw = null
+	check(g4.load_game(v2_path), "v2 kaydı göçle yüklendi")
+	check(g4.coins == 1234 and g4.shift_history.is_empty() and g4.sound_on and g4.music_on,
+		"göç varsayılanları doğru (geçmiş boş, sesler açık)")
+	g4.save_game(v2_path)
+	var reparsed = JSON.parse_string(FileAccess.get_file_as_string(v2_path))
+	check(int(reparsed.save_version) == 3, "göçen kayıt v3 olarak yazıldı")
+	old_save["save_version"] = 99
+	fw = FileAccess.open(v2_path, FileAccess.WRITE)
+	fw.store_string(JSON.stringify(old_save))
+	fw = null
+	check(not g4.load_game(v2_path), "bilinmeyen gelecek sürüm reddedilir")
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(v2_path))
+	g4.free()
+
 	g.free()
 	g2.free()
 	print("TÜM TESTLER GEÇTİ" if failures == 0 else "%d test BAŞARISIZ" % failures)

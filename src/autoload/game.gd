@@ -8,7 +8,9 @@ signal quest_completed(quest: Dictionary)
 signal leveled_up(new_level: int)
 
 const SAVE_PATH := "user://save.json"
-const SAVE_VERSION := 2
+const SAVE_VERSION := 3
+## Göçle yükseltilebilen en eski kayıt sürümü
+const MIN_SAVE_VERSION := 2
 const ECO_PATH := "res://data/economy.json"
 const QUESTS_PATH := "res://data/quests.json"
 const AUTOSAVE_INTERVAL := 30.0
@@ -575,12 +577,35 @@ func save_game(path: String = SAVE_PATH) -> void:
 		f.store_string(JSON.stringify(data))
 
 
+## Eski kayıtları adım adım güncel sürüme taşır. Her case tek bir sürüm
+## atlaması yapar; yeni sürüm eklerken buraya yeni bir case eklenir.
+func _migrate_save(data: Dictionary) -> Dictionary:
+	var v := int(data.get("save_version", 0))
+	while v < SAVE_VERSION:
+		match v:
+			2:
+				# v3: vardiya geçmişi + ses ayarları eklendi
+				if not data.has("shift_history"):
+					data["shift_history"] = []
+				if not data.has("sound_on"):
+					data["sound_on"] = true
+				if not data.has("music_on"):
+					data["music_on"] = true
+		v += 1
+		data["save_version"] = v
+	return data
+
+
 func load_game(path: String = SAVE_PATH) -> bool:
 	if not FileAccess.file_exists(path):
 		return false
 	var parsed = JSON.parse_string(FileAccess.get_file_as_string(path))
-	if typeof(parsed) != TYPE_DICTIONARY or int(parsed.get("save_version", 0)) != SAVE_VERSION:
+	if typeof(parsed) != TYPE_DICTIONARY:
 		return false
+	var v := int(parsed.get("save_version", 0))
+	if v < MIN_SAVE_VERSION or v > SAVE_VERSION:
+		return false
+	parsed = _migrate_save(parsed)
 	coins = int(parsed.get("coins", 0))
 	gems = int(parsed.get("gems", 0))
 	xp = int(parsed.get("xp", 0))
