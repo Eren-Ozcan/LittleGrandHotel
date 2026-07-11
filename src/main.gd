@@ -1222,6 +1222,9 @@ func _build_room_popup(c: VBoxContainer) -> void:
 		if lv < int(it.get("unlock_level", 1)):
 			b.text = "%s — Seviye %d'de açılır" % [it.name, int(it.unlock_level)]
 			b.disabled = true
+		elif Game.room_has_item(selected_room, it.id):
+			b.text = "%s — sahipsin ✓" % it.name
+			b.disabled = true
 		else:
 			b.disabled = not Game.can_afford_item(it)
 			var iid: String = it.id
