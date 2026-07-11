@@ -76,6 +76,8 @@ var popup_builder: Callable = Callable()
 
 var selected_room := -1
 var move_from := -1
+var _walker: Control = null
+var _walker_timer := 0.0
 var _toast_timer := 0.0
 var _tex_cache: Dictionary = {}
 var _sfx_players: Dictionary = {}
@@ -108,10 +110,64 @@ func _maybe_show_offline_popup() -> void:
 
 func _process(delta: float) -> void:
 	_update_live_labels()
+	_update_walker(delta)
 	if _toast_timer > 0.0:
 		_toast_timer -= delta
 		if _toast_timer <= 0.0:
 			toast_panel.visible = false
+
+
+## Kaçan misafir: vardiya sırasında ara ara sokakta bir misafir yürüyüp
+## geçer; dokunursan kapıya döner ve bonus verir (Hotel City "drag guest").
+func _update_walker(delta: float) -> void:
+	if not Game.shift_active() or is_instance_valid(_walker):
+		return
+	_walker_timer += delta
+	if _walker_timer < float(Game.eco.catch.interval_real_seconds):
+		return
+	_walker_timer = 0.0
+	_spawn_walker()
+
+
+func _spawn_walker() -> void:
+	if street_node == null or not is_instance_valid(street_node):
+		return
+	var walk_y := street_node.global_position.y - 34.0
+	var b := TextureButton.new()
+	b.texture_normal = _tex("res://assets/guests/guest_%s.svg" % ["a", "b", "c"][randi() % 3])
+	b.ignore_texture_size = true
+	b.stretch_mode = TextureButton.STRETCH_KEEP_ASPECT_CENTERED
+	b.custom_minimum_size = Vector2(40, 40)
+	b.size = Vector2(40, 40)
+	b.position = Vector2(size.x + 24.0, walk_y)
+	b.z_index = 55
+	add_child(b)
+	_walker = b
+	_animate_guest(b, randi() % 4, true)
+	var tw := b.create_tween()
+	b.set_meta("walk_tween", tw)
+	tw.tween_property(b, "position:x", -64.0, 10.0)
+	tw.tween_callback(b.queue_free)
+	b.pressed.connect(func(): _on_walker_caught(b))
+
+
+func _on_walker_caught(b: Control) -> void:
+	var bonus := Game.catch_guest()
+	if bonus <= 0:
+		return
+	_play("collect")
+	_show_toast("Kaçan misafiri kapıya döndürdün! +%d coin" % bonus)
+	var old_tw: Tween = b.get_meta("walk_tween")
+	if old_tw:
+		old_tw.kill()
+	b.disabled = true
+	b.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var tw := b.create_tween()
+	tw.tween_property(b, "position:x", size.x / 2.0, 0.8) \
+		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	tw.tween_property(b, "scale", Vector2(0.3, 0.3), 0.25)
+	tw.parallel().tween_property(b, "modulate:a", 0.0, 0.25)
+	tw.tween_callback(b.queue_free)
 
 
 func _init_sfx() -> void:
@@ -632,12 +688,15 @@ func _make_room_button(idx: int) -> Button:
 	var d: Dictionary = Game.room_def(room.type)
 	var cat: String = d.category
 	var is_dirty: bool = cat == "guest" and room.dirty
+	var is_infested: bool = is_dirty and Game.room_infested(room)
 
 	var b := Button.new()
 	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	b.custom_minimum_size = Vector2(0, 118)
 	var wall: Color = WALLPAPERS.get(room.type, PALETTE.cream)
-	if is_dirty:
+	if is_infested:
+		wall = wall.darkened(0.45)
+	elif is_dirty:
 		wall = wall.darkened(0.25)
 	for state in ["normal", "hover", "pressed", "disabled"]:
 		var sb := StyleBoxFlat.new()
@@ -689,14 +748,34 @@ func _make_room_button(idx: int) -> Button:
 			var cheapest := Game.cheapest_item_price()
 			if cheapest > 0 and Game.coins >= cheapest:
 				b.add_child(_make_decorate_badge())
-		# Misafir (vardiya açık + temiz odada)
+		# Misafir (vardiya açık + temiz odada) — dokununca dürtülür (gizli müfettiş)
 		if Game.shift_active() and not is_dirty:
 			var g_idx := idx % 3
-			var gpath := "res://assets/guests/guest_%s.svg" % ["a", "b", "c"][g_idx]
-			var guest := _icon(gpath, 44)
+			var guest := TextureButton.new()
+			guest.texture_normal = _tex("res://assets/guests/guest_%s.svg" % ["a", "b", "c"][g_idx])
+			guest.ignore_texture_size = true
+			guest.stretch_mode = TextureButton.STRETCH_KEEP_ASPECT_CENTERED
+			guest.custom_minimum_size = Vector2(44, 44)
+			guest.mouse_filter = Control.MOUSE_FILTER_STOP
+			guest.pressed.connect(func(): _on_guest_poked(guest))
 			strip.add_child(guest)
 			_animate_guest(guest, idx, false)
 	else:
+		# Tesis kapasitesi: vardiyada içerideki müşteriler görünür
+		if cat == "facility" and Game.shift_active():
+			var cap_row := HBoxContainer.new()
+			cap_row.add_theme_constant_override("separation", 1)
+			cap_row.anchor_top = 1.0
+			cap_row.anchor_bottom = 1.0
+			cap_row.offset_top = -44
+			cap_row.offset_bottom = -14
+			cap_row.offset_left = 4
+			cap_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			b.add_child(cap_row)
+			for ci in int(d.get("capacity", 0)):
+				var cg := _icon("res://assets/guests/guest_%s.svg" % ["a", "b", "c"][(idx + ci) % 3], 26)
+				cap_row.add_child(cg)
+				_animate_guest(cg, idx + ci, false)
 		var art := _icon("res://assets/rooms/%s.svg" % room.type, 64)
 		art.anchor_left = 0.5
 		art.anchor_right = 0.5
@@ -709,9 +788,9 @@ func _make_room_button(idx: int) -> Button:
 		art.custom_minimum_size = Vector2.ZERO
 		b.add_child(art)
 
-	# Kirli göstergesi
+	# Kirli göstergesi (istilada hamamböceği)
 	if is_dirty:
-		var dust := _icon("res://assets/ui/dust.svg", 52)
+		var dust := _icon("res://assets/ui/roach.svg" if is_infested else "res://assets/ui/dust.svg", 52)
 		dust.anchor_left = 0.5
 		dust.anchor_right = 0.5
 		dust.anchor_top = 0.5
@@ -736,7 +815,9 @@ func _make_room_button(idx: int) -> Button:
 	plate.position = Vector2(4, 4)
 	plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var plate_text: String = d.name
-	if is_dirty:
+	if is_infested:
+		plate_text = "İSTİLA! %d c" % int(Game.eco.infest.clean_cost)
+	elif is_dirty:
 		plate_text = "KİRLİ!"
 	elif cat == "guest":
 		plate_text = "%s · SP %d" % [Game.tier_name(Game.room_tier(room)), Game.room_score(room)]
@@ -792,16 +873,39 @@ func _on_room_tapped(idx: int, btn: Control) -> void:
 	if room.dirty:
 		# Buton yeniden kurulumda yok olacağı için merkezi temizlemeden önce al
 		var center := btn.global_position + btn.size / 2.0
+		var cost := Game.clean_cost(idx)
 		if Game.clean_room(idx):
 			_play("clean")
 			_spawn_clean_anim(center)
-			_show_toast("Oda temizlendi (+2 XP)")
+			if cost > 0:
+				_show_toast("İstila temizlendi! (−%d coin, +2 XP)" % cost)
+			else:
+				_show_toast("Oda temizlendi (+2 XP)")
+		elif cost > 0:
+			_show_toast("İstila temizliği için %d coin gerek!" % cost)
 		return
 	selected_room = idx
 	if Game.room_def(room.type).category == "guest":
 		_open_popup("Oda Dekorasyonu", _build_room_popup)
 	else:
 		_open_popup("Tesis", _build_facility_popup)
+
+
+## Uyuyan misafiri dürtme: Hotel City'deki gizli müfettiş şansı.
+func _on_guest_poked(btn: Control) -> void:
+	if Game.pokes_left() <= 0:
+		_play("tap")
+		_show_toast("Bugünlük dürtme hakkın bitti — yarın yine dene!")
+		return
+	var center := btn.global_position + btn.size / 2.0
+	var bonus := Game.poke_guest()
+	if bonus > 0:
+		_play("collect")
+		_spawn_sparkles(center)
+		_show_toast("Gizli müfettiş çıktı! +%d coin (kalan hak: %d)" % [bonus, Game.pokes_left()])
+	else:
+		_play("tap")
+		_show_toast("Misafir esnedi, uyumaya devam etti… (kalan hak: %d)" % Game.pokes_left())
 
 
 func _on_collect() -> void:
@@ -816,7 +920,7 @@ func _on_collect() -> void:
 ## Misafir canlandırması: kuyruktakiler paytak yürür, odadakiler kıpırdanır.
 ## Container yerleşimine dokunmamak için yalnızca rotation/scale kullanılır;
 ## tween misafir düğümüne bağlıdır, düğüm silinince kendiliğinden ölür.
-func _animate_guest(g: TextureRect, seed_i: int, walking: bool) -> void:
+func _animate_guest(g: Control, seed_i: int, walking: bool) -> void:
 	g.pivot_offset = Vector2(g.custom_minimum_size.x / 2.0, g.custom_minimum_size.y)
 	var dur := 0.32 + 0.06 * (seed_i % 4)
 	var tw := g.create_tween().set_loops()
@@ -1021,6 +1125,31 @@ func _build_room_popup(c: VBoxContainer) -> void:
 	if tier < Game.eco.tier_names.size() - 1:
 		var next_th := int(Game.eco.tier_thresholds[tier + 1])
 		c.add_child(_label("Sonraki kademe (%s): SP %d gerekir" % [Game.tier_name(tier + 1), next_th], 13, PALETTE.wood_dark))
+
+	# Hazır dekor paketleri: tek dokunuşla, tek tek almaktan ucuz
+	var bundles: Array = Game.eco.get("bundles", [])
+	if not bundles.is_empty():
+		c.add_child(_label("Hazır paketler — tek dokunuşla dekor:", 14, PALETTE.muted))
+		for bd in bundles:
+			var sp_total := 0
+			for iid in bd.items:
+				sp_total += int(Game.item_def(iid).sp)
+			var pb := _button("%s — SP +%d — %s coin (%%%d indirimli)" % [
+				bd.name, sp_total, _fmt(Game.bundle_price(bd)), int(float(bd.discount) * 100.0)],
+				14, PALETTE.green_deep, PALETTE.cream_text)
+			var need_lv := Game.bundle_unlock_level(bd)
+			if Game.level() < need_lv:
+				pb.text = "%s — Seviye %d'de açılır" % [bd.name, need_lv]
+				pb.disabled = true
+			else:
+				pb.disabled = not Game.can_buy_bundle(bd)
+				var bid: String = bd.id
+				pb.pressed.connect(func():
+					if Game.buy_bundle(selected_room, bid):
+						_play("buy")
+						_show_toast("%s yerleştirildi!" % Game.bundle_def(bid).name))
+			c.add_child(pb)
+
 	c.add_child(_label("Eşya ekle:", 14, PALETTE.muted))
 	var lv := Game.level()
 	for it in Game.eco.items:
