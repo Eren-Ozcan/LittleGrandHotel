@@ -43,6 +43,9 @@ func _initialize() -> void:
 	print("\n=== 7) ELMAS EKONOMİSİ (kaynak vs gider) ===")
 	_check_gem_economy()
 
+	print("\n=== 8) MOBİL ASKI/OFFLINE KAPAK SENARYOSU (hayalet vardiya yenilemesi) ===")
+	_check_offline_cap_ghost_renewals()
+
 	quit()
 
 
@@ -218,6 +221,34 @@ func _check_gem_economy() -> void:
 	print("    -> en ucuz premium eşya %d elmas; seviye 20'ye kadar biriken elmasla (%d + seviye atlama)" % [
 		cheapest_premium, int(eco.start.gems)])
 	print("       rahatça karşılanabiliyor mu: %s" % (int(eco.start.gems) + lv20_gems >= cheapest_premium))
+	g.free()
+
+
+func _check_offline_cap_ghost_renewals() -> void:
+	# Regresyon: uygulama kapatılmadan (mobilde askıya alınıp) 48 saatlik
+	# kapağı çok aşan bir süre sonra öne dönülürse, simulate_to() eskiden
+	# yalnızca last_sim_unix'i ileri atlıyordu; shift_end_unix eski kalınca
+	# auto-renew döngüsü atılan sürenin tamamını (gelir üretmeden) tek tek
+	# "hayalet" yenilemeyle coin harcayarak yürümek zorunda kalıyordu.
+	# Düzeltme: shift_end_unix de eşit miktarda kaydırılıyor (bkz. game.gd).
+	var g = new_g()
+	g.coins = 1000000
+	g.time_scale = 3600.0
+	g.start_shift(1)
+	var real_now: float = g.now()
+	g.last_sim_unix = real_now - 240.0  # 240 "saat" (10 gün) önce
+	g.shift_end_unix = real_now - 239.0
+	g.auto_renew_count = 0
+	var coins_before: int = g.coins
+	g.simulate_to(g.now())
+	var cap_h: int = int(eco.offline_cap_hours)
+	print("  240 saatlik (10 günlük) boşluk sonrası: %d yenileme yapıldı (beklenen ~%d, kapak: %d saat)" % [
+		g.auto_renew_count, cap_h, cap_h])
+	print("  harcanan coin: %d (yenileme başına %d) -> hayalet (gelirsiz) yenileme: %s" % [
+		coins_before - g.coins, g.shift_cost(1),
+		"YOK" if coins_before - g.coins == g.auto_renew_count * g.shift_cost(1) else "VAR (bkz. yukarıdaki sayı tutarsızlığı)"])
+	if g.auto_renew_count > cap_h + 5:
+		print("  BULGU: kapak etkisiz görünüyor, yenileme sayısı beklenenden çok yüksek.")
 	g.free()
 
 

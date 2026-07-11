@@ -499,6 +499,11 @@ func _initialize() -> void:
 	var got_catch: int = g14.catch_guest()
 	var expect_catch: int = maxi(5, int(g14.hourly_income() * float(g14.eco.catch.bonus_hourly_frac)))
 	check(got_catch == expect_catch and g14.coins == catch_coins + got_catch, "yakalama bonusu doğru (%d)" % got_catch)
+	# Oyun mantığı kendi tarafında da aralığı uyguluyor (UI'nin ~25 sn'lik doğuş
+	# zamanlayıcısına güvenmek yerine) — art arda çağrılırsa ikincisi reddedilir.
+	check(g14.catch_guest() == 0, "hemen art arda yakalama reddedilir (kendi aralık kontrolü)")
+	g14.last_catch_unix -= float(g14.eco.catch.interval_real_seconds) + 1.0
+	check(g14.catch_guest() > 0, "aralık geçince yakalama tekrar çalışır")
 	g14.shift_end_unix = g14.now()  # vardiyayı bitir
 	check(g14.catch_guest() == 0, "vardiya yokken yakalama bonus vermez")
 
@@ -526,6 +531,41 @@ func _initialize() -> void:
 	check(g14.rooms[0].items.size() == items_after_first, "ikinci alımda mükerrer eşya eklenmedi")
 	check(g14.eco.room_types.cafe.capacity == 4, "tesis kapasitesi tanımlı (kafe 4)")
 	g14.free()
+
+	# 26) Mobil arka plan/askı senaryosu: uygulama kapatılmadan (load_game()
+	# tekrar tetiklenmeden) günlerce arka planda askıya alınıp geri dönülürse
+	# de 48 saatlik çevrimdışı kazanç tavanı işlemeli. Bu tavan artık yalnızca
+	# load_game()'de değil simulate_to() içinde uygulanıyor (bkz. game.gd) —
+	# aksi halde iOS/Android'de uygulama arka planda askıya alınıp (öldürülmeden)
+	# günler sonra öne getirildiğinde _process() askıdayken hiç çalışmadığından
+	# ve load_game() tekrar tetiklenmediğinden kapak devre dışı kalırdı.
+	# Ayrıca kapak yalnızca last_sim_unix'i ileri atlarsa (shift_end_unix'i
+	# değil), auto-renew döngüsü atılan sürenin tamamını (gerçek gelir
+	# üretmeden) tek tek "hayalet" vardiya yenilemesiyle coin harcayarak
+	# yürümek zorunda kalırdı — bu yüzden shift_end_unix de eşit miktarda
+	# kaydırılıyor.
+	var g15 = GameScript.new()
+	g15.eco = g.eco
+	g15.quests = g.quests
+	g15.achievements = g.achievements
+	g15.new_game()
+	g15.coins = 1000000
+	g15.time_scale = 3600.0
+	check(g15.start_shift(1), "mobil senaryo: 1 saatlik vardiya başladı")
+	var real_now15: float = g15.now()
+	g15.last_sim_unix = real_now15 - 240.0
+	g15.shift_end_unix = real_now15 - 239.0
+	g15.auto_renew_count = 0
+	var coins_before15: int = g15.coins
+	g15.simulate_to(g15.now())
+	var renews15: int = g15.auto_renew_count
+	var cap_h: int = int(g15.eco.offline_cap_hours)
+	check(renews15 > 0 and renews15 <= cap_h + 2,
+		"askıdan dönüşte 240 saatlik boşluk yerine ~%d saatlik kapak uygulandı (şu an %d yenileme)" % [cap_h, renews15])
+	check(coins_before15 - g15.coins == renews15 * g15.shift_cost(1),
+		"yalnızca gerçekleşen yenilemeler kadar coin harcandı (hayalet yenileme yok)")
+	check(g15.now() - g15.last_sim_unix < 2.0, "simulate_to sonunda güncel zamana yetişildi")
+	g15.free()
 
 	g.free()
 	g2.free()
