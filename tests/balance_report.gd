@@ -52,6 +52,9 @@ func _initialize() -> void:
 	print("\n=== 10) İKİ PARÇALI XP EĞRİSİ (kümülatif + seviye-başı artış) ===")
 	_check_xp_curve()
 
+	print("\n=== 11) OFFLINE TAM-VERİM (24 saatlik kapak) ===")
+	_check_offline_full_efficiency()
+
 	quit()
 
 
@@ -231,7 +234,7 @@ func _check_gem_economy() -> void:
 
 
 func _check_offline_cap_ghost_renewals() -> void:
-	# Regresyon: uygulama kapatılmadan (mobilde askıya alınıp) 48 saatlik
+	# Regresyon: uygulama kapatılmadan (mobilde askıya alınıp) 24 saatlik
 	# kapağı çok aşan bir süre sonra öne dönülürse, simulate_to() eskiden
 	# yalnızca last_sim_unix'i ileri atlıyordu; shift_end_unix eski kalınca
 	# auto-renew döngüsü atılan sürenin tamamını (gelir üretmeden) tek tek
@@ -300,3 +303,28 @@ func _check_xp_curve() -> void:
 		print("  %2d  %10d  %8d%s" % [lv, cum, delta, mark])
 		prev = cum
 	g.free()
+
+
+func _check_offline_full_efficiency() -> void:
+	# Arka planda (full_efficiency) 20 saatlik ve 30 saatlik (24 saatlik kapağı
+	# aşan) senaryoları karşılaştır — kapak sonrası fazlanın birikime katkı
+	# vermediğini ve arka planda odanın hiç kirlenmediğini göster.
+	var g20 = new_g()
+	g20.coins = 1000000
+	g20.time_scale = 1.0
+	g20.start_shift(24)
+	g20.last_sim_unix = g20.now() - 20.0 * 3600.0
+	g20.simulate_to(g20.now())
+	print("  20 saatlik arka plan boşluğu: birikim %.0f, oda kirli mi: %s" % [
+		g20.pending_income, g20.rooms[0].dirty])
+	g20.free()
+
+	var g30 = new_g()
+	g30.coins = 1000000
+	g30.time_scale = 1.0
+	g30.start_shift(24)
+	g30.last_sim_unix = g30.now() - 30.0 * 3600.0
+	g30.simulate_to(g30.now())
+	print("  30 saatlik arka plan boşluğu (24 saatlik kapak): birikim %.0f, oda kirli mi: %s" % [
+		g30.pending_income, g30.rooms[0].dirty])
+	g30.free()

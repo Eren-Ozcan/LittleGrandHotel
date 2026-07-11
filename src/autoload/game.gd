@@ -16,6 +16,11 @@ const ECO_PATH := "res://data/economy.json"
 const QUESTS_PATH := "res://data/quests.json"
 const ACHIEVEMENTS_PATH := "res://data/achievements.json"
 const AUTOSAVE_INTERVAL := 30.0
+## simulate_to() bu eşiği aşan bir sıçrama (gap) gördüğünde bunu "arka planda
+## geçen süre" sayar (tam verim); ön plan kare-kare ilerlemesi hep bunun
+## altında kalır. Mevcut testlerin en büyük ön-plan-eşdeğeri sıçraması 20.5s,
+## en küçük gerçek arka plan senaryosu 240s — 60s ikisinin arasında güvenli.
+const BACKGROUND_CATCHUP_THRESHOLD_SECONDS := 60.0
 
 var eco: Dictionary = {}
 var quests: Array = []
@@ -404,11 +409,17 @@ func simulate_to(to_unix: float) -> void:
 	# askıya alma) hiç devreye girmezdi.
 	var cap_real_seconds := float(eco.offline_cap_hours) * 3600.0 / time_scale
 	var gap := to_unix - last_sim_unix
+	# Arka plan tam-verim: last_sim_unix yalnızca _process() çalışırken
+	# ilerler, yani büyük bir gap = uygulama askıda/kapalıyken geçen gerçek
+	# süre. Bu süre boyunca (24 saatlik kapağa kadar) oda hiç kirlenmeden tam
+	# hızda üretir — ön plandaki kare-kare ilerlemede (küçük gap) kirlenme/
+	# temizlik mekaniği aynen aktif kalır.
+	var full_efficiency := gap > BACKGROUND_CATCHUP_THRESHOLD_SECONDS
 	if gap > cap_real_seconds:
 		# last_sim_unix'i yalnızca ileri atlamak yetmez: shift_end_unix de aynı
 		# miktarda ileri kaydırılmalı, yoksa auto-renew döngüsü, atılan süre
 		# boyunca (gerçek gelir üretmeden) tek tek "hayalet" vardiya yenilemesi
-		# yaparak coin harcar — kapak yalnızca geliri 48 saatle sınırlar ama
+		# yaparak coin harcar — kapak yalnızca geliri 24 saatle sınırlar ama
 		# harcamayı sınırlamaz, oyuncu dönüşte gelirsiz coin kaybına uğrar.
 		var discard := gap - cap_real_seconds
 		last_sim_unix += discard
@@ -422,7 +433,7 @@ func simulate_to(to_unix: float) -> void:
 		var accrue_end := minf(to_unix, shift_end_unix)
 		if accrue_end > last_sim_unix:
 			var game_hours := (accrue_end - last_sim_unix) * time_scale / 3600.0
-			_advance(game_hours)
+			_advance(game_hours, full_efficiency)
 			last_sim_unix = accrue_end
 		if last_sim_unix >= to_unix or shift_end_unix > to_unix:
 			break
@@ -457,11 +468,13 @@ func _try_auto_renew() -> bool:
 	return true
 
 
-## Vardiya penceresi içindeki game_hours kadar ilerlet.
-func _advance(game_hours: float) -> void:
+## Vardiya penceresi içindeki game_hours kadar ilerlet. full_efficiency=true
+## yalnızca simulate_to()'nun arka plan (offline) kısmı için geçilir — odalar
+## Temizlik Odası'na sahip olmasa bile hiç kirlenmeden tam hızda üretir.
+func _advance(game_hours: float, full_efficiency: bool = false) -> void:
 	var smult := float(eco.star_mult[str(star_rating())]) * prestige_mult()
 	var occ := float(eco.occupancy_base)
-	var hk := housekeeping_active()
+	var hk := housekeeping_active() or full_efficiency
 	for r in rooms:
 		var d := room_def(r.type)
 		if d.category == "facility":

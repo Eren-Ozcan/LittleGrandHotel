@@ -536,7 +536,7 @@ func _initialize() -> void:
 
 	# 26) Mobil arka plan/askı senaryosu: uygulama kapatılmadan (load_game()
 	# tekrar tetiklenmeden) günlerce arka planda askıya alınıp geri dönülürse
-	# de 48 saatlik çevrimdışı kazanç tavanı işlemeli. Bu tavan artık yalnızca
+	# de 24 saatlik çevrimdışı kazanç tavanı işlemeli. Bu tavan artık yalnızca
 	# load_game()'de değil simulate_to() içinde uygulanıyor (bkz. game.gd) —
 	# aksi halde iOS/Android'de uygulama arka planda askıya alınıp (öldürülmeden)
 	# günler sonra öne getirildiğinde _process() askıdayken hiç çalışmadığından
@@ -568,6 +568,50 @@ func _initialize() -> void:
 		"yalnızca gerçekleşen yenilemeler kadar coin harcandı (hayalet yenileme yok)")
 	check(g15.now() - g15.last_sim_unix < 2.0, "simulate_to sonunda güncel zamana yetişildi")
 	g15.free()
+
+	# 27) Arka plan tam-verim: Temizlik Odası yokken büyük bir arka plan (offline)
+	# boşluğunda oda hiç kirlenmemeli — ve aynı süreyi otomasyonsuz (ön plan,
+	# full_efficiency=false) ilerleten bir referanstan kesinlikle daha fazla
+	# üretmeli, çünkü kirlenip duran oda gelir üretmeyi durdurur.
+	var g16 = GameScript.new()
+	g16.eco = g.eco; g16.quests = g.quests; g16.achievements = g.achievements
+	g16.new_game(); g16.coins = 1000000; g16.time_scale = 1.0
+	check(g16.start_shift(24), "arka plan testi: 24 saatlik vardiya başladı")
+	g16.last_sim_unix = g16.now() - 20.0 * 3600.0
+	g16.simulate_to(g16.now())
+	var all_clean16 := true
+	for r16 in g16.rooms:
+		if bool(r16.dirty) or float(r16.get("dirty_hours", 0.0)) > 0.0:
+			all_clean16 = false
+	check(all_clean16, "arka planda (full_efficiency) oda hiç kirlenmedi")
+	check(g16.pending_income > 0.0, "arka planda gelir birikti")
+	var g16b = GameScript.new()
+	g16b.eco = g.eco; g16b.quests = g.quests; g16b.achievements = g.achievements
+	g16b.new_game(); g16b.coins = 1000000
+	g16b._advance(20.0, false)
+	check(g16.pending_income > g16b.pending_income,
+		"arka plan tam-verim, kirlenip duran ön-plan senaryosundan kesinlikle daha fazla üretti")
+	g16.free(); g16b.free()
+
+	# 28) 24 saatlik offline kapak: kapak ötesindeki süre birikime katkı vermemeli
+	# — 30 saatlik boşluk, 24 saatlik bir referansla aynı geliri üretmeli.
+	var g17 = GameScript.new()
+	g17.eco = g.eco; g17.quests = g.quests; g17.achievements = g.achievements
+	g17.new_game(); g17.coins = 1000000; g17.time_scale = 1.0
+	check(g17.start_shift(24), "kapak testi: 24 saatlik vardiya başladı")
+	check(int(g17.eco.offline_cap_hours) == 24, "offline_cap_hours 24 olarak ayarlı")
+	g17.last_sim_unix = g17.now() - 30.0 * 3600.0
+	g17.simulate_to(g17.now())
+	var g17b = GameScript.new()
+	g17b.eco = g.eco; g17b.quests = g.quests; g17b.achievements = g.achievements
+	g17b.new_game(); g17b.coins = 1000000; g17b.time_scale = 1.0
+	check(g17b.start_shift(24), "kapak testi (referans): 24 saatlik vardiya başladı")
+	g17b.last_sim_unix = g17b.now() - 24.0 * 3600.0
+	g17b.simulate_to(g17b.now())
+	check(absf(g17.pending_income - g17b.pending_income) < 5.0,
+		"30 saatlik boşluk, 24 saatlik referansla aynı geliri biriktirdi (kapak ötesi atıldı)")
+	check(g17.now() - g17.last_sim_unix < 2.0, "simulate_to sonunda güncel zamana yetişildi")
+	g17.free(); g17b.free()
 
 	g.free()
 	g2.free()
