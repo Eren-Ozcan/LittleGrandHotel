@@ -60,6 +60,14 @@
   "levelup_gems": 5,
   "offline_cap_hours": 24,
 
+  "staff_upgrade": {
+    "max_tier": 8,
+    "base_cost": 5000,
+    "cost_mult": 1.5,
+    "cost_reduction_pct": 0.04,
+    "income_boost_pct": 0.05
+  },
+
   "prestige": { "min_level": 20, "mult_gain": 0.2 },
 
   "infest": { "after_hours": 6, "clean_cost": 150 },
