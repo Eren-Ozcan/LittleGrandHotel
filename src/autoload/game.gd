@@ -81,6 +81,12 @@ var last_daily_claim_day: int = -1
 var poke_day: int = -1
 var poke_count: int = 0
 
+## Kaçan misafiri yakalamanın en son gerçekleştiği an (gerçek unix saniye).
+## catch_guest() aralığı yalnızca UI'daki doğuş zamanlayıcısına (25 sn)
+## güvenmesin diye — UI atlanıp fonksiyon doğrudan/hızlı çağrılırsa bile bu
+## sınır oyun mantığı tarafında da uygulanır (savunma derinliği).
+var last_catch_unix: float = 0.0
+
 var _autosave_acc := 0.0
 var _rooms_changed_in_sim := false
 
@@ -182,6 +188,7 @@ func new_game() -> void:
 	last_daily_claim_day = -1
 	poke_day = -1
 	poke_count = 0
+	last_catch_unix = 0.0
 	offline_earned = 0
 	state_changed.emit()
 
@@ -388,6 +395,24 @@ func simulate_to(to_unix: float) -> void:
 	if last_sim_unix <= 0.0:
 		last_sim_unix = to_unix
 		return
+	# Çevrimdışı kazanç tavanı (GDD §10.2 saat güvenliği): burada, load_game()
+	# özelinde değil, HER simulate_to() çağrısında uygulanır. Mobilde (iOS/
+	# Android) uygulama kapatılmadan günlerce arka planda askıya alınıp geri
+	# dönülebilir — bu durumda _process() askıdayken hiç çalışmaz ve
+	# load_game() tekrar tetiklenmez, yalnızca askıdan dönüşte kaldığı yerden
+	# devam eder. Kapak yalnızca yüklemede olsaydı bu senaryoda (kapatmadan
+	# askıya alma) hiç devreye girmezdi.
+	var cap_real_seconds := float(eco.offline_cap_hours) * 3600.0 / time_scale
+	var gap := to_unix - last_sim_unix
+	if gap > cap_real_seconds:
+		# last_sim_unix'i yalnızca ileri atlamak yetmez: shift_end_unix de aynı
+		# miktarda ileri kaydırılmalı, yoksa auto-renew döngüsü, atılan süre
+		# boyunca (gerçek gelir üretmeden) tek tek "hayalet" vardiya yenilemesi
+		# yaparak coin harcar — kapak yalnızca geliri 48 saatle sınırlar ama
+		# harcamayı sınırlamaz, oyuncu dönüşte gelirsiz coin kaybına uğrar.
+		var discard := gap - cap_real_seconds
+		last_sim_unix += discard
+		shift_end_unix += discard
 	# Vardiya biterken hâlâ ilerlenecek zaman kaldıysa (uzun süre uzakta
 	# kalınmış olabilir) ve otomatik yenileme açıksa, art arda yeni vardiyalar
 	# başlatarak boşta geçen süreyi engelle. guard, coin biterse veya yenileme
@@ -534,10 +559,15 @@ func poke_guest(rng_override: float = -1.0) -> int:
 
 ## Kaçan misafiri yakalama: vardiya sırasında sokakta yürüyüp giden misafire
 ## dokununca saatlik gelirin bir kesri kadar bonus verir (Hotel City'deki
-## "müşteriyi resepsiyona sürükleme"). Hızı UI'daki doğuş aralığı sınırlar.
+## "müşteriyi resepsiyona sürükleme"). UI zaten aynı anda tek misafir gösterip
+## ~25 sn'de bir doğuruyor; burdaki kontrol UI atlanıp fonksiyon doğrudan/hızlı
+## çağrılsa bile aynı aralığı oyun mantığı tarafında da garanti eder.
 func catch_guest() -> int:
 	if not shift_active():
 		return 0
+	if now() - last_catch_unix < float(eco.catch.interval_real_seconds):
+		return 0
+	last_catch_unix = now()
 	simulate_to(now())
 	var bonus := maxi(5, int(hourly_income() * float(eco.catch.bonus_hourly_frac)))
 	coins += bonus
@@ -1014,10 +1044,7 @@ func _load_from_dict(parsed) -> bool:
 	last_daily_claim_day = int(parsed.get("last_daily_claim_day", -1))
 	poke_day = int(parsed.get("poke_day", -1))
 	poke_count = int(parsed.get("poke_count", 0))
-	# Çevrimdışı kazanç tavanı (GDD §10.2 saat güvenliği)
-	var cap_real_seconds := float(eco.offline_cap_hours) * 3600.0 / time_scale
-	if now() - last_sim_unix > cap_real_seconds:
-		last_sim_unix = now() - cap_real_seconds
+	# Çevrimdışı kazanç tavanı simulate_to() içinde uygulanır (bkz. orada).
 	var pending_before := pending_income
 	auto_renew_count = 0
 	auto_renew_spent = 0
