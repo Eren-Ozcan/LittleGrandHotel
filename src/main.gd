@@ -84,6 +84,17 @@ var _sfx_players: Dictionary = {}
 var music_player: AudioStreamPlayer
 
 
+func _notification(what: int) -> void:
+	# Android geri tuşu: proje ayarında quit_on_go_back kapatıldı, aksi halde
+	# bir popup açıkken bile geri tuşu beklenmedik şekilde uygulamayı anında
+	# kapatırdı. Popup açıksa yalnızca onu kapat, değilse normal çıkışı yap.
+	if what == NOTIFICATION_WM_GO_BACK_REQUEST:
+		if overlay != null and overlay.visible:
+			_close_popup()
+		else:
+			get_tree().quit()
+
+
 func _ready() -> void:
 	_build_ui()
 	_init_sfx()
