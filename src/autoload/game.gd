@@ -617,11 +617,24 @@ func can_afford_item(it: Dictionary) -> bool:
 	return coins - int(it.price) >= min_shift_reserve()
 
 
+## Bir eşyanın belirli bir odada zaten olup olmadığını söyler. Eşyalar odaya
+## yalnızca birer kez eklenebilir — aksi halde en ucuz/en erken açılan eşya
+## (ör. Masa Lambası/Basit Yatak) tekrar tekrar alınarak kademe eşiği neredeyse
+## bedavaya sömürülebilir (tier_thresholds tüm eşyaların birer kez toplanacağı
+## varsayımıyla kurulu: 12 eşyanın SP toplamı 645, en üst eşik 550).
+func room_has_item(room_index: int, item_id: String) -> bool:
+	if room_index < 0 or room_index >= rooms.size():
+		return false
+	return item_id in rooms[room_index].items
+
+
 func buy_item(room_index: int, item_id: String) -> bool:
 	if room_index < 0 or room_index >= rooms.size():
 		return false
 	var it := item_def(item_id)
 	if it.is_empty() or not can_afford_item(it) or level() < int(it.get("unlock_level", 1)):
+		return false
+	if room_has_item(room_index, item_id):
 		return false
 	simulate_to(now())
 	if item_is_premium(it):
@@ -675,7 +688,8 @@ func buy_bundle(room_index: int, bundle_id: String) -> bool:
 	simulate_to(now())
 	coins -= bundle_price(b)
 	for iid in b.items:
-		rooms[room_index].items.append(iid)
+		if not room_has_item(room_index, iid):
+			rooms[room_index].items.append(iid)
 	_check_progress()
 	state_changed.emit()
 	return true
