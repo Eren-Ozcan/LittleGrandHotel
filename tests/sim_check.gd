@@ -97,7 +97,9 @@ func _initialize() -> void:
 	var got: int = g.collect()
 	check(got > 0 and g.coins >= coins_before + got, "toplama coin'e işlendi")
 	check(int(g.pending_income) == 0, "birikim sıfırlandı")
-	check(g.xp_for_level(2) == 100, "XP eğrisi: seviye 2 = 100")
+	check(g.xp_for_level(2) == 55, "XP eğrisi (erken/hızlı parça): seviye 2 = 55")
+	check(g.xp_for_level(12) - g.xp_for_level(11) == int(g._xp_late_raw(12)) - int(g._xp_late_raw(11)),
+		"XP eğrisi: seam sonrası artış eski dik eğriyle birebir aynı")
 	var gems_before: int = g.gems
 	g.add_xp(g.xp_for_level(g.level() + 1) - g.xp + 1)  # tam bir seviye atlat
 	check(g.gems > gems_before, "seviye atlama elmas verdi")

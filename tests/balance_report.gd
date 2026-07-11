@@ -49,6 +49,9 @@ func _initialize() -> void:
 	print("\n=== 9) ERKEN TEMİZLİK ODASI KARŞILANABİLİRLİĞİ (Sv.2) ===")
 	_check_early_housekeeping_afford()
 
+	print("\n=== 10) İKİ PARÇALI XP EĞRİSİ (kümülatif + seviye-başı artış) ===")
+	_check_xp_curve()
+
 	quit()
 
 
@@ -283,4 +286,17 @@ func _check_early_housekeeping_afford() -> void:
 	print("  can_buy_room('housekeeping'): %s" % g.can_buy_room("housekeeping"))
 	if not g.can_buy_room("housekeeping"):
 		print("  BULGU: Sv.2 oyuncu gerçekçi harcamadan sonra Temizlik Odası'nı karşılayamıyor.")
+	g.free()
+
+
+func _check_xp_curve() -> void:
+	var g = new_g()
+	print("  sv  kümülatif-xp  seviye-başı-artış")
+	var prev := 0
+	for lv in range(1, 31):
+		var cum: int = g.xp_for_level(lv)
+		var delta: int = cum - prev
+		var mark := "  <-- seam (Sv.%d)" % int(eco.xp_curve_early.seam_level) if lv == int(eco.xp_curve_early.seam_level) else ""
+		print("  %2d  %10d  %8d%s" % [lv, cum, delta, mark])
+		prev = cum
 	g.free()

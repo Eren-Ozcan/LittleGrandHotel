@@ -56,6 +56,7 @@
   ],
 
   "xp_curve": { "base": 100, "exp": 1.9 },
+  "xp_curve_early": { "base": 55, "exp": 1.35, "seam_level": 11 },
   "levelup_gems": 5,
   "offline_cap_hours": 48,
 

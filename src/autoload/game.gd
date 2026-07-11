@@ -768,10 +768,24 @@ func move_room(a: int, b: int) -> bool:
 
 # --- XP / seviye (GDD §5.3) --------------------------------------------
 
+## Geç eğrinin (seam sonrası) ham değeri — offset hesaplamak için ayrı tutulur.
+func _xp_late_raw(n: int) -> float:
+	return float(eco.xp_curve.base) * pow(n - 1, float(eco.xp_curve.exp))
+
+
+## İki parçalı eğri: seviye ~1-10 hızlı/düz (anlık tatmin), seam_level'dan
+## sonra mevcut dik eğri (xp_curve) aynen devam eder — geç eğri seam noktasında
+## sürekli olacak şekilde bir sabitle kaydırılır, böylece seam sonrası
+## seviye-başı XP artışı DEĞİŞMEZ, yalnızca daha düşük bir toplama bağlanır.
 func xp_for_level(n: int) -> int:
 	if n <= 1:
 		return 0
-	return int(float(eco.xp_curve.base) * pow(n - 1, float(eco.xp_curve.exp)))
+	var seam := int(eco.xp_curve_early.seam_level)
+	if n <= seam:
+		return int(float(eco.xp_curve_early.base) * pow(n - 1, float(eco.xp_curve_early.exp)))
+	var seam_early := float(eco.xp_curve_early.base) * pow(seam - 1, float(eco.xp_curve_early.exp))
+	var offset := seam_early - _xp_late_raw(seam)
+	return int(_xp_late_raw(n) + offset)
 
 
 func level() -> int:
