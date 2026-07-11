@@ -363,6 +363,7 @@ func _build_ui() -> void:
 
 	for def in [
 		["res://assets/ui/icon_shop.svg", "Mağaza", _build_shop_popup],
+		["res://assets/ui/icon_gear.svg", "Personel", _build_staff_popup],
 		["res://assets/ui/icon_quest.svg", "Görevler", _build_quests_popup],
 		["res://assets/ui/icon_stats.svg", "İstatistik", _build_stats_popup],
 		["res://assets/ui/icon_gear.svg", "Ayarlar", _build_settings_popup],
@@ -1121,6 +1122,18 @@ func _build_shift_popup(c: VBoxContainer) -> void:
 				_show_toast("Vardiya elmasla tamamlandı — birikim kasada!")
 				_close_popup())
 		c.add_child(skip_b)
+		if Game.now() < Game.boost_end_unix:
+			var left_min := int((Game.boost_end_unix - Game.now()) / 60.0)
+			c.add_child(_label("Reklam bonusu aktif: gelir ×%.1f (%d dk kaldı)" % [Game.boost_mult, maxi(0, left_min)], 13, PALETTE.green_deep))
+		else:
+			var boost_b := _button("Reklam izle — 30 dk gelir ×2", 15, PALETTE.wood_dark, PALETTE.cream_text)
+			boost_b.pressed.connect(func():
+				Ads.show_rewarded(func():
+					Game.start_income_boost(30.0, 2.0)
+					_play("buy")
+					_show_toast("Reklam bonusu başladı: 30 dk gelir ×2!")
+					_rebuild_popup()))
+			c.add_child(boost_b)
 		return
 	c.add_child(_label("Süre seç — saatlik maliyet hepsinde aynıdır:", 14, PALETTE.muted))
 	for hours: int in [1, 4, 8, 24]:
@@ -1140,6 +1153,32 @@ func _build_shift_popup(c: VBoxContainer) -> void:
 	else:
 		c.add_child(_label("Otomatik yenileme kapalı: vardiya bitince elle yeniden başlatman gerekir (Ayarlar).", 12, PALETTE.muted))
 	c.add_child(_label("Not: temizlenmeyen odalar gelir üretmez. Uzun vardiyada Temizlik Odası şart!", 13, PALETTE.banner_red))
+
+
+func _build_staff_popup(c: VBoxContainer) -> void:
+	var tier: int = Game.staff_tier
+	var max_tier: int = int(Game.eco.staff_upgrade.max_tier)
+	c.add_child(_label("Personel kademesi: %d / %d" % [tier, max_tier], 16, PALETTE.text))
+	c.add_child(_label(
+		"Vardiya maliyeti: %%%.0f indirimli  ·  Saatlik gelir: +%%%.0f" % [
+			(1.0 - Game.staff_cost_mult()) * 100.0, (Game.staff_income_mult() - 1.0) * 100.0],
+		14, PALETTE.muted))
+	if tier >= max_tier:
+		c.add_child(_label("Personel en üst kademede — daha fazla yükseltme yok.", 14, PALETTE.green_deep))
+		return
+	var cost := Game.staff_upgrade_cost()
+	var next_cost_mult := 1.0 - pow(1.0 - float(Game.eco.staff_upgrade.cost_reduction_pct), tier + 1)
+	var next_income_mult := pow(1.0 + float(Game.eco.staff_upgrade.income_boost_pct), tier + 1) - 1.0
+	var b := _button(
+		"Kademeyi yükselt — %s coin\nSonraki: -%%%.0f maliyet, +%%%.0f gelir" % [
+			_fmt(cost), next_cost_mult * 100.0, next_income_mult * 100.0],
+		15, PALETTE.wood, PALETTE.cream_text)
+	b.disabled = not Game.can_buy_staff_upgrade()
+	b.pressed.connect(func():
+		if Game.buy_staff_upgrade():
+			_play("buy")
+			_show_toast("Personel kalitesi yükseltildi! (Kademe %d)" % Game.staff_tier))
+	c.add_child(b)
 
 
 func _build_shop_popup(c: VBoxContainer) -> void:
@@ -1360,6 +1399,35 @@ func _build_settings_popup(c: VBoxContainer) -> void:
 		_rebuild_popup())
 	c.add_child(ar_b)
 	c.add_child(_label("Açıkken bir vardiya bitince, coin yeterse aynı süreyle otomatik yenilenir — otel sen yokken de üretime devam eder.", 12, PALETTE.muted))
+
+	c.add_child(_spacer_y(10))
+	c.add_child(_label("Premium", 15, PALETTE.wood_dark))
+	if Game.remove_ads:
+		c.add_child(_label("Reklamlar kaldırıldı. Teşekkürler!", 13, PALETTE.green_deep))
+	else:
+		var no_ads_b := _button("Reklamları Kaldır", 15, PALETTE.green_deep, PALETTE.cream_text)
+		no_ads_b.pressed.connect(func():
+			IAP.purchase(IAP.PRODUCT_REMOVE_ADS, func(ok: bool):
+				if ok:
+					Game.remove_ads = true
+					Game.save_game()
+					_play("buy")
+					_show_toast("Reklamlar kaldırıldı!")
+					_rebuild_popup()))
+		c.add_child(no_ads_b)
+	if Game.permanent_income_mult > 1.0:
+		c.add_child(_label("Kazanç çarpanı aktif: ×%.1f" % Game.permanent_income_mult, 13, PALETTE.green_deep))
+	else:
+		var x2_b := _button("Kazancı 2x Yap", 15, PALETTE.green_deep, PALETTE.cream_text)
+		x2_b.pressed.connect(func():
+			IAP.purchase(IAP.PRODUCT_INCOME_2X, func(ok: bool):
+				if ok:
+					Game.permanent_income_mult = 2.0
+					Game.save_game()
+					_play("buy")
+					_show_toast("Kazanç 2x oldu!")
+					_rebuild_popup()))
+		c.add_child(x2_b)
 
 	c.add_child(_spacer_y(10))
 	c.add_child(_label("Prestij — çarpan ×%.2f (devir %d)" % [Game.prestige_mult(), Game.prestige_level], 15, PALETTE.wood_dark))

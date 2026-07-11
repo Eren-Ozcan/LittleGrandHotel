@@ -19,6 +19,8 @@ run/quit_on_go_back=false
 [autoload]
 
 Game="*res://src/autoload/game.gd"
+Ads="*res://src/autoload/ads.gd"
+IAP="*res://src/autoload/iap.gd"
 
 [display]
 

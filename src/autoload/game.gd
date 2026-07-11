@@ -9,7 +9,7 @@ signal achievement_unlocked(achievement: Dictionary)
 signal leveled_up(new_level: int)
 
 const SAVE_PATH := "user://save.json"
-const SAVE_VERSION := 8
+const SAVE_VERSION := 10
 ## Göçle yükseltilebilen en eski kayıt sürümü
 const MIN_SAVE_VERSION := 2
 const ECO_PATH := "res://data/economy.json"
@@ -50,6 +50,24 @@ var unlocked_achievements: Array = []
 
 ## Prestij: devretme sayısı. new_game() ile sıfırlanmaz — kalıcıdır.
 var prestige_level: int = 0
+
+## Personel kalitesi kademesi: coin ile alınan, sıradan bir oda/eşya gibi
+## new_game() ile sıfırlanan (prestij gibi KALICI DEĞİL) bir yükseltme.
+## Vardiya maliyetini düşürür, saatlik geliri artırır — geç oyunda marj
+## sıkışmasını "daha çok bekle" yerine aktif bir yatırım kararına çevirir.
+var staff_tier: int = 0
+
+## Ödüllü reklam sonrası geçici gelir artışı (Faz 5). new_game() ile
+## sıfırlanır — gerçek zamana bağlı, kalıcı bir ilerleme değildir.
+var boost_end_unix: float = 0.0
+var boost_mult: float = 1.0
+
+## IAP (Faz 5): gerçek para karşılığı satın alınan kalıcı haklar. prestij_level
+## gibi new_game()/reset_game() ile SİLİNMEZ — gerçek bir satın alma, oyuncunun
+## ilerleme kaydını sıfırlamasıyla kaybolmamalı (mağaza tarafında da bir kaydı
+## yok, bu yüzden yerel kayıt tek doğruluk kaynağı).
+var remove_ads: bool = false
+var permanent_income_mult: float = 1.0
 
 ## Uygulama açılışında sen-yokken kazanılan gelir (UI popup için; UI okur ve sıfırlar).
 var offline_earned: int = 0
@@ -195,6 +213,9 @@ func new_game() -> void:
 	poke_count = 0
 	last_catch_unix = 0.0
 	offline_earned = 0
+	staff_tier = 0
+	boost_end_unix = 0.0
+	boost_mult = 1.0
 	state_changed.emit()
 
 
@@ -335,7 +356,7 @@ func hourly_income() -> float:
 			if hk:
 				rate *= float(d.stay_hours) / (float(d.stay_hours) + float(eco.auto_clean_hours))
 			total += rate
-	return total * smult * occ * prestige_mult()
+	return total * smult * occ * prestige_mult() * staff_income_mult() * permanent_income_mult * income_boost_mult()
 
 
 func staff_count() -> int:
@@ -343,7 +364,57 @@ func staff_count() -> int:
 
 
 func shift_cost(hours: int) -> int:
-	return staff_count() * hours * int(eco.shift_rates[str(hours)])
+	return int(staff_count() * hours * int(eco.shift_rates[str(hours)]) * staff_cost_mult())
+
+
+# --- Personel kalitesi (geç oyun aktif karar katmanı) -------------------
+
+## Verilen (veya mevcut) kademenin yükseltme maliyeti. Her kademe bir
+## öncekinden cost_mult kat pahalı — azalan getiri, gerçek bir yatırım kararı.
+func staff_upgrade_cost(tier: int = -1) -> int:
+	var t: int = staff_tier if tier < 0 else tier
+	return int(float(eco.staff_upgrade.base_cost) * pow(float(eco.staff_upgrade.cost_mult), t))
+
+
+func staff_cost_mult() -> float:
+	return pow(1.0 - float(eco.staff_upgrade.cost_reduction_pct), staff_tier)
+
+
+func staff_income_mult() -> float:
+	return pow(1.0 + float(eco.staff_upgrade.income_boost_pct), staff_tier)
+
+
+func can_buy_staff_upgrade() -> bool:
+	return staff_tier < int(eco.staff_upgrade.max_tier) \
+		and coins - staff_upgrade_cost() >= min_shift_reserve()
+
+
+func buy_staff_upgrade() -> bool:
+	if not can_buy_staff_upgrade():
+		return false
+	simulate_to(now())
+	coins -= staff_upgrade_cost()
+	staff_tier += 1
+	_check_progress()
+	state_changed.emit()
+	return true
+
+
+# --- Reklam bonusu + IAP (Faz 5 Aşama A) --------------------------------
+
+## Şu an geçerli geçici gelir çarpanı — süre dolmuşsa 1.0.
+func income_boost_mult() -> float:
+	return boost_mult if now() < boost_end_unix else 1.0
+
+
+## Ads.show_rewarded() ödülü sonrası çağrılır: real_minutes gerçek dakika
+## cinsindendir (time_scale ile test hızlandırması tutarlılığı için ölçeklenir,
+## bkz. start_shift()'teki aynı desen).
+func start_income_boost(real_minutes: float, mult: float) -> void:
+	simulate_to(now())
+	boost_end_unix = maxf(boost_end_unix, now()) + real_minutes * 60.0 / time_scale
+	boost_mult = mult
+	state_changed.emit()
 
 
 func shift_active() -> bool:
@@ -472,7 +543,8 @@ func _try_auto_renew() -> bool:
 ## yalnızca simulate_to()'nun arka plan (offline) kısmı için geçilir — odalar
 ## Temizlik Odası'na sahip olmasa bile hiç kirlenmeden tam hızda üretir.
 func _advance(game_hours: float, full_efficiency: bool = false) -> void:
-	var smult := float(eco.star_mult[str(star_rating())]) * prestige_mult()
+	var smult := float(eco.star_mult[str(star_rating())]) * prestige_mult() * staff_income_mult() \
+		* permanent_income_mult * income_boost_mult()
 	var occ := float(eco.occupancy_base)
 	var hk := housekeeping_active() or full_efficiency
 	for r in rooms:
@@ -955,6 +1027,11 @@ func _save_dict() -> Dictionary:
 		"last_daily_claim_day": last_daily_claim_day,
 		"poke_day": poke_day,
 		"poke_count": poke_count,
+		"staff_tier": staff_tier,
+		"boost_end_unix": boost_end_unix,
+		"boost_mult": boost_mult,
+		"remove_ads": remove_ads,
+		"permanent_income_mult": permanent_income_mult,
 	}
 
 
@@ -1008,6 +1085,20 @@ func _migrate_save(data: Dictionary) -> Dictionary:
 					data["poke_day"] = -1
 				if not data.has("poke_count"):
 					data["poke_count"] = 0
+			8:
+				# v9: personel kalitesi eklendi.
+				if not data.has("staff_tier"):
+					data["staff_tier"] = 0
+			9:
+				# v10: reklam bonusu + IAP (reklam kaldırma, kazanç çarpanı) eklendi.
+				if not data.has("boost_end_unix"):
+					data["boost_end_unix"] = 0.0
+				if not data.has("boost_mult"):
+					data["boost_mult"] = 1.0
+				if not data.has("remove_ads"):
+					data["remove_ads"] = false
+				if not data.has("permanent_income_mult"):
+					data["permanent_income_mult"] = 1.0
 		v += 1
 		data["save_version"] = v
 	return data
@@ -1071,6 +1162,11 @@ func _load_from_dict(parsed) -> bool:
 	last_daily_claim_day = int(parsed.get("last_daily_claim_day", -1))
 	poke_day = int(parsed.get("poke_day", -1))
 	poke_count = int(parsed.get("poke_count", 0))
+	staff_tier = int(parsed.get("staff_tier", 0))
+	boost_end_unix = float(parsed.get("boost_end_unix", 0.0))
+	boost_mult = float(parsed.get("boost_mult", 1.0))
+	remove_ads = bool(parsed.get("remove_ads", false))
+	permanent_income_mult = float(parsed.get("permanent_income_mult", 1.0))
 	# Çevrimdışı kazanç tavanı simulate_to() içinde uygulanır (bkz. orada).
 	var pending_before := pending_income
 	auto_renew_count = 0

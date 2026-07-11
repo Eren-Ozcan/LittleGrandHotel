@@ -55,6 +55,9 @@ func _initialize() -> void:
 	print("\n=== 11) OFFLINE TAM-VERİM (24 saatlik kapak) ===")
 	_check_offline_full_efficiency()
 
+	print("\n=== 12) PERSONEL KALİTESİ ETKİSİ (Sv.18 marjı üzerinde) ===")
+	_check_staff_upgrade_impact()
+
 	quit()
 
 
@@ -328,3 +331,24 @@ func _check_offline_full_efficiency() -> void:
 	print("  30 saatlik arka plan boşluğu (24 saatlik kapak): birikim %.0f, oda kirli mi: %s" % [
 		g30.pending_income, g30.rooms[0].dirty])
 	g30.free()
+
+
+func _check_staff_upgrade_impact() -> void:
+	var levels := [8, 18, 28]
+	var room_types: Array = eco.room_types.keys()
+	for lv in levels:
+		var unlocked := []
+		for t in room_types:
+			if int(eco.room_types[t].unlock_level) <= lv:
+				unlocked.append(t)
+		var g = _milestone_setup(lv, 5000000, unlocked, 2)
+		print("  --- Seviye %d ---" % lv)
+		var max_tier: int = int(eco.staff_upgrade.max_tier)
+		for tier in range(0, max_tier + 1):
+			g.staff_tier = tier
+			var cost: float = g.shift_cost(1)
+			var income: float = g.hourly_income()
+			var margin := cost / income if income > 0.0 else 0.0
+			print("    kademe %d: vardiya maliyeti %6d  saatlik gelir %8.0f  marj %%%5.1f" % [
+				tier, int(cost), income, margin * 100.0])
+		g.free()

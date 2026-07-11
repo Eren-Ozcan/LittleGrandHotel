@@ -234,6 +234,7 @@ func _initialize() -> void:
 	check(int(reparsed.prestige_level) == 0, "göç prestige_level alanını 0 ile ekledi")
 	check(int(reparsed.daily_streak) == 0 and int(reparsed.last_daily_claim_day) == -1,
 		"göç günlük seri alanlarını varsayılanla ekledi")
+	check(int(reparsed.staff_tier) == 0, "göç staff_tier alanını 0 ile ekledi")
 	old_save["save_version"] = 99
 	fw = FileAccess.open(v2_path, FileAccess.WRITE)
 	fw.store_string(JSON.stringify(old_save))
@@ -612,6 +613,102 @@ func _initialize() -> void:
 		"30 saatlik boşluk, 24 saatlik referansla aynı geliri biriktirdi (kapak ötesi atıldı)")
 	check(g17.now() - g17.last_sim_unix < 2.0, "simulate_to sonunda güncel zamana yetişildi")
 	g17.free(); g17b.free()
+
+	# 29) Personel kalitesi: azalan getirili maliyet, gelir/maliyet çarpanları,
+	# maksimum kademede kilit, save/load'da korunma.
+	var g18 = GameScript.new()
+	g18.eco = g.eco; g18.quests = g.quests; g18.achievements = g.achievements
+	g18.new_game(); g18.coins = 10000000
+	check(g18.staff_tier == 0, "personel kademesi başlangıçta 0")
+	var cost0: int = g18.staff_upgrade_cost()
+	var base_shift_cost18: int = g18.shift_cost(1)
+	var base_income18: float = g18.hourly_income()
+	check(g18.buy_staff_upgrade(), "ilk personel yükseltmesi alındı")
+	check(g18.staff_tier == 1, "kademe 1'e çıktı")
+	check(g18.shift_cost(1) < base_shift_cost18, "yükseltme sonrası vardiya maliyeti düştü")
+	check(g18.hourly_income() > base_income18, "yükseltme sonrası saatlik gelir arttı")
+	var cost1: int = g18.staff_upgrade_cost()
+	check(cost1 > cost0, "bir sonraki kademe daha pahalı (azalan getiri)")
+	var cost_mult18 := float(g18.eco.staff_upgrade.cost_mult)
+	check(absf(float(cost1) / float(cost0) - cost_mult18) < 0.01, "maliyet artışı cost_mult ile tutarlı")
+	var max_tier18 := int(g18.eco.staff_upgrade.max_tier)
+	while g18.staff_tier < max_tier18:
+		var ok18: bool = g18.buy_staff_upgrade()
+		check(ok18, "personel kademesi %d'ye yükseltildi" % g18.staff_tier)
+	check(not g18.can_buy_staff_upgrade(), "maksimum kademede yeni yükseltme reddedilir")
+	check(g18.staff_tier == max_tier18, "maksimum kademeye ulaşıldı (%d)" % max_tier18)
+	var staff_save_path := "user://test_staff.json"
+	g18.save_game(staff_save_path)
+	var g18b = GameScript.new()
+	g18b.eco = g.eco; g18b.quests = g.quests; g18b.achievements = g.achievements
+	check(g18b.load_game(staff_save_path), "personel kademesi içeren kayıt yüklendi")
+	check(g18b.staff_tier == max_tier18, "yüklenen kayıtta personel kademesi korundu")
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(staff_save_path))
+	g18.free(); g18b.free()
+
+	# 30) Reklam bonusu (Faz 5): geçici çarpan süresi dolunca 1.0'a döner,
+	# save/load ile birlikte korunur (askıdan dönüşte de kaldığı yerden sürer).
+	var g19 = GameScript.new()
+	g19.eco = g.eco; g19.quests = g.quests; g19.achievements = g.achievements
+	g19.new_game(); g19.time_scale = 1.0
+	check(g19.income_boost_mult() == 1.0, "reklam bonusu yokken çarpan 1.0")
+	g19.start_income_boost(30.0, 2.0)
+	check(g19.income_boost_mult() == 2.0, "reklam bonusu başlayınca çarpan 2.0")
+	var base_income19: float = g19.hourly_income() / g19.income_boost_mult()
+	check(absf(g19.hourly_income() - base_income19 * 2.0) < 0.01, "hourly_income() bonusu uyguluyor")
+	g19.boost_end_unix = g19.now() - 1.0  # süresi dolmuş gibi davran
+	check(g19.income_boost_mult() == 1.0, "süre dolunca çarpan 1.0'a döner")
+	g19.start_income_boost(30.0, 2.0)
+	var boost_save_path := "user://test_boost.json"
+	g19.save_game(boost_save_path)
+	var g19b = GameScript.new()
+	g19b.eco = g.eco; g19b.quests = g.quests; g19b.achievements = g.achievements
+	check(g19b.load_game(boost_save_path), "reklam bonusu içeren kayıt yüklendi")
+	check(g19b.income_boost_mult() == 2.0, "yüklenen kayıtta bonus hâlâ aktif (gerçek zamana bağlı)")
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(boost_save_path))
+	g19.free(); g19b.free()
+
+	# 31) IAP (Faz 5): reklam kaldırma ve kazanç çarpanı new_game()/reset_game()
+	# ile SİLİNMEMELİ — gerçek para karşılığı, ilerleme sıfırlamasından bağımsız.
+	var g21 = GameScript.new()
+	g21.eco = g.eco; g21.quests = g.quests; g21.achievements = g.achievements
+	g21.new_game()
+	check(not g21.remove_ads and g21.permanent_income_mult == 1.0, "IAP alanları başlangıçta kapalı")
+	g21.remove_ads = true
+	g21.permanent_income_mult = 2.0
+	g21.new_game()
+	check(g21.remove_ads and g21.permanent_income_mult == 2.0, "new_game() IAP haklarını silmiyor")
+	g21.reset_game()
+	check(g21.remove_ads and g21.permanent_income_mult == 2.0, "reset_game() IAP haklarını silmiyor")
+	var base_income21: float = g21.hourly_income() / g21.permanent_income_mult
+	check(absf(g21.hourly_income() - base_income21 * 2.0) < 0.01, "permanent_income_mult hourly_income()'a işliyor")
+	g21.free()
+
+	# 32) Ads/IAP script'leri (Faz 5 Aşama A mock backend): Game autoload'ından
+	# kasıtlı olarak bağımsızdır (bkz. ads.gd/iap.gd) — bu yüzden headless
+	# --script modunda (autoload'lar yüklenmez) bile doğrudan örneklenip
+	# test edilebilirler; main.gd'nin çağıracağı tam sözleşme burada doğrulanır.
+	# Not: GDScript lambda'ları yerel değişkenleri DEĞER olarak yakalar —
+	# içeriden atama dış kapsamdaki değişkeni güncellemez (doğrulandı). Bu
+	# yüzden sonucu bir Array/Dictionary hücresine yazıyoruz (referans türü,
+	# paylaşılan içerik lambda içinden de mutasyona açık).
+	var IAPScript := load("res://src/autoload/iap.gd")
+	var iap = IAPScript.new()
+	var iap_ok := [false]
+	var iap_product := [""]
+	iap.purchase(iap.PRODUCT_REMOVE_ADS, func(ok: bool): iap_ok[0] = ok)
+	check(iap_ok[0], "IAP.purchase() mock backend her zaman başarılı döner")
+	iap.purchase_result.connect(func(pid: String, ok: bool): iap_product[0] = pid)
+	iap.purchase(iap.PRODUCT_INCOME_2X)
+	check(iap_product[0] == iap.PRODUCT_INCOME_2X, "purchase_result sinyali doğru ürün id'siyle yayınlanıyor")
+	iap.free()
+
+	var AdsScript := load("res://src/autoload/ads.gd")
+	var ads = AdsScript.new()
+	var ads_rewarded := [false]
+	ads.show_rewarded(func(): ads_rewarded[0] = true)
+	check(ads_rewarded[0], "Ads.show_rewarded() mock backend ödülü anında verdi")
+	ads.free()
 
 	g.free()
 	g2.free()
