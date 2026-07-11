@@ -19,7 +19,14 @@ satma, istatistik ekranı, ayarlar (ses/müzik, kayıt sıfırlama) ve geç oyun
 Uzun vade eklentileri: 13 kalıcı başarım, prestij sistemi (seviye 20'de oteli devredip
 kalıcı gelir çarpanı kazanma), sunucusuz haftalık dekorasyon teması, bulut kaydı yerine
 paylaşılabilir kayıt kodu (dışa/içe aktarma) ve Android dışa aktarma (export preset +
-imzalı debug APK). Kayıt formatı v5'e kadar adım adım göçle uyumlu.
+imzalı debug APK). Kayıt formatı v2'den itibaren adım adım göçle uyumlu.
+
+Hotel City incelemesi sürümüyle gelenler (orijinal oyunun rehber + görselleri
+incelenerek): istila mekaniği (uzun süre kirli kalan oda paralı temizlenir),
+uyuyan misafiri dürtüp gizli müfettiş bonusu, sokakta kaçan misafiri yakalama,
+hazır dekor paketleri, tesislerde kapasite görünümü; chibi karakterler, komi ve
+hizmetçi, sütunlu-asansörlü lobi sahnesi, zengin tesis sahneleri ve oda kademe
+metresi (kırmızı→yeşil).
 
 ## Çalıştırma
 

@@ -56,6 +56,17 @@
 - [x] **Günlük giriş serisi ödülü** eklendi: modern F2P'nin en standart tutundurma mekaniği eksikti. 7 günlük artan ödül döngüsü, sunucusuz/deterministik.
 - [x] **Dekorasyon dürtmesi**: açgözlü/deneyimsiz oyuncu profilinde yıldız derecesinin hiç yükselmeme riskine karşı, boş misafir odalarında (en ucuz eşya karşılanabiliyorsa) yanıp sönen altın "✦ Dekore et!" rozeti gösteriliyor. Rozet oda butonunun sağ üstünde, dokunma zaten dekorasyon popup'ını açıyor.
 
+### Hotel City incelemesi sürümü (Temmuz 2026)
+Orijinal Hotel City'nin Gamezebo rehberi (Web Archive) ve Playfish resmi blog
+görselleri incelenerek uyarlanan mekanik + görsel turu:
+- [x] **Kademeli kirlilik → istila**: 6 saatten uzun kirli kalan oda istilaya döner (hamamböceği ikonu, koyu duvar); temizliği 150 coin. `dirty_hours` çevrimdışı ilerletmede de birikir.
+- [x] **Uyuyan misafiri dürtme (gizli müfettiş)**: odadaki misafire dokun — günde 20 hak, %25 şansla yıldıza göre 40+15×yıldız coin bonusu (kayıt v8).
+- [x] **Kaçan misafiri yakalama**: vardiyada ~25 sn'de bir sokakta bir misafir yürüyüp geçer; dokunursan kapıya döner, saatlik gelirin %15'i bonus.
+- [x] **Hazır dekor paketleri**: Konfor / Ahşap / Kraliyet paketleri, %10–12 indirimli, kilit paketteki en yüksek eşyaya göre.
+- [x] **Tesis kapasitesi**: vardiya sırasında tesislerde kapasite kadar mini misafir görünür.
+- [x] **Görsel yenileme**: chibi misafirler (3 karakter), komi + hizmetçi, sütunlu/asansörlü lobi sahnesi, zengin tesis sahneleri (havuz, sinema, spor, spa, temizlik), Hotel City tarzı oda kademe metresi (kırmızı→yeşil).
+- [x] Ekran görüntüsü doğrulama aracı: `tests/shot.tscn` (`-- demo` argümanıyla vardiyalı görünüm).
+
 ## Yapılacaklar
 
 ### Orta vade
