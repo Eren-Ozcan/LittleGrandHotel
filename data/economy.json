@@ -35,7 +35,7 @@
     "restaurant":  { "name": "Restoran", "category": "facility", "base_income": 200, "price": 34000, "unlock_level": 24, "capacity": 3 },
     "roof_garden": { "name": "Çatı Bahçesi", "category": "facility", "base_income": 260, "price": 45000, "unlock_level": 28, "capacity": 4 },
 
-    "housekeeping": { "name": "Temizlik Odası", "category": "functional", "base_income": 0, "price": 2500, "unlock_level": 4 }
+    "housekeeping": { "name": "Temizlik Odası", "category": "functional", "base_income": 0, "price": 1500, "unlock_level": 2 }
   },
 
   "items": [

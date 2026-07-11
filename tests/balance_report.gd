@@ -46,6 +46,9 @@ func _initialize() -> void:
 	print("\n=== 8) MOBİL ASKI/OFFLINE KAPAK SENARYOSU (hayalet vardiya yenilemesi) ===")
 	_check_offline_cap_ghost_renewals()
 
+	print("\n=== 9) ERKEN TEMİZLİK ODASI KARŞILANABİLİRLİĞİ (Sv.2) ===")
+	_check_early_housekeeping_afford()
+
 	quit()
 
 
@@ -105,7 +108,7 @@ func _milestone_setup(level: int, coins: int, rooms_wanted: Array, target_tier: 
 func _check_margin_by_level() -> void:
 	# Her kilometre taşında o seviyeye kadar açılan tüm oda tiplerinden birer
 	# tane + ortalama "Şık" kademe (tier 2) hedefiyle gerçekçi bir kurulum.
-	var levels := [1, 4, 6, 8, 10, 12, 14, 16, 18, 20, 24, 28]
+	var levels := [1, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 24, 28]
 	var room_types: Array = eco.room_types.keys()
 	for lv in levels:
 		var unlocked := []
@@ -265,3 +268,19 @@ func _premium_item_list() -> String:
 		if int(it.get("gem_price", 0)) > 0:
 			parts.append("%s(%d elmas, Sv.%d)" % [it.id, int(it.gem_price), int(it.get("unlock_level", 1))])
 	return ", ".join(parts)
+
+
+func _check_early_housekeeping_afford() -> void:
+	# Temizlik Odası artık Sv.2/1500 coin — q07 görevinin ("Görünmez El") ilk
+	# oturumun içinde tamamlanabilir olduğunu doğrula: gerçekçi bir seviye-2
+	# oyuncu (birkaç erken eşya almış) hâlâ karşılayabiliyor mu?
+	var g = _milestone_setup(2, int(eco.start.coins), [], 0)
+	var hk_price: int = int(eco.room_types.housekeeping.price)
+	var hk_level: int = int(eco.room_types.housekeeping.unlock_level)
+	var reserve: int = g.min_shift_reserve()
+	print("  Sv.2 oyuncu: coin %d, Temizlik Odası fiyatı %d (Sv.%d'de açılıyor), min vardiya rezervi %d" % [
+		g.coins, hk_price, hk_level, reserve])
+	print("  can_buy_room('housekeeping'): %s" % g.can_buy_room("housekeeping"))
+	if not g.can_buy_room("housekeeping"):
+		print("  BULGU: Sv.2 oyuncu gerçekçi harcamadan sonra Temizlik Odası'nı karşılayamıyor.")
+	g.free()
