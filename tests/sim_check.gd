@@ -133,6 +133,16 @@ func _initialize() -> void:
 	check(g.gems == gems_b - int(it_prem.gem_price), "premium bedeli elmastan düşüldü")
 	check(g.coins == coins_b, "premium alım coin harcamadı")
 
+	# 8d) Aynı eşya bir odaya yalnızca bir kez eklenebilir (denge incelemesinde
+	# bulunan sömürü: tekrar alım engeli yoksa en ucuz eşya defalarca alınarak
+	# kademe eşiği (tier_thresholds) neredeyse bedavaya aşılabiliyordu).
+	check(g.room_has_item(1, "statue_gold"), "room_has_item alınan eşyayı görüyor")
+	check(g.buy_item(1, "lamp_desk"), "farklı eşya normalde alınabiliyor")
+	var score_before: int = g.room_score(g.rooms[1])
+	check(not g.buy_item(1, "lamp_desk"), "aynı eşya ikinci kez reddedilir")
+	check(g.room_score(g.rooms[1]) == score_before, "tekrar reddi puanı şişirmedi")
+	check(not g.buy_item(1, "statue_gold"), "sahip olunan premium eşya de tekrar alınamaz")
+
 	# 9) Yuva/kat sınırları
 	var big_price: int = g.floor_price()
 	check(big_price == 15000, "3. kat fiyatı 15000")
@@ -509,6 +519,11 @@ func _initialize() -> void:
 	check(g14.buy_bundle(0, "cozy_set"), "Konfor Paketi satın alındı")
 	check(g14.rooms[0].items.size() == items_before + 4, "4 eşya odaya yerleşti")
 	check(g14.coins == 10000 - bundle_cost, "paket bedeli düşüldü")
+	# Aynı paket ikinci kez alınırsa (veya içindeki eşyalarla çakışırsa) odaya
+	# mükerrer eşya eklenmez — buy_item ile aynı tekil-eşya kuralı geçerli.
+	var items_after_first: int = g14.rooms[0].items.size()
+	check(g14.buy_bundle(0, "cozy_set"), "aynı paket ikinci kez de satın alınabiliyor (ücret düşüyor)")
+	check(g14.rooms[0].items.size() == items_after_first, "ikinci alımda mükerrer eşya eklenmedi")
 	check(g14.eco.room_types.cafe.capacity == 4, "tesis kapasitesi tanımlı (kafe 4)")
 	g14.free()
 
