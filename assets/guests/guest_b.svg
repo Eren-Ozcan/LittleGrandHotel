@@ -1,12 +1,21 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="48" height="64" viewBox="0 0 48 64">
-  <path d="M 12 38 L 36 38 L 34 58 L 14 58 Z" fill="#c4574e" stroke="#8a3a33" stroke-width="2.5" stroke-linejoin="round"/>
-  <rect x="16" y="56" width="6" height="6" rx="2" fill="#55402e"/>
-  <rect x="26" y="56" width="6" height="6" rx="2" fill="#55402e"/>
-  <circle cx="24" cy="22" r="17" fill="#e8bd93" stroke="#a87b4f" stroke-width="2.5"/>
-  <path d="M 7 24 C 5 10 15 4 24 4 C 33 4 43 10 41 24 C 40 14 34 10 24 10 C 14 10 8 14 7 24" fill="#c98a3a"/>
-  <path d="M 6 24 C 6 30 8 34 10 36 L 10 24 Z" fill="#c98a3a"/>
-  <path d="M 42 24 C 42 30 40 34 38 36 L 38 24 Z" fill="#c98a3a"/>
-  <circle cx="18" cy="24" r="2.5" fill="#2e2b28"/>
-  <circle cx="30" cy="24" r="2.5" fill="#2e2b28"/>
-  <path d="M 20 30 Q 24 34 28 30" fill="none" stroke="#8a4527" stroke-width="2" stroke-linecap="round"/>
+  <!-- chibi adam: afro saç, güneş gözlüğü, hardal gömlek (Hotel City barındaki tip) -->
+  <rect x="16.5" y="53" width="5.5" height="9" rx="2.5" fill="#3a3a3f" stroke="#26262a" stroke-width="1.6"/>
+  <rect x="26" y="53" width="5.5" height="9" rx="2.5" fill="#3a3a3f" stroke="#26262a" stroke-width="1.6"/>
+  <path d="M 16.5 40 L 31.5 40 L 33 56 L 15 56 Z" fill="#d9a13b" stroke="#3a2a1c" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M 24 40 L 24 55 M 21 44 h 6" fill="none" stroke="#a8781f" stroke-width="1.4"/>
+  <circle cx="24" cy="25" r="16" fill="#c68a5b" stroke="#3a2a1c" stroke-width="2"/>
+  <circle cx="12" cy="14" r="7" fill="#2b1a10" stroke="#1a0f08" stroke-width="1.8"/>
+  <circle cx="24" cy="10" r="8" fill="#2b1a10" stroke="#1a0f08" stroke-width="1.8"/>
+  <circle cx="36" cy="14" r="7" fill="#2b1a10" stroke="#1a0f08" stroke-width="1.8"/>
+  <circle cx="8.5" cy="22" r="5.5" fill="#2b1a10" stroke="#1a0f08" stroke-width="1.8"/>
+  <circle cx="39.5" cy="22" r="5.5" fill="#2b1a10" stroke="#1a0f08" stroke-width="1.8"/>
+  <path d="M 9 17 A 16 16 0 0 1 39 17 L 39 22 L 9 22 Z" fill="#2b1a10"/>
+  <circle cx="17" cy="9" r="1.5" fill="#4a2f1c" opacity="0.9"/>
+  <circle cx="31" cy="12" r="1.3" fill="#4a2f1c" opacity="0.9"/>
+  <rect x="12" y="22.5" width="10.5" height="7" rx="3" fill="#26262a" stroke="#1a1a1d" stroke-width="1.5"/>
+  <rect x="25.5" y="22.5" width="10.5" height="7" rx="3" fill="#26262a" stroke="#1a1a1d" stroke-width="1.5"/>
+  <path d="M 22.5 25 h 3" stroke="#1a1a1d" stroke-width="1.8"/>
+  <path d="M 14 25 l 3 1.5 M 27.5 25 l 3 1.5" stroke="#5d5d66" stroke-width="1.3" stroke-linecap="round"/>
+  <path d="M 20.5 35 Q 24 38 27.5 35" fill="none" stroke="#3a2a1c" stroke-width="1.7" stroke-linecap="round"/>
 </svg>

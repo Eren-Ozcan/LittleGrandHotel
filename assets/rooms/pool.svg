@@ -1,8 +1,21 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="96" height="64" viewBox="0 0 96 64">
-  <rect x="4" y="34" width="88" height="26" rx="5" fill="#5db3d6" stroke="#33809f" stroke-width="2.5"/>
-  <path d="M 8 42 q 8 -5 16 0 t 16 0 t 16 0 t 16 0 t 16 0" fill="none" stroke="#bfe8f5" stroke-width="3" stroke-linecap="round"/>
-  <path d="M 8 52 q 8 -5 16 0 t 16 0 t 16 0 t 16 0" fill="none" stroke="#8fd0e8" stroke-width="3" stroke-linecap="round"/>
-  <path d="M 78 34 L 78 16 M 88 34 L 88 16 M 78 20 L 88 20 M 78 28 L 88 28" stroke="#d7dedb" stroke-width="3.5" stroke-linecap="round"/>
-  <circle cx="26" cy="30" r="9" fill="#f2d7b0" stroke="#b58c53" stroke-width="2.5"/>
-  <ellipse cx="26" cy="40" rx="12" ry="5" fill="#e07a5f" stroke="#8a3a33" stroke-width="2.5"/>
+  <!-- havuz: mavi fayans duvar, su, cankurtaran kulesi, can simidi, deniz topu -->
+  <rect x="0" y="0" width="96" height="40" fill="#dff2f7"/>
+  <g fill="#7fc4de" opacity="0.85">
+    <rect x="4" y="4" width="9" height="9" rx="1"/><rect x="24" y="4" width="9" height="9" rx="1"/><rect x="44" y="4" width="9" height="9" rx="1"/><rect x="64" y="4" width="9" height="9" rx="1"/><rect x="84" y="4" width="9" height="9" rx="1"/>
+    <rect x="14" y="15" width="9" height="9" rx="1"/><rect x="34" y="15" width="9" height="9" rx="1"/><rect x="54" y="15" width="9" height="9" rx="1"/><rect x="74" y="15" width="9" height="9" rx="1"/>
+  </g>
+  <rect x="0" y="38" width="96" height="6" fill="#fdf6e3" stroke="#c9c2b4" stroke-width="1.6"/>
+  <path d="M 0 44 L 96 44 L 96 64 L 0 64 Z" fill="#4fb3d9"/>
+  <path d="M 4 50 q 8 -4 16 0 t 16 0 t 16 0 t 16 0 t 16 0" fill="none" stroke="#bfe9f7" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M 12 58 q 8 -4 16 0 t 16 0 t 16 0 t 16 0" fill="none" stroke="#8fd4ec" stroke-width="2" stroke-linecap="round"/>
+  <path d="M 8 40 v 16 M 16 40 v 16 M 8 46 h 8 M 8 52 h 8" fill="none" stroke="#e8e8ee" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M 70 18 L 74 44 M 90 18 L 86 44" stroke="#c9622a" stroke-width="3" stroke-linecap="round"/>
+  <path d="M 71 30 h 18" stroke="#c9622a" stroke-width="2.5"/>
+  <rect x="70" y="12" width="20" height="8" rx="2" fill="#e8843c" stroke="#a84f18" stroke-width="2"/>
+  <circle cx="30" cy="34" r="7" fill="#ffffff" stroke="#e05a4e" stroke-width="3.5"/>
+  <circle cx="30" cy="34" r="2.6" fill="#dff2f7"/>
+  <circle cx="52" cy="56" r="6.5" fill="#ffffff" stroke="#3a2a1c" stroke-width="1.6"/>
+  <path d="M 52 49.5 a 6.5 6.5 0 0 1 0 13 c 2 -4 2 -9 0 -13 Z" fill="#e05a4e"/>
+  <path d="M 52 49.5 a 6.5 6.5 0 0 0 0 13 c -2 -4 -2 -9 0 -13 Z" fill="#3d9e4f"/>
 </svg>

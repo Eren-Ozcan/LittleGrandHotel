@@ -1,12 +1,23 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="96" height="64" viewBox="0 0 96 64">
-  <rect x="8" y="40" width="34" height="20" rx="4" fill="#a8845f" stroke="#55402e" stroke-width="2.5"/>
-  <rect x="12" y="30" width="26" height="7" rx="3" fill="#fdfaf2" stroke="#9fa8a4" stroke-width="2"/>
-  <rect x="12" y="22" width="26" height="7" rx="3" fill="#cfe8ef" stroke="#9fa8a4" stroke-width="2"/>
-  <rect x="12" y="14" width="26" height="7" rx="3" fill="#fdfaf2" stroke="#9fa8a4" stroke-width="2"/>
-  <path d="M 66 22 C 60 30 60 38 66 42 C 72 38 72 30 66 22" fill="#e8a0b4" stroke="#b06a80" stroke-width="2.5"/>
-  <path d="M 54 34 C 58 40 62 42 66 42 C 62 46 56 44 54 34" fill="#74b874" stroke="#3c6b3d" stroke-width="2.5"/>
-  <path d="M 78 34 C 74 40 70 42 66 42 C 70 46 76 44 78 34" fill="#74b874" stroke="#3c6b3d" stroke-width="2.5"/>
-  <rect x="52" y="48" width="28" height="10" rx="4" fill="#4f9490" stroke="#2f5f5c" stroke-width="2.5"/>
-  <ellipse cx="88" cy="52" rx="5" ry="7" fill="#f0c75e" stroke="#a07118" stroke-width="2"/>
-  <ellipse cx="88" cy="45" rx="2" ry="3" fill="#e07a5f"/>
+  <!-- spa: masaj masası, mumlar, havlular, buhar, bambu, taş dizisi -->
+  <rect x="0" y="0" width="96" height="56" fill="#eaf3e8"/>
+  <rect x="0" y="54" width="96" height="10" fill="#c8b28a"/>
+  <path d="M 20 10 q 3 -5 0 -9 M 27 12 q 3 -5 0 -9 M 34 10 q 3 -5 0 -9" fill="none" stroke="#b9d4c0" stroke-width="2.2" stroke-linecap="round" opacity="0.9"/>
+  <rect x="12" y="30" width="44" height="9" rx="4" fill="#fdf6e3" stroke="#c9b28a" stroke-width="2"/>
+  <rect x="10" y="27" width="12" height="6" rx="3" fill="#e0cdb6" stroke="#c9b28a" stroke-width="1.6"/>
+  <path d="M 17 39 l -3 16 M 51 39 l 3 16" stroke="#8a6642" stroke-width="3" stroke-linecap="round"/>
+  <rect x="24" y="24" width="20" height="4" rx="2" fill="#7fc4a0" stroke="#4f9470" stroke-width="1.4"/>
+  <rect x="66" y="44" width="6" height="10" rx="1.5" fill="#fff3cf" stroke="#d9c48a" stroke-width="1.4"/>
+  <rect x="76" y="40" width="6" height="14" rx="1.5" fill="#fff3cf" stroke="#d9c48a" stroke-width="1.4"/>
+  <ellipse cx="69" cy="42" rx="2" ry="3.2" fill="#f0c75e"/>
+  <ellipse cx="79" cy="38" rx="2" ry="3.2" fill="#f0c75e"/>
+  <ellipse cx="69" cy="41.4" rx="0.9" ry="1.6" fill="#fdf6e3"/>
+  <ellipse cx="79" cy="37.4" rx="0.9" ry="1.6" fill="#fdf6e3"/>
+  <rect x="62" y="10" width="26" height="3" rx="1" fill="#8a6642"/>
+  <rect x="65" y="13" width="8" height="10" rx="1" fill="#7fc4a0" stroke="#4f9470" stroke-width="1.4"/>
+  <rect x="76" y="13" width="8" height="10" rx="1" fill="#fdf6e3" stroke="#d9c48a" stroke-width="1.4"/>
+  <ellipse cx="30" cy="12" rx="6" ry="3.6" fill="#b9c7bd" stroke="#8fa396" stroke-width="1.4"/>
+  <ellipse cx="30" cy="8.4" rx="4.4" ry="2.8" fill="#cdd8d1" stroke="#8fa396" stroke-width="1.2"/>
+  <path d="M 6 54 C 5 40 5 28 8 18 M 8 54 C 9 42 10 34 12 26" fill="none" stroke="#3d9e4f" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M 8 30 q 5 -2 7 -6 M 6 40 q -4 -2 -5 -6" fill="none" stroke="#3d9e4f" stroke-width="2" stroke-linecap="round"/>
 </svg>

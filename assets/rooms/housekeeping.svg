@@ -1,10 +1,26 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="96" height="64" viewBox="0 0 96 64">
-  <rect x="14" y="24" width="44" height="26" rx="4" fill="#d7a53f" stroke="#8a6642" stroke-width="2.5"/>
-  <rect x="18" y="14" width="14" height="12" rx="2" fill="#fdfaf2" stroke="#9fa8a4" stroke-width="2"/>
-  <rect x="36" y="14" width="14" height="12" rx="2" fill="#cfe8ef" stroke="#9fa8a4" stroke-width="2"/>
-  <circle cx="24" cy="56" r="6" fill="#4f4a45" stroke="#2e2b28" stroke-width="2.5"/>
-  <circle cx="48" cy="56" r="6" fill="#4f4a45" stroke="#2e2b28" stroke-width="2.5"/>
-  <rect x="70" y="8" width="5" height="44" rx="2" fill="#a8845f" stroke="#55402e" stroke-width="2"/>
-  <path d="M 64 50 L 82 50 L 86 62 L 60 62 Z" fill="#f0c75e" stroke="#a07118" stroke-width="2.5" stroke-linejoin="round"/>
-  <path d="M 64 54 L 64 60 M 70 54 L 70 61 M 76 54 L 76 61 M 82 54 L 82 60" stroke="#a07118" stroke-width="2"/>
+  <!-- temizlik odası: raflı dolap, deterjanlar, süpürge + faraş, köpüklü kova -->
+  <rect x="0" y="0" width="96" height="56" fill="#efe9db"/>
+  <rect x="0" y="54" width="96" height="10" fill="#b39a72"/>
+  <rect x="6" y="6" width="38" height="48" rx="2" fill="#a8845f" stroke="#55402e" stroke-width="2.5"/>
+  <path d="M 8 22 h 34 M 8 38 h 34" stroke="#55402e" stroke-width="2"/>
+  <rect x="11" y="12" width="7" height="9" rx="1" fill="#4fb3d9" stroke="#2a7fa3" stroke-width="1.4"/>
+  <rect x="21" y="12" width="7" height="9" rx="1" fill="#e05a4e" stroke="#a83e35" stroke-width="1.4"/>
+  <rect x="31" y="14" width="8" height="7" rx="1" fill="#3d9e4f" stroke="#1f6b2d" stroke-width="1.4"/>
+  <rect x="11" y="27" width="10" height="10" rx="1" fill="#fdf6e3" stroke="#c9b28a" stroke-width="1.4"/>
+  <rect x="24" y="27" width="10" height="10" rx="1" fill="#7fc4a0" stroke="#4f9470" stroke-width="1.4"/>
+  <circle cx="16" cy="47" r="4" fill="#f0c75e" stroke="#a07118" stroke-width="1.4"/>
+  <rect x="26" y="43" width="12" height="9" rx="1.5" fill="#8d8d99" stroke="#5d5d66" stroke-width="1.4"/>
+  <path d="M 56 8 L 62 40" stroke="#8a6642" stroke-width="3" stroke-linecap="round"/>
+  <path d="M 58 38 L 70 36 L 74 50 C 68 53 60 54 54 51 Z" fill="#e0a92f" stroke="#a07118" stroke-width="2"/>
+  <path d="M 59 50 v -5 M 63 51 v -6 M 67 51 v -7 M 71 49 v -7" stroke="#a07118" stroke-width="1.4"/>
+  <path d="M 80 26 l 8 0 l 3 8 l -11 0 Z" fill="#4fb3d9" stroke="#2a7fa3" stroke-width="1.6"/>
+  <path d="M 84 26 l 0 -8" stroke="#2a7fa3" stroke-width="2.2" stroke-linecap="round"/>
+  <path d="M 76 42 L 92 42 L 89 56 L 79 56 Z" fill="#e05a4e" stroke="#a83e35" stroke-width="2"/>
+  <path d="M 76 42 a 8 4 0 0 1 16 0" fill="none" stroke="#a83e35" stroke-width="1.8"/>
+  <circle cx="79" cy="39" r="2.4" fill="#ffffff" opacity="0.9"/>
+  <circle cx="84" cy="37.5" r="3" fill="#ffffff" opacity="0.9"/>
+  <circle cx="89" cy="39" r="2.2" fill="#ffffff" opacity="0.9"/>
+  <path d="M 50 18 l 1 3 l 3 1 l -3 1 l -1 3 l -1 -3 l -3 -1 l 3 -1 Z" fill="#f0c75e"/>
+  <path d="M 88 12 l 0.8 2.4 l 2.4 0.8 l -2.4 0.8 l -0.8 2.4 l -0.8 -2.4 l -2.4 -0.8 l 2.4 -0.8 Z" fill="#f0c75e" opacity="0.8"/>
 </svg>

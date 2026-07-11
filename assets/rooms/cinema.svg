@@ -1,11 +1,24 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="96" height="64" viewBox="0 0 96 64">
-  <rect x="10" y="6" width="76" height="30" rx="3" fill="#fdfaf2" stroke="#55402e" stroke-width="2.5"/>
-  <path d="M 22 28 L 34 14 L 46 26 L 58 12 L 74 28 Z" fill="#7fa9d8"/>
-  <circle cx="66" cy="14" r="4" fill="#f0c75e"/>
-  <rect x="12" y="44" width="16" height="14" rx="4" fill="#b8524a" stroke="#8a3a33" stroke-width="2.5"/>
-  <rect x="34" y="44" width="16" height="14" rx="4" fill="#b8524a" stroke="#8a3a33" stroke-width="2.5"/>
-  <rect x="56" y="44" width="16" height="14" rx="4" fill="#b8524a" stroke="#8a3a33" stroke-width="2.5"/>
-  <rect x="10" y="40" width="20" height="8" rx="4" fill="#c96157" stroke="#8a3a33" stroke-width="2.5"/>
-  <rect x="32" y="40" width="20" height="8" rx="4" fill="#c96157" stroke="#8a3a33" stroke-width="2.5"/>
-  <rect x="54" y="40" width="20" height="8" rx="4" fill="#c96157" stroke="#8a3a33" stroke-width="2.5"/>
+  <!-- sinema: parlayan perde, kırmızı koltuk sırası, patlamış mısır -->
+  <rect x="0" y="0" width="96" height="64" fill="#2c2438"/>
+  <rect x="10" y="4" width="76" height="30" rx="2" fill="#f5f2ff" stroke="#8d84a8" stroke-width="2.5"/>
+  <path d="M 10 34 L 2 44 M 86 34 L 94 44" stroke="#8d84a8" stroke-width="2"/>
+  <path d="M 24 14 L 40 24 L 24 24 Z" fill="#4fb3d9" opacity="0.8"/>
+  <circle cx="62" cy="16" r="7" fill="#f0c75e" opacity="0.9"/>
+  <path d="M 50 28 q 10 -6 24 -2" stroke="#c9bfe0" stroke-width="2" fill="none" opacity="0.7"/>
+  <g stroke="#6e1f1a" stroke-width="2">
+    <rect x="8" y="44" width="16" height="12" rx="3" fill="#a83e35"/>
+    <rect x="6" y="52" width="20" height="8" rx="3" fill="#c0504a"/>
+    <rect x="30" y="44" width="16" height="12" rx="3" fill="#a83e35"/>
+    <rect x="28" y="52" width="20" height="8" rx="3" fill="#c0504a"/>
+    <rect x="52" y="44" width="16" height="12" rx="3" fill="#a83e35"/>
+    <rect x="50" y="52" width="20" height="8" rx="3" fill="#c0504a"/>
+    <rect x="74" y="44" width="16" height="12" rx="3" fill="#a83e35"/>
+    <rect x="72" y="52" width="20" height="8" rx="3" fill="#c0504a"/>
+  </g>
+  <path d="M 84 32 L 81 42 L 91 42 L 88 32 Z" fill="#e05a4e" stroke="#a83e35" stroke-width="1.4"/>
+  <path d="M 83 34 v 8 M 86 32.5 v 9.5 M 89 34 v 8" stroke="#fdf6e3" stroke-width="1.4"/>
+  <circle cx="83" cy="31" r="1.8" fill="#fff3cf"/>
+  <circle cx="86.5" cy="29.5" r="1.8" fill="#fff3cf"/>
+  <circle cx="89.5" cy="31.2" r="1.8" fill="#fff3cf"/>
 </svg>

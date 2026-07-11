@@ -609,12 +609,33 @@ func _rebuild_hotel() -> void:
 			var idx := (f - 1) * spf + s
 			row.add_child(_make_slot(idx))
 
-	# Lobi şeridi
-	var lobby := _panel(PALETTE.wood, PALETTE.wood_dark)
+	# Lobi: sütunlu resepsiyon sahnesi + komi (Hotel City lobisi)
+	var lobby := PanelContainer.new()
+	var lsb := StyleBoxFlat.new()
+	lsb.bg_color = Color("f3e7d8")
+	lsb.border_color = PALETTE.frame
+	lsb.set_border_width_all(3)
+	lsb.set_content_margin_all(0)
+	lobby.add_theme_stylebox_override("panel", lsb)
 	hotel_box.add_child(lobby)
-	var lobby_l := _label("▬▬  LOBİ · Resepsiyon  ▬▬", 15, PALETTE.cream_text)
-	lobby_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	lobby.add_child(lobby_l)
+	var lobby_scene := TextureRect.new()
+	lobby_scene.texture = _tex("res://assets/ui/lobby.svg")
+	lobby_scene.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	lobby_scene.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	lobby_scene.custom_minimum_size = Vector2(0, 76)
+	lobby_scene.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	lobby.add_child(lobby_scene)
+	var bellboy := _icon("res://assets/guests/bellboy.svg", 48)
+	bellboy.anchor_left = 0.16
+	bellboy.anchor_right = 0.16
+	bellboy.anchor_top = 1.0
+	bellboy.anchor_bottom = 1.0
+	bellboy.offset_left = -24
+	bellboy.offset_right = 24
+	bellboy.offset_top = -66
+	bellboy.offset_bottom = -8
+	lobby_scene.add_child(bellboy)
+	_animate_guest(bellboy, 2, false)
 
 	# Sokak: kaldırım + kapı önünde misafir kuyruğu
 	var street := PanelContainer.new()
@@ -761,6 +782,19 @@ func _make_room_button(idx: int) -> Button:
 			strip.add_child(guest)
 			_animate_guest(guest, idx, false)
 	else:
+		# Temizlik odasında vardiya boyunca hizmetçi çalışır
+		if room.type == "housekeeping" and Game.shift_active():
+			var maid := _icon("res://assets/guests/maid.svg", 44)
+			maid.anchor_left = 0.12
+			maid.anchor_right = 0.12
+			maid.anchor_top = 1.0
+			maid.anchor_bottom = 1.0
+			maid.offset_left = -22
+			maid.offset_right = 22
+			maid.offset_top = -60
+			maid.offset_bottom = -14
+			b.add_child(maid)
+			_animate_guest(maid, idx, false)
 		# Tesis kapasitesi: vardiyada içerideki müşteriler görünür
 		if cat == "facility" and Game.shift_active():
 			var cap_row := HBoxContainer.new()
@@ -825,6 +859,30 @@ func _make_room_button(idx: int) -> Button:
 	pl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	plate.add_child(pl)
 	b.add_child(plate)
+
+	# Oda metresi (Hotel City): kademe ilerlemesi kırmızıdan yeşile dolar,
+	# tavan kademede tam yeşil kalır.
+	if cat == "guest" and not is_dirty:
+		var score := Game.room_score(room)
+		var t := Game.room_tier(room)
+		var frac := 1.0
+		if t < Game.eco.tier_thresholds.size() - 1:
+			var lo := int(Game.eco.tier_thresholds[t])
+			var hi := int(Game.eco.tier_thresholds[t + 1])
+			frac = clampf(float(score - lo) / float(hi - lo), 0.0, 1.0)
+		var meter_bg := ColorRect.new()
+		meter_bg.color = Color(0, 0, 0, 0.3)
+		meter_bg.position = Vector2(4, 23)
+		meter_bg.size = Vector2(58, 7)
+		meter_bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		b.add_child(meter_bg)
+		var meter := ColorRect.new()
+		meter.color = Color(0.16, 0.62, 0.29) if frac >= 1.0 \
+			else Color(0.85 - 0.55 * frac, 0.3 + 0.45 * frac, 0.18)
+		meter.position = Vector2(5, 24)
+		meter.size = Vector2(maxf(2.0, 56.0 * frac), 5)
+		meter.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		b.add_child(meter)
 
 	return b
 

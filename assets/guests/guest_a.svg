@@ -1,11 +1,20 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="48" height="64" viewBox="0 0 48 64">
-  <rect x="14" y="36" width="20" height="20" rx="7" fill="#4f9490" stroke="#2f5f5c" stroke-width="2.5"/>
-  <rect x="16" y="54" width="7" height="8" rx="3" fill="#55402e"/>
-  <rect x="25" y="54" width="7" height="8" rx="3" fill="#55402e"/>
-  <circle cx="24" cy="22" r="17" fill="#f2d7b0" stroke="#b58c53" stroke-width="2.5"/>
-  <path d="M 8 18 A 17 17 0 0 1 40 18 L 40 14 A 17 17 0 0 0 8 14 Z" fill="#55402e"/>
-  <path d="M 7 22 C 7 12 14 5 24 5 C 34 5 41 12 41 22 C 41 16 36 12 24 12 C 12 12 7 16 7 22" fill="#55402e"/>
-  <circle cx="18" cy="24" r="2.5" fill="#2e2b28"/>
-  <circle cx="30" cy="24" r="2.5" fill="#2e2b28"/>
-  <path d="M 20 31 Q 24 34 28 31" fill="none" stroke="#8a4527" stroke-width="2" stroke-linecap="round"/>
+  <!-- chibi kadın: koyu kızıl küt saç, camgöbeği elbise (Hotel City stili) -->
+  <rect x="16.5" y="53" width="5.5" height="9" rx="2.5" fill="#e8b48d" stroke="#3a2a1c" stroke-width="1.6"/>
+  <rect x="26" y="53" width="5.5" height="9" rx="2.5" fill="#e8b48d" stroke="#3a2a1c" stroke-width="1.6"/>
+  <path d="M 16 40 L 32 40 L 35.5 57 L 12.5 57 Z" fill="#1f8a8c" stroke="#3a2a1c" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M 17 44 L 14.5 51 M 31 44 L 33.5 51" fill="none" stroke="#166b6d" stroke-width="1.4"/>
+  <circle cx="24" cy="24" r="16.5" fill="#f2c9a0" stroke="#3a2a1c" stroke-width="2"/>
+  <path d="M 7.5 24 C 4.5 5 43.5 5 40.5 24 C 40.5 31 38 36 35 37 C 38 28 36 16 24 16 C 12 16 10 28 13 37 C 10 36 7.5 31 7.5 24 Z" fill="#7a2f22" stroke="#3a2a1c" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M 13 11 C 17 7 23 6 27 7" fill="none" stroke="#a24a37" stroke-width="2" stroke-linecap="round"/>
+  <circle cx="18" cy="26" r="3.6" fill="#ffffff"/>
+  <circle cx="18.9" cy="26.7" r="1.8" fill="#2e1c0c"/>
+  <circle cx="18.2" cy="25.8" r="0.7" fill="#ffffff"/>
+  <circle cx="30" cy="26" r="3.6" fill="#ffffff"/>
+  <circle cx="30.9" cy="26.7" r="1.8" fill="#2e1c0c"/>
+  <circle cx="30.2" cy="25.8" r="0.7" fill="#ffffff"/>
+  <path d="M 14.5 21.5 Q 18 19.8 21 21.2 M 27 21.2 Q 30 19.8 33.5 21.5" fill="none" stroke="#3a2a1c" stroke-width="1.4" stroke-linecap="round"/>
+  <circle cx="13.5" cy="31" r="2" fill="#f0a08a" opacity="0.65"/>
+  <circle cx="34.5" cy="31" r="2" fill="#f0a08a" opacity="0.65"/>
+  <path d="M 21 34 Q 24 36.6 27 34" fill="none" stroke="#3a2a1c" stroke-width="1.7" stroke-linecap="round"/>
 </svg>
