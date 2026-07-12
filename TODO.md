@@ -247,6 +247,13 @@ olsun, orada düzenleme/ekleme vs olsun" (bkz. Gamezebo Hotel City rehberi).
       konumu (x≈850–1040, y≈5–222) git geçmişinden (silinmeden önceki
       commit) geri getirilip bu dönüşümle doğru kesirlere çevrildi
       (`elevator_tex` anchor'ları 0.535–0.685 → 0.428–0.552).
+- [x] On ikinci geri bildirim turu: kullanıcı asansörün arkasında "yarım
+      kalmış" bir şekil olduğunu fark etti — önceki `lobby.png` yamasında
+      referans sütun olarak x=100 kullanılmıştı, ama o sütun duvarın uzun
+      dekoratif çizgilerinden birinin üzerinden geçiyordu; bu çizgi yama
+      kutusunun kenarında aniden başlayıp bitiyordu (kesik görünüm). Gerçekten
+      temiz bir sütun (x=1120, tüm yükseklik boyunca çizgisiz olduğu
+      doğrulandı) kullanılarak yama yeniden yapıldı — artık dikişsiz, düz.
 - [x] Yeni "Oda Mağazası" rafı eklendi (`build_shop_panel`/`build_shop_row`,
       yalnızca İnşa Modu açıkken görünür): her oda tipi için fiyat/seviye
       kilidi gösteren bir kart; kartı basılı tutup binaya sürükleyip
