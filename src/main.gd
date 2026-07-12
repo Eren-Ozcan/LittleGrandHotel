@@ -1909,8 +1909,6 @@ func _close_popup() -> void:
 	overlay.visible = false
 	popup_builder = Callable()
 	selected_room = -1
-	place_target_floor = -1
-	place_target_col = -1
 
 
 func _rebuild_popup() -> void:
@@ -2000,60 +1998,6 @@ func _blocks_used() -> int:
 	for r in Game.rooms:
 		total += int(r.w)
 	return total
-
-
-func _build_shop_popup(c: VBoxContainer) -> void:
-	var lv := Game.level()
-	var has_target := place_target_floor >= 0
-	if has_target:
-		c.add_child(_label("%d. kat, %d. hücreye yerleşecek:" % [place_target_floor, place_target_col + 1], 14, PALETTE.muted))
-	else:
-		var free_blocks := Game.max_slots() - _blocks_used()
-		c.add_child(_label("Boş blok: %d — oda satın al:" % free_blocks, 14, PALETTE.muted))
-	for type in Game.eco.room_types:
-		var d: Dictionary = Game.eco.room_types[type]
-		var cat: String = d.category
-		var w := Game.room_footprint(type)
-		var desc := ("%d coin/saat taban" % int(d.base_income)) if cat == "guest" \
-			else ("+%d coin/saat · yıldıza katkı" % int(d.base_income)) if cat == "facility" \
-			else "odaları otomatik temizler"
-		if w > 1:
-			desc += " · %d blok" % w
-		var row := HBoxContainer.new()
-		row.add_theme_constant_override("separation", 8)
-		c.add_child(row)
-		if cat != "guest":
-			row.add_child(_icon("res://assets/rooms/%s.svg" % type, 40))
-		var b := _button("%s — %s coin\n%s" % [d.name, _fmt(int(d.price)), desc], 14, PALETTE.wood, PALETTE.cream_text)
-		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		if lv < int(d.unlock_level):
-			b.text = "%s — Seviye %d'de açılır" % [d.name, int(d.unlock_level)]
-			b.disabled = true
-		else:
-			var t: String = type
-			if has_target:
-				var tf := place_target_floor
-				var tc := place_target_col
-				b.disabled = not Game.can_place_room(t, tf, tc)
-				b.pressed.connect(func():
-					if Game.place_room(t, tf, tc):
-						_play("buy")
-						_close_popup()
-						_show_toast("%s satın alındı!" % Game.room_def(t).name))
-			else:
-				b.disabled = not Game.can_buy_room(type)
-				b.pressed.connect(func():
-					if Game.buy_room(t):
-						_play("buy")
-						_show_toast("%s satın alındı!" % Game.room_def(t).name))
-		row.add_child(b)
-	if Game.floors < int(Game.eco.building.max_floors):
-		var fb := _button("Yeni kat aç — %s coin (+%d blok)" % [_fmt(Game.floor_price()), Game.DEFAULT_FLOOR_OPEN_WIDTH], 14, PALETTE.wood_dark, PALETTE.cream_text)
-		fb.disabled = not Game.can_buy_floor()
-		fb.pressed.connect(func():
-			if Game.buy_floor():
-				_show_toast("Yeni kat açıldı!"))
-		c.add_child(fb)
 
 
 func _build_room_popup(c: VBoxContainer) -> void:
