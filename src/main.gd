@@ -1586,64 +1586,122 @@ func _on_room_tapped(idx: int, btn: Control) -> void:
 		_open_popup("Tesis", _build_facility_popup)
 
 
-## Açık-ama-boş bir hücreye dokunma: taşıma modundaysa seçili odayı buraya
-## taşır, değilse normal mağaza akışını açar ("+ Oda ekle").
-func _on_empty_cell_tapped(floor_i: int, col: int) -> void:
-	if move_from != "":
-		var mid := move_from
-		move_from = ""
-		if Game.move_room_to(mid, floor_i, col):
-			_play("buy")
-			_show_toast("Oda taşındı")
-		else:
-			_show_toast("Oda buraya sığmıyor")
+## Açık-ama-boş bir hücreye dokunma: yalnızca "Taşı" modundaysa (bkz.
+## move_from, _add_manage_buttons) anlamlı — seçili odayı buraya taşır.
+## Yeni oda eklemek artık tıklamayla değil, mağaza rafından sürükleyip
+## bırakmakla olur (bkz. _make_shop_tray_card, _finish_drag).
+func _on_empty_cell_move_tapped(floor_i: int, col: int) -> void:
+	if move_from == "":
+		_show_toast("Oda eklemek için mağaza rafından bir kartı sürükle")
 		return
-	place_target_floor = floor_i
-	place_target_col = col
-	_open_popup("Mağaza", _build_shop_popup)
+	var mid := move_from
+	move_from = ""
+	if Game.move_room_to(mid, floor_i, col):
+		_play("buy")
+		_show_toast("Oda taşındı")
+	else:
+		_show_toast("Oda buraya sığmıyor")
 
 
-# --- Oda sürükleyerek taşıma ---------------------------------------------
+## Mağaza rafındaki tek bir oda tipi kartı: ikon + isim + fiyat. Kilitliyse
+## (seviye yetmiyorsa) devre dışı ve sürüklenemez. Tıklama/pressed'e değil
+## button_down'a bağlanır — kart bir buton gibi tıklanmaz, yalnızca
+## sürüklenerek binaya bırakılır (bkz. _on_shop_card_press_start).
+func _make_shop_tray_card(type: String) -> Control:
+	var d: Dictionary = Game.room_def(type)
+	var locked := Game.level() < int(d.unlock_level)
+	var b := Button.new()
+	b.custom_minimum_size = Vector2(92, 104)
+	b.disabled = locked
+	for state in ["normal", "hover", "pressed", "disabled"]:
+		b.add_theme_stylebox_override(state, _card_sb(PALETTE.locked if locked else PALETTE.wood, PALETTE.facade_line, 10, 0.15))
+	var col := VBoxContainer.new()
+	col.set_anchors_preset(Control.PRESET_FULL_RECT)
+	col.alignment = BoxContainer.ALIGNMENT_CENTER
+	col.add_theme_constant_override("separation", 2)
+	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	b.add_child(col)
+	var icon_wrap := CenterContainer.new()
+	icon_wrap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_child(icon_wrap)
+	if String(d.category) == "guest":
+		var sw := ColorRect.new()
+		sw.color = WALLPAPERS.get(type, PALETTE.cream)
+		sw.custom_minimum_size = Vector2(36, 36)
+		sw.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		icon_wrap.add_child(sw)
+	else:
+		icon_wrap.add_child(_icon("res://assets/rooms/%s.svg" % type, 36))
+	var name_l := _label(String(d.name), 11, PALETTE.muted if locked else PALETTE.cream_text)
+	name_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	name_l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_child(name_l)
+	var price_text := ("Sv.%d'de açılır" % int(d.unlock_level)) if locked else "%s coin" % _fmt(int(d.price))
+	var price_l := _label(price_text, 10, PALETTE.muted if locked else PALETTE.gold_soft)
+	price_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	price_l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_child(price_l)
+	if not locked:
+		var t: String = type
+		b.button_down.connect(func(): _on_shop_card_press_start(t))
+	return b
+
+
+# --- Oda sürükleyerek taşıma / mağazadan sürükleyerek ekleme -------------
+# İkisi de aynı sürükleme durum makinesini paylaşır: _drag_room_id (mevcut
+# odayı taşı) veya _drag_new_type (mağaza rafından yeni oda ekle) — aynı
+# anda yalnızca biri dolu olabilir. Her ikisi de sadece İnşa Modu açıkken
+# başlatılabilir (kullanıcı isteği: "yapım modu olsun, düzenleme/ekleme
+# orada olsun").
 
 ## Bir oda kartına basıldığında çağrılır (button_down) — henüz sürükleme
 ## değil, yalnızca aday. Gerçek eşik main.gd:_update_room_drag'de.
 func _on_room_press_start(room_id: String, _btn: Control) -> void:
-	if move_from != "" or overlay.visible:
-		return  # popup açıkken veya "Taşı" iki-dokunuşlu moddaysa karıştırma
+	if not build_mode or move_from != "" or overlay.visible:
+		return  # İnşa Modu kapalıyken, popup açıkken veya "Taşı" iki-dokunuşlu moddaysa karıştırma
 	_drag_room_id = room_id
+	_drag_new_type = ""
 	_drag_active = false
 	_drag_start_mouse = get_global_mouse_position()
 
 
-## Her karede: basılı tutulan oda eşik kadar hareket ettiyse sürükleme
+## Mağaza rafındaki bir oda kartına basıldığında çağrılır — yeni oda
+## sürüklemesi başlatır (bkz. _make_shop_tray_card).
+func _on_shop_card_press_start(type: String) -> void:
+	if not build_mode or move_from != "" or overlay.visible:
+		return
+	_drag_new_type = type
+	_drag_room_id = ""
+	_drag_active = false
+	_drag_start_mouse = get_global_mouse_position()
+
+
+## Her karede: basılı tutulan kart eşik kadar hareket ettiyse sürükleme
 ## moduna geç (ghost oluştur, imleci takip et); fare bırakılınca hücreye
-## bırak (move_room_to) veya iptal et.
+## bırak (move_room_to / place_room) veya iptal et.
 func _update_room_drag() -> void:
-	if _drag_room_id == "":
+	if _drag_room_id == "" and _drag_new_type == "":
 		return
 	if not Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
 		if _drag_active:
 			_finish_drag()
 		else:
 			_drag_room_id = ""
+			_drag_new_type = ""
 		return
 	var mouse := get_global_mouse_position()
 	if not _drag_active:
 		if mouse.distance_to(_drag_start_mouse) < PAN_DRAG_THRESHOLD * 2.0:
 			return
 		_drag_active = true
-		_drag_ghost = _make_drag_ghost(_drag_room_id)
+		var w := int(Game.rooms[_room_index_by_id(_drag_room_id)].w) if _drag_room_id != "" else Game.room_footprint(_drag_new_type)
+		var type_name := String(Game.room_def(Game.rooms[_room_index_by_id(_drag_room_id)].type).name) if _drag_room_id != "" else String(Game.room_def(_drag_new_type).name)
+		_drag_ghost = _make_drag_ghost(w, type_name)
 		add_child(_drag_ghost)
 	_drag_ghost.position = mouse - _drag_ghost.size / 2.0
 
 
-func _make_drag_ghost(room_id: String) -> Control:
-	var idx := _room_index_by_id(room_id)
-	var w := 1
-	var type_name := ""
-	if idx >= 0:
-		w = int(Game.rooms[idx].w)
-		type_name = String(Game.room_def(Game.rooms[idx].type).name)
+func _make_drag_ghost(w: int, type_name: String) -> Control:
 	var g := PanelContainer.new()
 	g.add_theme_stylebox_override("panel", _card_sb(PALETTE.gold_soft, PALETTE.facade_line, 8, 0.2))
 	g.modulate = Color(1.0, 1.0, 1.0, 0.8)
@@ -1666,7 +1724,9 @@ func _room_index_by_id(room_id: String) -> int:
 
 func _finish_drag() -> void:
 	var room_id := _drag_room_id
+	var new_type := _drag_new_type
 	_drag_room_id = ""
+	_drag_new_type = ""
 	_drag_active = false
 	if _drag_ghost != null and is_instance_valid(_drag_ghost):
 		_drag_ghost.queue_free()
@@ -1675,11 +1735,18 @@ func _finish_drag() -> void:
 	if cell.x < 1:
 		_show_toast("Buraya bırakılamaz")
 		return
-	if Game.move_room_to(room_id, cell.x, cell.y):
-		_play("buy")
-		_show_toast("Oda taşındı")
+	if room_id != "":
+		if Game.move_room_to(room_id, cell.x, cell.y):
+			_play("buy")
+			_show_toast("Oda taşındı")
+		else:
+			_show_toast("Oda buraya sığmıyor")
 	else:
-		_show_toast("Oda buraya sığmıyor")
+		if Game.place_room(new_type, cell.x, cell.y):
+			_play("buy")
+			_show_toast("%s yerleştirildi!" % Game.room_def(new_type).name)
+		else:
+			_show_toast("Buraya sığmıyor, seviye yetmiyor ya da bedeli karşılanamıyor")
 
 
 ## Ekran koordinatını (global mouse) tuval yerel kat/sütununa çevirir.
