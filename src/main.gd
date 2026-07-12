@@ -4,44 +4,92 @@ extends Control
 ## sıcak cephe, duvar kağıtlı odalar, mobilya ve misafir görselleri.
 
 const PALETTE := {
-	"sky_top": Color("6db9e8"),
-	"sky_bottom": Color("cfeafc"),
-	"cream": Color("f8f2e2"),
-	"cream_dark": Color("efe5cc"),
-	"facade": Color("f3e4c3"),
-	"facade_line": Color("b39463"),
+	"sky_top": Color("8fd0f5"),
+	"sky_bottom": Color("ffe0ea"),
+	"cream": Color("fff6e6"),
+	"cream_dark": Color("f3e6cc"),
+	"facade": Color("fbe6c4"),
+	"facade_line": Color("e6b866"),
 	"wood": Color("8a6642"),
 	"wood_dark": Color("6e4f31"),
-	"gold": Color("e0a92f"),
-	"gold_soft": Color("f0c75e"),
-	"text": Color("4a3b2a"),
-	"muted": Color("8a7a62"),
+	"gold": Color("f6b83c"),
+	"gold_soft": Color("ffd878"),
+	"text": Color("5a3f22"),
+	"muted": Color("a08a68"),
 	"cream_text": Color("fdf6e3"),
-	"green_deep": Color("14532d"),
-	"banner_red": Color("a83e35"),
+	"green_deep": Color("1f7a44"),
+	"banner_red": Color("e0554a"),
 	"floor_wood": Color("c19a6f"),
-	"locked": Color("41372c"),
+	"locked": Color("6b5f52"),
 	"frame": Color("2f2418"),
-	"asphalt": Color("55504a"),
-	"bar_dark": Color("33261a"),
+	"asphalt": Color("6b6f78"),
+	"sidewalk": Color("c9c3b4"),
+	"curb": Color("e0a83c"),
+	"bar_dark": Color("3a2c4d"),
+	"grass": Color("6cc24a"),
+	"grass_dark": Color("4e9e34"),
+}
+
+## Misafir oda tipine göre ayrı sanat havuzları: oyuncu daha pahalı oda
+## tipine yükseldikçe (standart → deluxe → süit) arka plan da görsel
+## olarak zenginleşir (referans oda tasarımları sayfasından).
+const GUEST_ROOM_ART := {
+	"standard": ["guest_room_a", "guest_room_budget"],
+	"deluxe": ["guest_room_d", "guest_room_luxury", "guest_room_asiatic"],
+	"suite": [
+		"guest_room_b", "guest_room_c", "guest_room_honeymoon", "guest_room_starry",
+		"guest_room_artdeco", "guest_room_royal", "guest_room_zen", "guest_room_space",
+	],
+}
+# Havuzdan çıkarılanlar: guest_room_forest (oda içi değil, bina dışından bir
+# kesitti — diğerleriyle tutarsız), guest_room_cinema (gerçek "Sinema" tesis
+# odasıyla neredeyse birebir aynı görünüyor, iki farklı mekaniği karıştırıyordu).
+
+## Misafirler/sokak yürüyüşçüleri için karakter havuzu (referans sayfadaki
+## 5 temel + 4 ekstra varyant) — tek tip 3'lü rotasyon yerine daha çeşitli.
+const GUEST_TYPES := ["a", "b", "c", "d_elder", "e_couple", "f_business", "g_kid"]
+
+
+## Dekor eşyalarının oda kartı içindeki sabit bölgeleri (fractional
+## anchor konumları, 0..1) — "avizenin olması gerektiği yerde durması gibi"
+## (bkz. kullanıcı isteği). Aynı bölgeyi paylaşan eşyalar sırayla bu
+## slotlara oturur; slot taşarsa (nadiren) fazlası gösterilmez.
+const ANCHOR_POSITIONS := {
+	"ceiling": [Vector2(0.5, 0.16)],
+	"wall": [Vector2(0.16, 0.3), Vector2(0.84, 0.3)],
+	"surface": [Vector2(0.18, 0.58)],
+	"floor_rug": [Vector2(0.5, 0.86)],
+	"floor_side": [Vector2(0.14, 0.86), Vector2(0.5, 0.7), Vector2(0.86, 0.86)],
 }
 
 const WALLPAPERS := {
 	"standard": Color("dcebf5"),
 	"deluxe": Color("f7e2e6"),
 	"suite": Color("eee4f7"),
-	"cafe": Color("f7ecd9"),
-	"gym": Color("e3eef0"),
-	"pool": Color("dff2f7"),
-	"cinema": Color("e8e3ef"),
-	"spa": Color("eaf3e8"),
-	"restaurant": Color("f7e7d4"),
-	"roof_garden": Color("e4f2dd"),
-	"housekeeping": Color("efe9db"),
+	"cafe": Color("ffe2b0"),
+	"gym": Color("bfe8ee"),
+	"pool": Color("b8ecf5"),
+	"cinema": Color("d9cdf2"),
+	"spa": Color("cdeecb"),
+	"restaurant": Color("ffdcae"),
+	"roof_garden": Color("cdeeb8"),
+	"housekeeping": Color("efe4cc"),
 }
 
 const SPEEDS: Array[float] = [1.0, 60.0, 3600.0]
 var speed_index := 0
+
+## Serbest blok yerleşimi (v2 render): tek hücre boyutu + bina şeridinin
+## sabit toplam genişliği (Game.eco.building.grid_cols × CELL_W).
+const CELL_W := 90.0
+const CELL_H := 112.0
+const CELL_GAP := 6.0
+const STREET_H := 90.0
+const LOBBY_H := 84.0
+const GRASS_H := 22.0
+const ZOOM_MIN := 0.5
+const ZOOM_MAX := 1.5
+const PAN_DRAG_THRESHOLD := 6.0
 
 ## Haftalık dekorasyon teması: sunucusuz, Game.current_week_index()'e göre
 ## deterministik seçilir — çatı tabelasını hafta boyunca tek renkte boyar.
@@ -63,11 +111,25 @@ var xp_bar: ProgressBar
 var shift_label: Label
 var shift_bar_label: Label
 var collect_button: Button
-var hotel_box: VBoxContainer
-var street_node: PanelContainer
+var street_node: Control
 var quest_hint: Label
 var toast_panel: PanelContainer
 var toast_label: Label
+
+## Serbest yerleşim bina görünümü: zoom_viewport (sabit, clip'li pencere) →
+## building_canvas (manuel konumlandırılan, ölçeklenen/kaydırılan tuval —
+## kat sıraları + lobi + sokak + çim hepsi burada, birlikte zoom/pan alır).
+var zoom_viewport: Control
+var building_canvas: Control
+var roof_panel: PanelContainer
+var roof_title_label: Label
+var roof_theme_label: Label
+var new_floor_button: Button
+var _zoom := 1.0
+var _canvas_pan := Vector2.ZERO
+var _pan_dragging := false
+var _pan_drag_start := Vector2.ZERO
+var _pan_start_canvas_pos := Vector2.ZERO
 
 var overlay: Control
 var popup_title: Label
@@ -75,7 +137,22 @@ var popup_content: VBoxContainer
 var popup_builder: Callable = Callable()
 
 var selected_room := -1
-var move_from := -1
+## Taşıma modunda seçili odanın kararlı kimliği ("" = taşıma modu kapalı).
+var move_from := ""
+## "+ Oda ekle" ile açılan mağazada, oyuncunun dokunduğu BOŞ hücre — seçilirse
+## mağazadaki alım o hücreye yerleşir (place_room), yoksa ilk uygun boşluğa
+## (buy_room). -1 = belirli bir hedef seçilmedi.
+var place_target_floor := -1
+var place_target_col := -1
+
+## Odayı basılı tutup sürükleyerek taşıma (kullanıcı isteği: "Taşı" butonuyla
+## iki-dokunuşlu seçim yerine gerçek sürükle-bırak). "Taşı" butonu da (bkz.
+## move_from) hâlâ çalışır — bu, aynı hedefe ULAŞMANIN ikinci bir yolu.
+var _drag_room_id := ""
+var _drag_active := false
+var _drag_start_mouse := Vector2.ZERO
+var _drag_ghost: Control = null
+
 var _walker: Control = null
 var _walker_timer := 0.0
 var _toast_timer := 0.0
@@ -122,6 +199,7 @@ func _maybe_show_offline_popup() -> void:
 func _process(delta: float) -> void:
 	_update_live_labels()
 	_update_walker(delta)
+	_update_room_drag()
 	if _toast_timer > 0.0:
 		_toast_timer -= delta
 		if _toast_timer <= 0.0:
@@ -145,7 +223,7 @@ func _spawn_walker() -> void:
 		return
 	var walk_y := street_node.global_position.y - 34.0
 	var b := TextureButton.new()
-	b.texture_normal = _tex("res://assets/guests/guest_%s.svg" % ["a", "b", "c"][randi() % 3])
+	b.texture_normal = _tex("res://assets/guests/guest_%s.svg" % GUEST_TYPES[randi() % GUEST_TYPES.size()])
 	b.ignore_texture_size = true
 	b.stretch_mode = TextureButton.STRETCH_KEEP_ASPECT_CENTERED
 	b.custom_minimum_size = Vector2(40, 40)
@@ -212,7 +290,14 @@ func _play(kind: String) -> void:
 
 func _tex(path: String) -> Texture2D:
 	if not _tex_cache.has(path):
-		_tex_cache[path] = load(path)
+		# Referans sanat sayfasından kesilen PNG varsa onu tercih et;
+		# yoksa elle çizilmiş SVG yedeği kullanılır.
+		var p := path
+		if p.ends_with(".svg"):
+			var png := p.trim_suffix(".svg") + ".png"
+			if ResourceLoader.exists(png, "Texture2D"):
+				p = png
+		_tex_cache[path] = load(p)
 	return _tex_cache[path]
 
 
@@ -332,24 +417,89 @@ func _build_ui() -> void:
 	quest_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	qp.add_child(quest_hint)
 
-	# --- Otel görünümü
-	var scroll := ScrollContainer.new()
-	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	root.add_child(scroll)
-	hotel_box = VBoxContainer.new()
-	hotel_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	hotel_box.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	hotel_box.add_theme_constant_override("separation", 0)
-	scroll.add_child(hotel_box)
+	# --- Otel görünümü: çatı tabelası (sabit) + zoom kontrolleri (sabit) +
+	# zoom/pan alan tuval (kat sıraları + lobi + sokak + çim, serbest blok
+	# yerleşimi — kat genişlikleri farklı olabildiği için artık HBoxContainer
+	# satırları yerine manuel konumlandırılmış tek bir Control tuval).
+	roof_panel = PanelContainer.new()
+	var roof_sb := StyleBoxFlat.new()
+	roof_sb.corner_radius_top_left = 20
+	roof_sb.corner_radius_top_right = 20
+	roof_sb.set_content_margin_all(12)
+	roof_sb.border_color = PALETTE.gold
+	roof_sb.set_border_width_all(2)
+	roof_sb.border_width_bottom = 5
+	roof_sb.shadow_color = Color(0.1, 0.06, 0.02, 0.18)
+	roof_sb.shadow_size = 5
+	roof_sb.shadow_offset = Vector2(0, 3)
+	roof_panel.add_theme_stylebox_override("panel", roof_sb)
+	root.add_child(roof_panel)
+	var roof_col := VBoxContainer.new()
+	roof_col.add_theme_constant_override("separation", 2)
+	roof_panel.add_child(roof_col)
+	roof_title_label = _label("★  LITTLE GRAND HOTEL  ★", 18, PALETTE.gold_soft)
+	roof_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	roof_col.add_child(roof_title_label)
+	roof_theme_label = _label("", 12, PALETTE.cream_text)
+	roof_theme_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	roof_col.add_child(roof_theme_label)
+
+	var zoom_row := HBoxContainer.new()
+	zoom_row.add_theme_constant_override("separation", 6)
+	zoom_row.alignment = BoxContainer.ALIGNMENT_END
+	root.add_child(zoom_row)
+	var zoom_out_b := _button("−", 18, PALETTE.wood, PALETTE.cream_text)
+	zoom_out_b.custom_minimum_size = Vector2(40, 36)
+	zoom_out_b.pressed.connect(func(): _zoom_by(-0.15, zoom_viewport.size / 2.0))
+	zoom_row.add_child(zoom_out_b)
+	var zoom_reset_b := _button("⟳", 16, PALETTE.wood, PALETTE.cream_text)
+	zoom_reset_b.custom_minimum_size = Vector2(40, 36)
+	zoom_reset_b.pressed.connect(func():
+		_zoom = 1.0
+		_canvas_pan = Vector2.ZERO
+		_clamp_pan()
+		_apply_canvas_transform())
+	zoom_row.add_child(zoom_reset_b)
+	var zoom_in_b := _button("+", 18, PALETTE.wood, PALETTE.cream_text)
+	zoom_in_b.custom_minimum_size = Vector2(40, 36)
+	zoom_in_b.pressed.connect(func(): _zoom_by(0.15, zoom_viewport.size / 2.0))
+	zoom_row.add_child(zoom_in_b)
+
+	# zoom_viewport'u kendi ScrollContainer'ına sarmalıyoruz: içeriği (bina
+	# tuvali) sabit bir yüksekliğe sahip, VBox'ın "kalan alanı" hesabına göre
+	# öngörülemez şekilde şişip "Yeni kat aç" butonunu ekran dışına itmesin;
+	# bina taşarsa (çok kat) kullanıcı aşağı kaydırıp butona ulaşabilir.
+	var view_scroll := ScrollContainer.new()
+	view_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	root.add_child(view_scroll)
+	var view_col := VBoxContainer.new()
+	view_col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	view_scroll.add_child(view_col)
+
+	zoom_viewport = Control.new()
+	zoom_viewport.clip_contents = true
+	zoom_viewport.custom_minimum_size = Vector2(0, 460)
+	zoom_viewport.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	zoom_viewport.mouse_filter = Control.MOUSE_FILTER_PASS
+	zoom_viewport.gui_input.connect(_on_viewport_gui_input)
+	view_col.add_child(zoom_viewport)
+	building_canvas = Control.new()
+	building_canvas.mouse_filter = Control.MOUSE_FILTER_PASS
+	zoom_viewport.add_child(building_canvas)
+
+	new_floor_button = _button("", 15, PALETTE.wood_dark, PALETTE.cream_text)
+	new_floor_button.pressed.connect(func():
+		if Game.buy_floor():
+			_play("buy")
+			_show_toast("Yeni kat açıldı!"))
+	view_col.add_child(new_floor_button)
 
 	# --- Alt bar: koyu şerit üzerinde ikonlu kategoriler (Hotel City tarzı)
 	var bar_panel := PanelContainer.new()
-	var bar_sb := StyleBoxFlat.new()
-	bar_sb.bg_color = PALETTE.bar_dark
-	bar_sb.set_corner_radius_all(12)
+	var bar_sb := _card_sb(PALETTE.bar_dark, PALETTE.gold, 20, 0.25)
 	bar_sb.set_content_margin_all(6)
-	bar_sb.border_color = PALETTE.gold
-	bar_sb.set_border_width_all(2)
+	bar_sb.shadow_size = 6
+	bar_sb.shadow_offset = Vector2(0, -2)
 	bar_panel.add_theme_stylebox_override("panel", bar_sb)
 	root.add_child(bar_panel)
 	var bottom := HBoxContainer.new()
@@ -439,14 +589,24 @@ func _build_ui() -> void:
 	toast_panel.add_child(toast_label)
 
 
-func _panel(bg: Color, border: Color) -> PanelContainer:
-	var p := PanelContainer.new()
+## Yuvarlak köşeli + yumuşak gölgeli kart stilbox'u (referans mockup'taki
+## "dollhouse kartları" hissi için) — düz StyleBoxFlat yerine ortak kullanılır.
+func _card_sb(bg: Color, border: Color, radius: int, shadow: float = 0.22) -> StyleBoxFlat:
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = bg
-	sb.set_corner_radius_all(10)
-	sb.set_content_margin_all(12)
+	sb.set_corner_radius_all(radius)
 	sb.border_color = border
 	sb.set_border_width_all(2)
+	sb.shadow_color = Color(0.1, 0.06, 0.02, shadow)
+	sb.shadow_size = 5
+	sb.shadow_offset = Vector2(0, 3)
+	return sb
+
+
+func _panel(bg: Color, border: Color) -> PanelContainer:
+	var p := PanelContainer.new()
+	var sb := _card_sb(bg, border, 18, 0.14)
+	sb.set_content_margin_all(12)
 	p.add_theme_stylebox_override("panel", sb)
 	return p
 
@@ -482,7 +642,7 @@ func _bar_button(icon_path: String, text: String) -> Button:
 			sb.bg_color = PALETTE.bar_dark.lightened(0.08)
 		elif state == "pressed":
 			sb.bg_color = PALETTE.bar_dark.darkened(0.2)
-		sb.set_corner_radius_all(9)
+		sb.set_corner_radius_all(16)
 		sb.set_content_margin_all(2)
 		b.add_theme_stylebox_override(state, sb)
 	var v := VBoxContainer.new()
@@ -533,12 +693,20 @@ func _button(text: String, size: int, bg: Color, fg: Color) -> Button:
 			sb.bg_color = bg.darkened(0.1)
 		elif state == "disabled":
 			sb.bg_color = bg.darkened(0.2)
-		sb.set_corner_radius_all(9)
+		sb.set_corner_radius_all(14)
 		sb.set_content_margin_all(9)
 		sb.border_color = bg.darkened(0.35)
 		sb.set_border_width_all(2)
 		b.add_theme_stylebox_override(state, sb)
 	return b
+
+
+## Butona sol ikon ekler (reklam/IAP butonlarındaki sanat sayfası ikonları).
+func _button_icon(b: Button, path: String) -> void:
+	b.icon = _tex(path)
+	b.expand_icon = true
+	b.add_theme_constant_override("icon_max_width", 26)
+	b.add_theme_constant_override("h_separation", 8)
 
 
 # --- Yenileme ----------------------------------------------------------
@@ -580,61 +748,78 @@ func _current_theme() -> Dictionary:
 
 
 func _rebuild_hotel() -> void:
-	for c in hotel_box.get_children():
-		hotel_box.remove_child(c)
+	for c in building_canvas.get_children():
+		building_canvas.remove_child(c)
 		c.queue_free()
 
-	# Bina küçükken zemine otursun diye üstte esneyen boşluk
-	var top_gap := Control.new()
-	top_gap.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	top_gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	hotel_box.add_child(top_gap)
-
-	# Çatı tabelası (haftalık temaya göre renklenen tente)
+	# Çatı tabelası (haftalık temaya göre renklenen tente) — sabit, tuvalin
+	# dışında; zoom/pan yalnızca kat sıraları + lobi + sokak + çimi kapsar.
 	var theme: Dictionary = _current_theme()
-	var roof := _panel(theme.accent, PALETTE.gold)
-	hotel_box.add_child(roof)
-	var roof_col := VBoxContainer.new()
-	roof_col.add_theme_constant_override("separation", 2)
-	roof.add_child(roof_col)
-	var roof_l := _label("★  LITTLE GRAND HOTEL  ★", 18, PALETTE.gold_soft)
-	roof_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	roof_col.add_child(roof_l)
-	var theme_l := _label("Haftanın teması: %s" % String(theme.name), 12, PALETTE.cream_text)
-	theme_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	roof_col.add_child(theme_l)
+	(roof_panel.get_theme_stylebox("panel") as StyleBoxFlat).bg_color = theme.accent
+	roof_theme_label.text = "Haftanın teması: %s" % String(theme.name)
 
-	var spf := int(Game.eco.building.slots_per_floor)
-	for f: int in range(Game.floors, 0, -1):
-		var row_panel := PanelContainer.new()
-		var sb := StyleBoxFlat.new()
-		sb.bg_color = PALETTE.facade
-		sb.border_color = PALETTE.frame
-		sb.set_border_width_all(3)
-		sb.set_content_margin_all(6)
-		row_panel.add_theme_stylebox_override("panel", sb)
-		hotel_box.add_child(row_panel)
-		var row := HBoxContainer.new()
-		row.add_theme_constant_override("separation", 8)
-		row_panel.add_child(row)
-		for s in spf:
-			var idx := (f - 1) * spf + s
-			row.add_child(_make_slot(idx))
+	var grid_cols := int(Game.eco.building.grid_cols)
+	var canvas_w := grid_cols * CELL_W
+	var floors_h := Game.floors * CELL_H
+	var canvas_h := floors_h + LOBBY_H + STREET_H + GRASS_H
+	building_canvas.custom_minimum_size = Vector2(canvas_w, canvas_h)
+	building_canvas.size = building_canvas.custom_minimum_size
+
+	# Kat sıraları: her kat için tüm grid_cols genişliğinde bir zemin şeridi,
+	# üzerine odalar (floor/col/w'ye göre konumlandırılır), açık-ama-boş
+	# hücrelere "+ oda ekle", henüz satın alınmamış bloklara "blok al" butonu.
+	for floor_i in range(Game.floors, 1 - 1, -1):
+		if floor_i < 1:
+			break
+		var row_y := float(Game.floors - floor_i) * CELL_H
+		var row_bg := PanelContainer.new()
+		var sb := _card_sb(PALETTE.facade, PALETTE.facade_line, 0, 0.1)
+		sb.set_content_margin_all(0)
+		row_bg.add_theme_stylebox_override("panel", sb)
+		row_bg.position = Vector2(0, row_y)
+		row_bg.size = Vector2(canvas_w, CELL_H)
+		row_bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		building_canvas.add_child(row_bg)
+
+		var open_w := Game.floor_open_width(floor_i)
+		var occupied := {}
+		for i in Game.rooms.size():
+			var r: Dictionary = Game.rooms[i]
+			if int(r.floor) != floor_i:
+				continue
+			var btn := _make_room_button(i)
+			btn.position = Vector2(int(r.col) * CELL_W + CELL_GAP * 0.5, row_y + CELL_GAP * 0.5)
+			btn.size = Vector2(int(r.w) * CELL_W - CELL_GAP, CELL_H - CELL_GAP)
+			building_canvas.add_child(btn)
+			for cc in range(int(r.col), int(r.col) + int(r.w)):
+				occupied[cc] = true
+
+		for col in range(grid_cols):
+			if occupied.has(col):
+				continue
+			var cell: Control = _make_add_cell_button(floor_i, col) if col < open_w \
+				else _make_block_cell_button(floor_i, col)
+			cell.position = Vector2(col * CELL_W + CELL_GAP * 0.5, row_y + CELL_GAP * 0.5)
+			cell.size = Vector2(CELL_W - CELL_GAP, CELL_H - CELL_GAP)
+			building_canvas.add_child(cell)
 
 	# Lobi: sütunlu resepsiyon sahnesi + komi (Hotel City lobisi)
+	var lobby_y := floors_h
 	var lobby := PanelContainer.new()
 	var lsb := StyleBoxFlat.new()
 	lsb.bg_color = Color("f3e7d8")
-	lsb.border_color = PALETTE.frame
-	lsb.set_border_width_all(3)
+	lsb.border_color = PALETTE.facade_line
+	lsb.set_border_width_all(2)
 	lsb.set_content_margin_all(0)
 	lobby.add_theme_stylebox_override("panel", lsb)
-	hotel_box.add_child(lobby)
+	lobby.position = Vector2(0, lobby_y)
+	lobby.size = Vector2(canvas_w, LOBBY_H)
+	building_canvas.add_child(lobby)
 	var lobby_scene := TextureRect.new()
 	lobby_scene.texture = _tex("res://assets/ui/lobby.svg")
 	lobby_scene.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	lobby_scene.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-	lobby_scene.custom_minimum_size = Vector2(0, 76)
+	lobby_scene.set_anchors_preset(Control.PRESET_FULL_RECT)
 	lobby_scene.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	lobby.add_child(lobby_scene)
 	var bellboy := _icon("res://assets/guests/bellboy.svg", 48)
@@ -649,38 +834,96 @@ func _rebuild_hotel() -> void:
 	lobby_scene.add_child(bellboy)
 	_animate_guest(bellboy, 2, false)
 
-	# Sokak: kaldırım + kapı önünde misafir kuyruğu
-	var street := PanelContainer.new()
-	var ssb := StyleBoxFlat.new()
-	ssb.bg_color = PALETTE.asphalt
-	ssb.border_color = PALETTE.frame
-	ssb.border_width_top = 3
-	ssb.content_margin_left = 12
-	ssb.content_margin_top = 2
-	ssb.content_margin_bottom = 2
-	street.add_theme_stylebox_override("panel", ssb)
-	hotel_box.add_child(street)
+	# Sokak: bina bir kaldırım kenarında duruyormuş hissi — açık gri kaldırım
+	# (döşeme derzleriyle) + bordür şeridi + koyu asfalt yol, bina ile aynı
+	# tuval içinde (aynı zoom/pan'i paylaşır), önceki dar şeritten belirgin geniş.
+	var street_y := lobby_y + LOBBY_H
+	var street := Control.new()
+	street.position = Vector2(0, street_y)
+	street.size = Vector2(canvas_w, STREET_H)
+	street.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	building_canvas.add_child(street)
 	street_node = street
+
+	const SIDEWALK_H := 58.0
+	const CURB_H := 7.0
+	var sidewalk := ColorRect.new()
+	sidewalk.color = PALETTE.sidewalk
+	sidewalk.position = Vector2.ZERO
+	sidewalk.size = Vector2(canvas_w, SIDEWALK_H)
+	sidewalk.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	street.add_child(sidewalk)
+	for seam_x in range(0, int(canvas_w), 64):
+		var seam := ColorRect.new()
+		seam.color = PALETTE.sidewalk.darkened(0.12)
+		seam.position = Vector2(seam_x, 0)
+		seam.size = Vector2(2, SIDEWALK_H)
+		seam.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		street.add_child(seam)
+	var curb := ColorRect.new()
+	curb.color = PALETTE.curb
+	curb.position = Vector2(0, SIDEWALK_H)
+	curb.size = Vector2(canvas_w, CURB_H)
+	curb.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	street.add_child(curb)
+	var road := ColorRect.new()
+	road.color = PALETTE.asphalt
+	road.position = Vector2(0, SIDEWALK_H + CURB_H)
+	road.size = Vector2(canvas_w, STREET_H - SIDEWALK_H - CURB_H)
+	road.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	street.add_child(road)
+	for dash_x in range(10, int(canvas_w), 46):
+		var dash := ColorRect.new()
+		dash.color = PALETTE.gold_soft
+		dash.position = Vector2(dash_x, SIDEWALK_H + CURB_H + (STREET_H - SIDEWALK_H - CURB_H) * 0.5 - 1.5)
+		dash.size = Vector2(22, 3)
+		dash.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		road.add_child(dash)
+
+	var street_scroll := ScrollContainer.new()
+	street_scroll.position = Vector2(0, 2)
+	street_scroll.size = Vector2(canvas_w, SIDEWALK_H - 4)
+	street_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	street.add_child(street_scroll)
 	var queue := HBoxContainer.new()
-	queue.add_theme_constant_override("separation", 4)
-	street.add_child(queue)
+	queue.add_theme_constant_override("separation", 8)
+	queue.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	street_scroll.add_child(queue)
 	if Game.shift_active():
 		for gi in mini(3 + Game.rooms.size() / 2, 8):
-			var gicon := _icon("res://assets/guests/guest_%s.svg" % ["a", "b", "c"][gi % 3], 34)
+			var gicon := _icon("res://assets/guests/guest_%s.svg" % GUEST_TYPES[gi % GUEST_TYPES.size()], 48)
 			queue.add_child(gicon)
 			_animate_guest(gicon, gi, true)
 	else:
-		var street_l := _label("· · · sokak sakin — vardiya başlat · · ·", 12, PALETTE.cream)
+		var street_l := _label("· · · sokak sakin — vardiya başlat · · ·", 13, PALETTE.cream)
+		street_l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		queue.add_child(street_l)
 
-	# Yeni kat
-	if Game.floors < int(Game.eco.building.max_floors):
-		var fb := _button("Yeni kat aç — %s coin" % _fmt(Game.floor_price()), 15, PALETTE.wood_dark, PALETTE.cream_text)
-		fb.disabled = not Game.can_buy_floor()
-		fb.pressed.connect(func():
-			if Game.buy_floor():
-				_show_toast("Yeni kat açıldı!"))
-		hotel_box.add_child(fb)
+	# Çim tabanı: binayı bir "dollhouse nesnesi" gibi zemine oturtan yeşil kapak
+	var grass := PanelContainer.new()
+	var gsb := StyleBoxFlat.new()
+	gsb.bg_color = PALETTE.grass
+	gsb.corner_radius_bottom_left = 20
+	gsb.corner_radius_bottom_right = 20
+	gsb.border_color = PALETTE.grass_dark
+	gsb.border_width_bottom = 4
+	gsb.shadow_color = Color(0.1, 0.06, 0.02, 0.18)
+	gsb.shadow_size = 5
+	gsb.shadow_offset = Vector2(0, 3)
+	grass.add_theme_stylebox_override("panel", gsb)
+	grass.position = Vector2(0, street_y + STREET_H)
+	grass.size = Vector2(canvas_w, GRASS_H)
+	building_canvas.add_child(grass)
+
+	_clamp_pan()
+	_apply_canvas_transform()
+
+	# Yeni kat (tuvalin dışında, sabit — satın alınca yeni bir kat satırı
+	# tuvale eklenir)
+	new_floor_button.visible = Game.floors < int(Game.eco.building.max_floors)
+	if new_floor_button.visible:
+		new_floor_button.text = "Yeni kat aç — %s coin" % _fmt(Game.floor_price())
+		new_floor_button.disabled = not Game.can_buy_floor()
 
 	var q: Dictionary = Game.current_quest()
 	if q.is_empty():
@@ -690,30 +933,93 @@ func _rebuild_hotel() -> void:
 		quest_hint.text = "Görev: %s (%d/%d)" % [q.name, mini(p[0], p[1]), p[1]]
 
 
-func _make_slot(idx: int) -> Control:
-	if idx < Game.rooms.size():
-		return _make_room_button(idx)
-	elif idx == Game.rooms.size() and idx < Game.max_slots():
-		var b := _button("+\nOda ekle", 14, PALETTE.cream_dark, PALETTE.muted)
-		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		b.custom_minimum_size = Vector2(0, 118)
-		b.pressed.connect(func(): _open_popup("Mağaza", _build_shop_popup))
-		return b
-	else:
-		var p := PanelContainer.new()
-		var sb := StyleBoxFlat.new()
-		sb.bg_color = PALETTE.locked
-		sb.border_color = PALETTE.frame
-		sb.set_border_width_all(3)
-		sb.set_corner_radius_all(3)
-		p.add_theme_stylebox_override("panel", sb)
-		p.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		p.custom_minimum_size = Vector2(0, 118)
-		var l := _label("▚ perde kapalı ▞", 11, Color("8d8070"))
-		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		p.add_child(l)
-		return p
+## Açık ama boş bir hücre: "+ oda ekle" (taşıma modundaysa hedef olarak da
+## kullanılır — bkz. _on_empty_cell_tapped).
+func _make_add_cell_button(floor_i: int, col: int) -> Control:
+	var b := _button("+\nOda ekle", 13, PALETTE.cream_dark, PALETTE.muted)
+	b.pressed.connect(func(): _on_empty_cell_tapped(floor_i, col))
+	return b
+
+
+## Henüz satın alınmamış blok: kapalı perde + fiyatıyla "blok al" butonu.
+func _make_block_cell_button(floor_i: int, col: int) -> Control:
+	var b := Button.new()
+	b.clip_text = true
+	for state in ["normal", "hover", "pressed", "disabled"]:
+		var sb := _card_sb(PALETTE.locked, PALETTE.facade_line, 12, 0.12)
+		b.add_theme_stylebox_override(state, sb)
+	b.clip_contents = true
+	var curt := TextureRect.new()
+	curt.texture = _tex("res://assets/ui/curtain_closed.svg")
+	curt.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	curt.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	curt.set_anchors_preset(Control.PRESET_FULL_RECT)
+	curt.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	b.add_child(curt)
+	var l := _label("Blok aç\n%s coin" % _fmt(Game.block_price(floor_i)), 11, Color("f0dfc4"))
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	l.set_anchors_preset(Control.PRESET_FULL_RECT)
+	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	b.add_child(l)
+	b.disabled = not Game.can_buy_block(floor_i)
+	b.pressed.connect(func():
+		if Game.buy_block(floor_i):
+			_play("buy")
+			_show_toast("Yeni blok açıldı!"))
+	return b
+
+
+# --- Bina görünümü: zoom / pan -----------------------------------------
+
+func _apply_canvas_transform() -> void:
+	building_canvas.scale = Vector2(_zoom, _zoom)
+	building_canvas.position = _canvas_pan
+
+
+## Tuvalin viewport dışına taşmasını (fazla pan/zoom-out) engeller.
+func _clamp_pan() -> void:
+	var content_size: Vector2 = building_canvas.custom_minimum_size * _zoom
+	var vp_size: Vector2 = zoom_viewport.size
+	var min_x: float = minf(0.0, vp_size.x - content_size.x)
+	var min_y: float = minf(0.0, vp_size.y - content_size.y)
+	_canvas_pan.x = clampf(_canvas_pan.x, min_x, 0.0)
+	_canvas_pan.y = clampf(_canvas_pan.y, min_y, 0.0)
+
+
+## Belirli bir ekran noktasını (ör. tıklanan yer) sabit tutarak yakınlaştırır.
+func _zoom_by(delta: float, around: Vector2) -> void:
+	var old_zoom := _zoom
+	_zoom = clampf(_zoom + delta, ZOOM_MIN, ZOOM_MAX)
+	if not is_zero_approx(old_zoom):
+		var local := (around - _canvas_pan) / old_zoom
+		_canvas_pan = around - local * _zoom
+	_clamp_pan()
+	_apply_canvas_transform()
+
+
+## zoom_viewport'a düşen (oda/hücre butonlarının TÜKETMEDİĞİ) girdiler:
+## fare tekerleği ile zoom, sürükleme ile pan, mobil pinch (magnify gesture).
+func _on_viewport_gui_input(event: InputEvent) -> void:
+	if event is InputEventMagnifyGesture:
+		_zoom_by(event.factor - 1.0, event.position)
+		return
+	if event is InputEventMouseButton:
+		if event.button_index == MOUSE_BUTTON_WHEEL_UP and event.pressed:
+			_zoom_by(0.1, event.position)
+		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN and event.pressed:
+			_zoom_by(-0.1, event.position)
+		elif event.button_index == MOUSE_BUTTON_LEFT:
+			if event.pressed:
+				_pan_dragging = true
+				_pan_drag_start = event.position
+				_pan_start_canvas_pos = _canvas_pan
+			else:
+				_pan_dragging = false
+	elif event is InputEventMouseMotion and _pan_dragging:
+		_canvas_pan = _pan_start_canvas_pos + (event.position - _pan_drag_start)
+		_clamp_pan()
+		_apply_canvas_transform()
 
 
 func _make_room_button(idx: int) -> Button:
@@ -724,76 +1030,138 @@ func _make_room_button(idx: int) -> Button:
 	var is_infested: bool = is_dirty and Game.room_infested(room)
 
 	var b := Button.new()
-	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	b.custom_minimum_size = Vector2(0, 118)
-	var wall: Color = WALLPAPERS.get(room.type, PALETTE.cream)
+	# Konum/boyut artık kat/sütun/genişliğe göre çağıran (_rebuild_hotel)
+	# tarafından tuval üzerinde manuel verilir (serbest blok yerleşimi).
+	# Mockup'taki gibi odalar arası sabit, tek tip duvar/çerçeve rengi —
+	# oda içi zaten kendi sanatıyla (guest_room_*.png) renkli; kutunun
+	# kendisi rastgele renk-index'ine göre değişmemeli.
+	var wall: Color = PALETTE.facade if cat == "guest" else WALLPAPERS.get(room.type, PALETTE.cream)
+	var border: Color = PALETTE.facade_line
 	if is_infested:
 		wall = wall.darkened(0.45)
 	elif is_dirty:
 		wall = wall.darkened(0.25)
 	for state in ["normal", "hover", "pressed", "disabled"]:
-		var sb := StyleBoxFlat.new()
-		sb.bg_color = wall if state != "hover" else wall.lightened(0.05)
-		sb.border_color = PALETTE.frame
-		sb.set_border_width_all(3)
-		sb.set_corner_radius_all(3)
+		var sb := _card_sb(wall if state != "hover" else wall.lightened(0.05), border, 8, 0.12)
 		b.add_theme_stylebox_override(state, sb)
 	b.pressed.connect(func(): _on_room_tapped(idx, b))
+	var rid: String = String(room.id)
+	b.button_down.connect(func(): _on_room_press_start(rid, b))
 
-	# Zemin şeridi
-	var floor_rect := ColorRect.new()
-	floor_rect.color = PALETTE.floor_wood if not is_dirty else PALETTE.floor_wood.darkened(0.25)
-	floor_rect.anchor_top = 1.0
-	floor_rect.anchor_bottom = 1.0
-	floor_rect.anchor_right = 1.0
-	floor_rect.offset_top = -16
-	floor_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	b.add_child(floor_rect)
-
-	# İçerik
+	# Döşenmiş oda içi: referans oda tasarımlarından kesilen hazır görseller.
+	# Oda tipine göre ayrı havuzdan, kat başına kaydırılarak seçilir ki
+	# alt-üst komşu odalar farklı görünsün. Eski beyaz-SVG + renk boyama
+	# sistemi yerine doğrudan sanat.
 	if cat == "guest":
-		var strip := HBoxContainer.new()
-		strip.add_theme_constant_override("separation", 2)
-		strip.anchor_top = 1.0
-		strip.anchor_bottom = 1.0
-		strip.anchor_right = 1.0
-		strip.offset_top = -62
-		strip.offset_bottom = -12
-		strip.offset_left = 6
-		strip.alignment = BoxContainer.ALIGNMENT_CENTER
-		strip.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		b.add_child(strip)
-		var shown := 0
-		var seen := {}
-		for item_id in room.items:
-			if seen.has(item_id) or shown >= 4:
-				continue
-			seen[item_id] = true
-			var it := _icon("res://assets/items/%s.svg" % item_id, 46)
-			strip.add_child(it)
-			shown += 1
+		# Varyant artık odanın KARARLI kimliğine (id) bağlı — array index'i
+		# taşıma/silme sonrası konumu ifade etmiyor (bkz. plan, "Riskler").
+		var pool: Array = GUEST_ROOM_ART.get(room.type, GUEST_ROOM_ART.standard)
+		var variant: int = hash(String(room.id)) % pool.size()
+		var bg := TextureRect.new()
+		bg.texture = _tex("res://assets/rooms/%s.png" % pool[variant])
+		bg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		# COVERED, oda kutusunun (≈1.3:1) dar en-boy oranıyla geniş oda
+		# görsellerini (≈1.8:1) kırpıp yatağın/pencerenin bir kısmını
+		# kesiyordu. CENTERED ile sprite hep bütün görünür; boşluk kalırsa
+		# arka planda zaten oda tonundaki panel rengi (wall) görünür.
+		bg.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+		bg.offset_left = 3
+		bg.offset_top = 3
+		bg.offset_right = -3
+		bg.offset_bottom = -3
+		if is_infested:
+			bg.modulate = Color(0.45, 0.45, 0.5)
+		elif is_dirty:
+			bg.modulate = Color(0.66, 0.66, 0.7)
+		bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		b.add_child(bg)
+
+	# Zemin şeridi (misafir odası görselinde zemin hazır — sadece tesisler)
+	if cat != "guest":
+		var floor_rect := ColorRect.new()
+		floor_rect.color = PALETTE.floor_wood if not is_dirty else PALETTE.floor_wood.darkened(0.25)
+		floor_rect.anchor_top = 1.0
+		floor_rect.anchor_bottom = 1.0
+		floor_rect.anchor_right = 1.0
+		floor_rect.offset_top = -16
+		floor_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		b.add_child(floor_rect)
+
+	# İçerik: dekor eşyaları artık düz bir ikon şeridi değil, türüne göre
+	# odanın sabit bir bölgesine (tavan/duvar/zemin) oturur.
+	if cat == "guest":
 		if room.items.size() == 0 and not is_dirty:
+			# Oda görseli zaten döşenmiş görünüyor; sadece küçük bir ipucu.
 			var hint := _label("boş oda", 12, PALETTE.muted)
+			hint.anchor_left = 0.0
+			hint.anchor_right = 1.0
+			hint.anchor_top = 1.0
+			hint.anchor_bottom = 1.0
+			hint.offset_top = -18
+			hint.offset_bottom = -4
+			hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 			hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			strip.add_child(hint)
+			b.add_child(hint)
 			# Dekorasyon dürtmesi: en ucuz eşya karşılanabiliyorsa yanıp sönen rozet.
-			# Yıldızın oda/kat büyütmenin gölgesinde kalmaması için (TODO gözlemi).
 			var cheapest := Game.cheapest_item_price()
 			if cheapest > 0 and Game.coins >= cheapest:
 				b.add_child(_make_decorate_badge())
+		else:
+			var anchor_counts := {}
+			for item_id in room.items:
+				var anchor: String = String(Game.item_def(item_id).get("anchor", "floor_side"))
+				var slots: Array = ANCHOR_POSITIONS.get(anchor, ANCHOR_POSITIONS.floor_side)
+				var slot_i: int = int(anchor_counts.get(anchor, 0))
+				anchor_counts[anchor] = slot_i + 1
+				if slot_i >= slots.size():
+					continue  # bu bölgenin slotları doldu — nadiren olur, fazlası atlanır
+				var frac: Vector2 = slots[slot_i]
+				var it := _icon("res://assets/items/%s.svg" % item_id, 34)
+				it.anchor_left = frac.x
+				it.anchor_right = frac.x
+				it.anchor_top = frac.y
+				it.anchor_bottom = frac.y
+				it.offset_left = -17
+				it.offset_right = 17
+				it.offset_top = -17
+				it.offset_bottom = 17
+				b.add_child(it)
 		# Misafir (vardiya açık + temiz odada) — dokununca dürtülür (gizli müfettiş)
 		if Game.shift_active() and not is_dirty:
-			var g_idx := idx % 3
+			var g_idx := idx % GUEST_TYPES.size()
 			var guest := TextureButton.new()
-			guest.texture_normal = _tex("res://assets/guests/guest_%s.svg" % ["a", "b", "c"][g_idx])
+			guest.texture_normal = _tex("res://assets/guests/guest_%s.svg" % GUEST_TYPES[g_idx])
 			guest.ignore_texture_size = true
 			guest.stretch_mode = TextureButton.STRETCH_KEEP_ASPECT_CENTERED
 			guest.custom_minimum_size = Vector2(44, 44)
+			guest.anchor_left = 0.5
+			guest.anchor_right = 0.5
+			guest.anchor_top = 1.0
+			guest.anchor_bottom = 1.0
+			guest.offset_left = -22
+			guest.offset_right = 22
+			guest.offset_top = -50
+			guest.offset_bottom = -6
 			guest.mouse_filter = Control.MOUSE_FILTER_STOP
 			guest.pressed.connect(func(): _on_guest_poked(guest))
-			strip.add_child(guest)
+			b.add_child(guest)
 			_animate_guest(guest, idx, false)
 	else:
+		# Tesis/fonksiyonel oda içi: referans sayfadan kesilen hazır oda
+		# görseli (varsa) — küçük ikon yerine misafir odalarıyla aynı
+		# "tam döşenmiş" sunum. PNG yoksa _tex() eski SVG ikona düşer.
+		var fac_bg := TextureRect.new()
+		fac_bg.texture = _tex("res://assets/rooms/%s.svg" % room.type)
+		fac_bg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		fac_bg.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		fac_bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+		fac_bg.offset_left = 3
+		fac_bg.offset_top = 3
+		fac_bg.offset_right = -3
+		fac_bg.offset_bottom = -3
+		fac_bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		b.add_child(fac_bg)
 		# Temizlik odasında vardiya boyunca hizmetçi çalışır
 		if room.type == "housekeeping" and Game.shift_active():
 			var maid := _icon("res://assets/guests/maid.svg", 44)
@@ -819,20 +1187,9 @@ func _make_room_button(idx: int) -> Button:
 			cap_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			b.add_child(cap_row)
 			for ci in int(d.get("capacity", 0)):
-				var cg := _icon("res://assets/guests/guest_%s.svg" % ["a", "b", "c"][(idx + ci) % 3], 26)
+				var cg := _icon("res://assets/guests/guest_%s.svg" % GUEST_TYPES[(idx + ci) % GUEST_TYPES.size()], 26)
 				cap_row.add_child(cg)
 				_animate_guest(cg, idx + ci, false)
-		var art := _icon("res://assets/rooms/%s.svg" % room.type, 64)
-		art.anchor_left = 0.5
-		art.anchor_right = 0.5
-		art.anchor_top = 1.0
-		art.anchor_bottom = 1.0
-		art.offset_left = -44
-		art.offset_right = 44
-		art.offset_top = -76
-		art.offset_bottom = -14
-		art.custom_minimum_size = Vector2.ZERO
-		b.add_child(art)
 
 	# Kirli göstergesi (istilada hamamböceği)
 	if is_dirty:
@@ -929,17 +1286,18 @@ func _make_decorate_badge() -> Control:
 
 
 func _on_room_tapped(idx: int, btn: Control) -> void:
-	# Taşıma modu: hedef odaya dokununca yer değiştir, aynı odaya dokununca iptal
-	if move_from >= 0:
-		var from := move_from
-		move_from = -1
-		if from == idx:
-			_show_toast("Taşıma iptal edildi")
-		elif Game.move_room(from, idx):
-			_play("buy")
-			_show_toast("Odalar yer değiştirdi")
-		return
 	var room: Dictionary = Game.rooms[idx]
+	# Taşıma modu: artık hedef BOŞ bir hücre olmalı (serbest yerleşimde
+	# değişken footprint'ler yüzünden iki dolu odayı takas etmek anlamsız —
+	# bkz. plan, "Riskler"). Bir odaya dokunmak yalnızca kendisiyse iptal eder.
+	if move_from != "":
+		if move_from == String(room.id):
+			move_from = ""
+			_show_toast("Taşıma iptal edildi")
+		else:
+			move_from = ""
+			_show_toast("Hedef dolu — taşımak için boş bir hücreye dokun")
+		return
 	if room.dirty:
 		# Buton yeniden kurulumda yok olacağı için merkezi temizlemeden önce al
 		var center := btn.global_position + btn.size / 2.0
@@ -959,6 +1317,117 @@ func _on_room_tapped(idx: int, btn: Control) -> void:
 		_open_popup("Oda Dekorasyonu", _build_room_popup)
 	else:
 		_open_popup("Tesis", _build_facility_popup)
+
+
+## Açık-ama-boş bir hücreye dokunma: taşıma modundaysa seçili odayı buraya
+## taşır, değilse normal mağaza akışını açar ("+ Oda ekle").
+func _on_empty_cell_tapped(floor_i: int, col: int) -> void:
+	if move_from != "":
+		var mid := move_from
+		move_from = ""
+		if Game.move_room_to(mid, floor_i, col):
+			_play("buy")
+			_show_toast("Oda taşındı")
+		else:
+			_show_toast("Oda buraya sığmıyor")
+		return
+	place_target_floor = floor_i
+	place_target_col = col
+	_open_popup("Mağaza", _build_shop_popup)
+
+
+# --- Oda sürükleyerek taşıma ---------------------------------------------
+
+## Bir oda kartına basıldığında çağrılır (button_down) — henüz sürükleme
+## değil, yalnızca aday. Gerçek eşik main.gd:_update_room_drag'de.
+func _on_room_press_start(room_id: String, _btn: Control) -> void:
+	if move_from != "" or overlay.visible:
+		return  # popup açıkken veya "Taşı" iki-dokunuşlu moddaysa karıştırma
+	_drag_room_id = room_id
+	_drag_active = false
+	_drag_start_mouse = get_global_mouse_position()
+
+
+## Her karede: basılı tutulan oda eşik kadar hareket ettiyse sürükleme
+## moduna geç (ghost oluştur, imleci takip et); fare bırakılınca hücreye
+## bırak (move_room_to) veya iptal et.
+func _update_room_drag() -> void:
+	if _drag_room_id == "":
+		return
+	if not Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT):
+		if _drag_active:
+			_finish_drag()
+		else:
+			_drag_room_id = ""
+		return
+	var mouse := get_global_mouse_position()
+	if not _drag_active:
+		if mouse.distance_to(_drag_start_mouse) < PAN_DRAG_THRESHOLD * 2.0:
+			return
+		_drag_active = true
+		_drag_ghost = _make_drag_ghost(_drag_room_id)
+		add_child(_drag_ghost)
+	_drag_ghost.position = mouse - _drag_ghost.size / 2.0
+
+
+func _make_drag_ghost(room_id: String) -> Control:
+	var idx := _room_index_by_id(room_id)
+	var w := 1
+	var type_name := ""
+	if idx >= 0:
+		w = int(Game.rooms[idx].w)
+		type_name = String(Game.room_def(Game.rooms[idx].type).name)
+	var g := PanelContainer.new()
+	g.add_theme_stylebox_override("panel", _card_sb(PALETTE.gold_soft, PALETTE.facade_line, 8, 0.2))
+	g.modulate = Color(1.0, 1.0, 1.0, 0.8)
+	g.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	g.size = Vector2(w * CELL_W - CELL_GAP, CELL_H - CELL_GAP) * _zoom
+	g.z_index = 100
+	var l := _label(type_name, 13, PALETTE.text)
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	g.add_child(l)
+	return g
+
+
+func _room_index_by_id(room_id: String) -> int:
+	for i in Game.rooms.size():
+		if String(Game.rooms[i].get("id", "")) == room_id:
+			return i
+	return -1
+
+
+func _finish_drag() -> void:
+	var room_id := _drag_room_id
+	_drag_room_id = ""
+	_drag_active = false
+	if _drag_ghost != null and is_instance_valid(_drag_ghost):
+		_drag_ghost.queue_free()
+	_drag_ghost = null
+	var cell := _canvas_cell_at_screen_pos(get_global_mouse_position())
+	if cell.x < 1:
+		_show_toast("Buraya bırakılamaz")
+		return
+	if Game.move_room_to(room_id, cell.x, cell.y):
+		_play("buy")
+		_show_toast("Oda taşındı")
+	else:
+		_show_toast("Oda buraya sığmıyor")
+
+
+## Ekran koordinatını (global mouse) tuval yerel kat/sütununa çevirir.
+## floor=-1 ise kat alanının dışına (lobi/sokak/çim ya da dışarı) bırakıldı.
+func _canvas_cell_at_screen_pos(screen_pos: Vector2) -> Vector2i:
+	var local := (screen_pos - zoom_viewport.global_position - _canvas_pan) / _zoom
+	var floors_h := float(Game.floors) * CELL_H
+	var grid_cols := int(Game.eco.building.grid_cols)
+	if local.y < 0.0 or local.y >= floors_h or local.x < 0.0 or local.x >= grid_cols * CELL_W:
+		return Vector2i(-1, -1)
+	var floor_i := Game.floors - int(floor(local.y / CELL_H))
+	var col := int(floor(local.x / CELL_W))
+	if floor_i < 1 or floor_i > Game.floors or col < 0 or col >= grid_cols:
+		return Vector2i(-1, -1)
+	return Vector2i(floor_i, col)
 
 
 ## Uyuyan misafiri dürtme: Hotel City'deki gizli müfettiş şansı.
@@ -1012,7 +1481,7 @@ func _guest_walk_in() -> void:
 	var walk_y := street_node.global_position.y - 26.0
 	var door_x := size.x / 2.0
 	for i in 4:
-		var gicon := _icon("res://assets/guests/guest_%s.svg" % ["a", "b", "c"][i % 3], 36)
+		var gicon := _icon("res://assets/guests/guest_%s.svg" % GUEST_TYPES[i % GUEST_TYPES.size()], 36)
 		gicon.position = Vector2(size.x + 24.0 + i * 34.0, walk_y)
 		gicon.pivot_offset = Vector2(18, 36)
 		gicon.z_index = 55
@@ -1100,6 +1569,8 @@ func _close_popup() -> void:
 	overlay.visible = false
 	popup_builder = Callable()
 	selected_room = -1
+	place_target_floor = -1
+	place_target_col = -1
 
 
 func _rebuild_popup() -> void:
@@ -1127,6 +1598,7 @@ func _build_shift_popup(c: VBoxContainer) -> void:
 			c.add_child(_label("Reklam bonusu aktif: gelir ×%.1f (%d dk kaldı)" % [Game.boost_mult, maxi(0, left_min)], 13, PALETTE.green_deep))
 		else:
 			var boost_b := _button("Reklam izle — 30 dk gelir ×2", 15, PALETTE.wood_dark, PALETTE.cream_text)
+			_button_icon(boost_b, "res://assets/ui/ad_video.png")
 			boost_b.pressed.connect(func():
 				Ads.show_rewarded(func():
 					Game.start_income_boost(30.0, 2.0)
@@ -1181,20 +1653,32 @@ func _build_staff_popup(c: VBoxContainer) -> void:
 	c.add_child(b)
 
 
+## Toplam kullanılan blok sayısı (değişken footprint yüzünden artık
+## rooms.size() ile aynı şey değil — bkz. plan §1).
+func _blocks_used() -> int:
+	var total := 0
+	for r in Game.rooms:
+		total += int(r.w)
+	return total
+
+
 func _build_shop_popup(c: VBoxContainer) -> void:
 	var lv := Game.level()
-	var free_slots := Game.max_slots() - Game.rooms.size()
-	c.add_child(_label("Boş yuva: %d — oda satın al:" % free_slots, 14, PALETTE.muted))
+	var has_target := place_target_floor >= 0
+	if has_target:
+		c.add_child(_label("%d. kat, %d. hücreye yerleşecek:" % [place_target_floor, place_target_col + 1], 14, PALETTE.muted))
+	else:
+		var free_blocks := Game.max_slots() - _blocks_used()
+		c.add_child(_label("Boş blok: %d — oda satın al:" % free_blocks, 14, PALETTE.muted))
 	for type in Game.eco.room_types:
 		var d: Dictionary = Game.eco.room_types[type]
 		var cat: String = d.category
-		var desc := ""
-		if cat == "guest":
-			desc = "%d coin/saat taban" % int(d.base_income)
-		elif cat == "facility":
-			desc = "+%d coin/saat · yıldıza katkı" % int(d.base_income)
-		else:
-			desc = "odaları otomatik temizler"
+		var w := Game.room_footprint(type)
+		var desc := ("%d coin/saat taban" % int(d.base_income)) if cat == "guest" \
+			else ("+%d coin/saat · yıldıza katkı" % int(d.base_income)) if cat == "facility" \
+			else "odaları otomatik temizler"
+		if w > 1:
+			desc += " · %d blok" % w
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 8)
 		c.add_child(row)
@@ -1206,15 +1690,25 @@ func _build_shop_popup(c: VBoxContainer) -> void:
 			b.text = "%s — Seviye %d'de açılır" % [d.name, int(d.unlock_level)]
 			b.disabled = true
 		else:
-			b.disabled = not Game.can_buy_room(type)
 			var t: String = type
-			b.pressed.connect(func():
-				if Game.buy_room(t):
-					_play("buy")
-					_show_toast("%s satın alındı!" % Game.room_def(t).name))
+			if has_target:
+				var tf := place_target_floor
+				var tc := place_target_col
+				b.disabled = not Game.can_place_room(t, tf, tc)
+				b.pressed.connect(func():
+					if Game.place_room(t, tf, tc):
+						_play("buy")
+						_close_popup()
+						_show_toast("%s satın alındı!" % Game.room_def(t).name))
+			else:
+				b.disabled = not Game.can_buy_room(type)
+				b.pressed.connect(func():
+					if Game.buy_room(t):
+						_play("buy")
+						_show_toast("%s satın alındı!" % Game.room_def(t).name))
 		row.add_child(b)
 	if Game.floors < int(Game.eco.building.max_floors):
-		var fb := _button("Yeni kat aç — %s coin (+%d yuva)" % [_fmt(Game.floor_price()), int(Game.eco.building.slots_per_floor)], 14, PALETTE.wood_dark, PALETTE.cream_text)
+		var fb := _button("Yeni kat aç — %s coin (+%d blok)" % [_fmt(Game.floor_price()), Game.DEFAULT_FLOOR_OPEN_WIDTH], 14, PALETTE.wood_dark, PALETTE.cream_text)
 		fb.disabled = not Game.can_buy_floor()
 		fb.pressed.connect(func():
 			if Game.buy_floor():
@@ -1258,9 +1752,44 @@ func _build_room_popup(c: VBoxContainer) -> void:
 						_show_toast("%s yerleştirildi!" % Game.bundle_def(bid).name))
 			c.add_child(pb)
 
-	c.add_child(_label("Eşya ekle:", 14, PALETTE.muted))
+	# Taban eşyalar: duvar kağıdı / zemin / yatak — odayla birlikte ücretsiz
+	# varsayılanla gelir, burada YÜKSELTİLİR (öncekinin yerine geçer, birikmez).
+	# Bu, oda görselinin zaten "döşenmiş" görünmesiyle mağazanın çelişmesi
+	# sorununu çözer: yatak zaten var, burada sadece daha iyisine geçiliyor.
 	var lv := Game.level()
+	var base: Dictionary = room.get("base", {})
+	var slot_names := {"wallpaper": "Duvar Kağıdı", "floor": "Zemin", "bed": "Yatak"}
+	for slot_key in ["bed", "wallpaper", "floor"]:
+		if not base.has(slot_key):
+			continue  # ör. tesis odalarında yatak yok
+		var current: String = String(base[slot_key])
+		var alts: Array = Game.eco.items.filter(func(it): return String(it.get("slot", "")) == slot_key)
+		if alts.size() <= 1:
+			continue  # tek seçenek varsa yükseltilecek bir şey yok, göstermeye gerek yok
+		c.add_child(_label(String(slot_names.get(slot_key, slot_key)) + ":", 14, PALETTE.muted))
+		for it in alts:
+			var owned: bool = current == String(it.id)
+			var b2 := _button("%s%s" % [it.name, "  ✓ mevcut" if owned else " — %s coin" % _fmt(int(it.price))],
+				13, PALETTE.wood, PALETTE.cream_text)
+			b2.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			if owned:
+				b2.disabled = true
+			elif lv < int(it.get("unlock_level", 1)):
+				b2.text = "%s — Seviye %d'de açılır" % [it.name, int(it.unlock_level)]
+				b2.disabled = true
+			else:
+				b2.disabled = not Game.can_afford_item(it)
+				var iid2: String = it.id
+				b2.pressed.connect(func():
+					if Game.upgrade_base(selected_room, iid2):
+						_play("buy")
+						_show_toast("%s güncellendi!" % Game.item_def(iid2).name))
+			c.add_child(b2)
+
+	c.add_child(_label("Dekor eşyası ekle:", 14, PALETTE.muted))
 	for it in Game.eco.items:
+		if not it.has("anchor"):
+			continue
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 8)
 		c.add_child(row)
@@ -1313,9 +1842,9 @@ func _add_manage_buttons(c: VBoxContainer) -> void:
 	var mv := _button("Taşı", 14, PALETTE.wood_dark, PALETTE.cream_text)
 	mv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	mv.pressed.connect(func():
-		move_from = ridx
+		move_from = String(Game.rooms[ridx].id)
 		_close_popup()
-		_show_toast("Hedef odaya dokun — iptal için aynı odaya dokun"))
+		_show_toast("Boş bir hücreye dokun — iptal için odana tekrar dokun"))
 	row.add_child(mv)
 	var sell_text := "Sat — +%s coin" % _fmt(Game.room_sell_value(ridx))
 	var sell_gems := Game.room_sell_gem_value(ridx)
@@ -1343,7 +1872,7 @@ func _build_stats_popup(c: VBoxContainer) -> void:
 		["Toplama sayısı", str(Game.stat_collects)],
 		["Temizlenen oda", str(Game.stat_cleans)],
 		["Başlatılan vardiya", str(Game.stat_shifts)],
-		["Oda sayısı", "%d / %d yuva" % [Game.rooms.size(), Game.max_slots()]],
+		["Oda sayısı", "%d oda (%d / %d blok dolu)" % [Game.rooms.size(), _blocks_used(), Game.max_slots()]],
 		["Tesis çeşitliliği", "%d / 5" % Game.facility_diversity()],
 		["Yıldız derecesi", "%d / 5" % Game.star_rating()],
 		["Seviye", "%d (XP %s)" % [Game.level(), _fmt(Game.xp)]],
@@ -1406,6 +1935,7 @@ func _build_settings_popup(c: VBoxContainer) -> void:
 		c.add_child(_label("Reklamlar kaldırıldı. Teşekkürler!", 13, PALETTE.green_deep))
 	else:
 		var no_ads_b := _button("Reklamları Kaldır", 15, PALETTE.green_deep, PALETTE.cream_text)
+		_button_icon(no_ads_b, "res://assets/ui/ad_video.png")
 		no_ads_b.pressed.connect(func():
 			IAP.purchase(IAP.PRODUCT_REMOVE_ADS, func(ok: bool):
 				if ok:
@@ -1419,6 +1949,7 @@ func _build_settings_popup(c: VBoxContainer) -> void:
 		c.add_child(_label("Kazanç çarpanı aktif: ×%.1f" % Game.permanent_income_mult, 13, PALETTE.green_deep))
 	else:
 		var x2_b := _button("Kazancı 2x Yap", 15, PALETTE.green_deep, PALETTE.cream_text)
+		_button_icon(x2_b, "res://assets/ui/dollar.png")
 		x2_b.pressed.connect(func():
 			IAP.purchase(IAP.PRODUCT_INCOME_2X, func(ok: bool):
 				if ok:
