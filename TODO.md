@@ -235,6 +235,18 @@ olsun, orada düzenleme/ekleme vs olsun" (bkz. Gamezebo Hotel City rehberi).
       bu yüzden yeni animasyonlu katmanla YAN YANA iki asansör görünüyordu.
       Çözüm: `lobby.png`'deki eski asansör bölgesi Pillow ile duvarın kendi
       gradyanından örneklenerek boyandı (temiz, dikişsiz).
+- [x] On birinci geri bildirim turu: kullanıcı yeni asansörün konumunun eski
+      sabit görselle birebir örtüşmesini istedi. İlk yerleşim basit
+      viewBox-oranı (262/480 vb.) ile hesaplanmıştı — ama `lobby_scene`
+      `STRETCH_KEEP_ASPECT_COVERED` kullandığından doku yatayda kırpılıyor,
+      bu da basit oran hesabını geçersiz kılıyor (tam da "iki asansör"
+      hatasının kök nedeni buydu). Doğru dönüşüm hesaplandı: control
+      648×108, doku 1920×256, ölçek=max(648/1920,108/256)=0.421875
+      (yükseklik baskın), yatayda 162px taşma → her yandan 81px (=192
+      orijinal piksel) kırpılıyor. Eski asansörün gerçek `lobby.png`
+      konumu (x≈850–1040, y≈5–222) git geçmişinden (silinmeden önceki
+      commit) geri getirilip bu dönüşümle doğru kesirlere çevrildi
+      (`elevator_tex` anchor'ları 0.535–0.685 → 0.428–0.552).
 - [x] Yeni "Oda Mağazası" rafı eklendi (`build_shop_panel`/`build_shop_row`,
       yalnızca İnşa Modu açıkken görünür): her oda tipi için fiyat/seviye
       kilidi gösteren bir kart; kartı basılı tutup binaya sürükleyip
