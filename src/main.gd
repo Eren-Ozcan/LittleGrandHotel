@@ -1264,48 +1264,87 @@ func _make_room_button(idx: int) -> Button:
 	# oda içi zaten kendi sanatıyla (guest_room_*.png) renkli; kutunun
 	# kendisi rastgele renk-index'ine göre değişmemeli.
 	var wall: Color = PALETTE.facade if cat == "guest" else WALLPAPERS.get(room.type, PALETTE.cream)
-	var border: Color = PALETTE.facade_line
+	# Duvar rengi (PALETTE.facade_line) artık kat şeridi kaldırıldığı için
+	# yetersiz kalıyordu — oda, boş/gökyüzü fonunun içinde net bir "oda"
+	# olarak okunsun diye belirgin bir duvar çerçevesi (PALETTE.frame,
+	# kalın kenarlık) eklendi (kullanıcı isteği: "odaların etrafına duvar
+	# gibi bir çerçeve").
+	var border: Color = PALETTE.frame
 	if is_infested:
 		wall = wall.darkened(0.45)
 	elif is_dirty:
 		wall = wall.darkened(0.25)
 	for state in ["normal", "hover", "pressed", "disabled"]:
 		var sb := _card_sb(wall if state != "hover" else wall.lightened(0.05), border, 8, 0.12)
+		sb.set_border_width_all(7)
 		b.add_theme_stylebox_override(state, sb)
 	b.pressed.connect(func(): _on_room_tapped(idx, b))
 	var rid: String = String(room.id)
 	b.button_down.connect(func(): _on_room_press_start(rid, b))
 
-	# Döşenmiş oda içi: referans oda tasarımlarından kesilen hazır görseller.
-	# Oda tipine göre ayrı havuzdan, kat başına kaydırılarak seçilir ki
-	# alt-üst komşu odalar farklı görünsün. Eski beyaz-SVG + renk boyama
-	# sistemi yerine doğrudan sanat.
+	# Döşenmiş oda içi (Faz 4 — serbest yerleşimin taban eşya sistemine göre
+	# gerçekten döşenmiş kabuk): duvar kağıdı (kademeye göre tonlanır) +
+	# perde + zemin dokusu + oyuncunun gerçekten satın aldığı yatak
+	# (room.base.bed — önceki hazır-sahne PNG havuzu, oyuncu yatağı
+	# yükseltince görsel HİÇ değişmiyordu; artık değişiyor).
 	if cat == "guest":
-		# Varyant artık odanın KARARLI kimliğine (id) bağlı — array index'i
-		# taşıma/silme sonrası konumu ifade etmiyor (bkz. plan, "Riskler").
-		var pool: Array = GUEST_ROOM_ART.get(room.type, GUEST_ROOM_ART.standard)
-		var variant: int = hash(String(room.id)) % pool.size()
-		var bg := TextureRect.new()
-		bg.texture = _tex("res://assets/rooms/%s.png" % pool[variant])
-		bg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		# COVERED, oda kutusunun (≈1.3:1) dar en-boy oranıyla geniş oda
-		# görsellerini (≈1.8:1) kırpıp yatağın/pencerenin bir kısmını
-		# kesiyordu. CENTERED ile sprite hep bütün görünür; boşluk kalırsa
-		# arka planda zaten oda tonundaki panel rengi (wall) görünür.
-		bg.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		bg.set_anchors_preset(Control.PRESET_FULL_RECT)
-		bg.offset_left = 3
-		bg.offset_top = 3
-		bg.offset_right = -3
-		bg.offset_bottom = -3
+		var shell := Control.new()
+		shell.set_anchors_preset(Control.PRESET_FULL_RECT)
+		shell.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		if is_infested:
-			bg.modulate = Color(0.45, 0.45, 0.5)
+			shell.modulate = Color(0.45, 0.45, 0.5)
 		elif is_dirty:
-			bg.modulate = Color(0.66, 0.66, 0.7)
-		bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		b.add_child(bg)
+			shell.modulate = Color(0.66, 0.66, 0.7)
+		b.add_child(shell)
 
-	# Zemin şeridi (misafir odası görselinde zemin hazır — sadece tesisler)
+		var wallpaper := TextureRect.new()
+		wallpaper.texture = _tex("res://assets/rooms/guest_wallpaper.svg")
+		wallpaper.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		wallpaper.stretch_mode = TextureRect.STRETCH_TILE
+		wallpaper.set_anchors_preset(Control.PRESET_FULL_RECT)
+		wallpaper.modulate = WALLPAPERS.get(room.type, PALETTE.cream)
+		wallpaper.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		shell.add_child(wallpaper)
+
+		var curtains := TextureRect.new()
+		curtains.texture = _tex("res://assets/rooms/guest_curtains.svg")
+		curtains.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		curtains.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT
+		curtains.anchor_right = 1.0
+		curtains.anchor_bottom = 0.55
+		curtains.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		shell.add_child(curtains)
+
+		var floor_tex := TextureRect.new()
+		floor_tex.texture = _tex("res://assets/rooms/guest_floor.svg")
+		floor_tex.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		floor_tex.stretch_mode = TextureRect.STRETCH_TILE
+		floor_tex.anchor_top = 1.0
+		floor_tex.anchor_bottom = 1.0
+		floor_tex.anchor_right = 1.0
+		floor_tex.offset_top = -26
+		floor_tex.modulate = PALETTE.floor_wood
+		floor_tex.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		shell.add_child(floor_tex)
+
+		var bed_id := String(room.get("base", {}).get("bed", "bed_basic"))
+		var bed := TextureRect.new()
+		bed.texture = _tex("res://assets/items/%s.svg" % bed_id)
+		bed.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		bed.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		bed.anchor_left = 0.5
+		bed.anchor_right = 0.5
+		bed.anchor_top = 1.0
+		bed.anchor_bottom = 1.0
+		bed.offset_left = -32
+		bed.offset_right = 32
+		bed.offset_top = -58
+		bed.offset_bottom = -10
+		bed.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		shell.add_child(bed)
+
+	# Zemin şeridi (misafir odası artık kendi zemin dokusunu çiziyor — bkz.
+	# yukarıdaki shell; burada yalnızca tesisler için düz renk şerit)
 	if cat != "guest":
 		var floor_rect := ColorRect.new()
 		floor_rect.color = PALETTE.floor_wood if not is_dirty else PALETTE.floor_wood.darkened(0.25)
