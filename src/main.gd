@@ -2119,6 +2119,9 @@ func _build_facility_popup(c: VBoxContainer) -> void:
 ## Oda popup'larının ortak yönetim satırı: Taşı + onaylı Sat.
 func _add_manage_buttons(c: VBoxContainer) -> void:
 	c.add_child(_spacer_y(6))
+	if not build_mode:
+		c.add_child(_label("Taşımak veya satmak için önce İnşa Modu'nu aç.", 12, PALETTE.muted))
+		return
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
 	c.add_child(row)
