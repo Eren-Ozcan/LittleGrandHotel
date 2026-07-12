@@ -1,6 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
-  <rect x="3" y="4" width="26" height="24" rx="3" fill="#fdf6e3" stroke="#6e4f31" stroke-width="2"/>
-  <rect x="7" y="17" width="4.5" height="8" rx="1" fill="#6db9e8" stroke="#4a7fa8" stroke-width="1.2"/>
-  <rect x="13.75" y="12" width="4.5" height="13" rx="1" fill="#58b88a" stroke="#2f7a56" stroke-width="1.2"/>
-  <rect x="20.5" y="8" width="4.5" height="17" rx="1" fill="#f0c75e" stroke="#a07118" stroke-width="1.2"/>
+  <!-- istatistik: krem pano, şeker renkli çubuklar, kalın kahve kontur -->
+  <rect x="2.6" y="3.6" width="26.8" height="24.8" rx="4" fill="#fdf6e3" stroke="#55402e" stroke-width="2.4"/>
+  <rect x="6.6" y="16.5" width="5" height="8.5" rx="2" fill="#7fc8ec" stroke="#55402e" stroke-width="1.8"/>
+  <rect x="13.5" y="11.5" width="5" height="13.5" rx="2" fill="#7ed8a2" stroke="#55402e" stroke-width="1.8"/>
+  <rect x="20.4" y="7.5" width="5" height="17.5" rx="2" fill="#ffcf3f" stroke="#55402e" stroke-width="1.8"/>
 </svg>

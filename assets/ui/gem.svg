@@ -1,5 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
-  <path d="M 8 4 L 24 4 L 30 12 L 16 29 L 2 12 Z" fill="#58b88a" stroke="#2f7a56" stroke-width="2.5" stroke-linejoin="round"/>
-  <path d="M 8 4 L 12 12 L 16 29 L 2 12 Z" fill="#79d3a8" stroke="#2f7a56" stroke-width="1.5" stroke-linejoin="round"/>
-  <path d="M 12 12 L 20 12 L 16 29 Z" fill="#a5e6c8" opacity="0.7"/>
+  <!-- şeker mücevher: turkuaz, kalın koyu kontur, parlak yüzeyler -->
+  <path d="M 9 4.5 L 23 4.5 L 29 12 L 16 28 L 3 12 Z" fill="#5fd0c2" stroke="#1f6a5e" stroke-width="2.6" stroke-linejoin="round"/>
+  <path d="M 9 4.5 L 12.5 12 L 16 28 L 3 12 Z" fill="#8ce3d6" stroke="#1f6a5e" stroke-width="1.4" stroke-linejoin="round"/>
+  <path d="M 12.5 12 L 19.5 12 L 16 28 Z" fill="#bdf0e8" opacity="0.85"/>
+  <path d="M 6.5 8.5 L 9.5 6" fill="none" stroke="#e8fbf8" stroke-width="2" stroke-linecap="round" opacity="0.9"/>
 </svg>

@@ -1,5 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="120" height="56" viewBox="0 0 120 56">
-  <ellipse cx="38" cy="38" rx="30" ry="15" fill="#ffffff" opacity="0.95"/>
-  <ellipse cx="70" cy="30" rx="26" ry="17" fill="#ffffff" opacity="0.95"/>
-  <ellipse cx="94" cy="40" rx="22" ry="12" fill="#ffffff" opacity="0.95"/>
+  <!-- pofuduk bulut: beyaz gövde, krem kontur (referans gökyüzü stili) -->
+  <g stroke="#f3e0c2" stroke-width="3" stroke-linejoin="round">
+    <ellipse cx="38" cy="37" rx="29" ry="14" fill="#ffffff"/>
+    <ellipse cx="70" cy="29" rx="25" ry="16" fill="#ffffff"/>
+    <ellipse cx="93" cy="39" rx="21" ry="11" fill="#ffffff"/>
+  </g>
+  <ellipse cx="38" cy="37" rx="29" ry="14" fill="#ffffff"/>
+  <ellipse cx="70" cy="29" rx="25" ry="16" fill="#ffffff"/>
+  <ellipse cx="93" cy="39" rx="21" ry="11" fill="#ffffff"/>
 </svg>

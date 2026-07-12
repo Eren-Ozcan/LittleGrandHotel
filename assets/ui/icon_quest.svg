@@ -1,6 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
-  <path d="M 8 3 C 5 3 5 7 8 7 L 8 26 C 8 29 11 29 11 26 L 11 7 L 24 7 L 21 12 L 24 17 L 11 17" fill="none"/>
-  <rect x="7" y="4" width="4" height="25" rx="2" fill="#8a6642" stroke="#6e4f31" stroke-width="1.5"/>
-  <path d="M 11 5 L 26 5 L 23 10.5 L 26 16 L 11 16 Z" fill="#a83e35" stroke="#6e4f31" stroke-width="2" stroke-linejoin="round"/>
-  <path d="M 17 8 L 18 10.2 L 20.4 10.2 L 18.5 11.7 L 19.2 14 L 17 12.7 L 14.8 14 L 15.5 11.7 L 13.6 10.2 L 16 10.2 Z" fill="#f0c75e"/>
+  <!-- görev bayrağı: mercan flama, altın yıldız, kalın kahve kontur -->
+  <rect x="6.6" y="3.4" width="4.6" height="26" rx="2.3" fill="#a06a3c" stroke="#55402e" stroke-width="2"/>
+  <path d="M 11.2 5 L 27 5 L 23.8 10.8 L 27 16.6 L 11.2 16.6 Z" fill="#ef6a5e" stroke="#55402e" stroke-width="2.4" stroke-linejoin="round"/>
+  <path d="M 17.6 7.2 L 18.7 9.6 L 21.3 9.9 L 19.4 11.7 L 19.9 14.3 L 17.6 13 L 15.3 14.3 L 15.8 11.7 L 13.9 9.9 L 16.5 9.6 Z" fill="#ffd878" stroke="#a5691c" stroke-width="1.2" stroke-linejoin="round"/>
+  <circle cx="8.9" cy="4.6" r="2.2" fill="#ffd878" stroke="#55402e" stroke-width="1.6"/>
 </svg>
