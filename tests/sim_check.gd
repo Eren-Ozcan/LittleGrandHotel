@@ -207,6 +207,27 @@ func _initialize() -> void:
 	var rooms_s: int = g.rooms.size()
 	check(g.sell_room(idx_cafe), "kafe satıldı")
 	check(g.rooms.size() == rooms_s - 1 and g.coins >= coins_s + sv, "iade coin'e işlendi")
+
+	# 12b) place_room/can_place_room (mağaza rafından sürükle-bırak yerleştirme)
+	g.coins += 100000
+	var free_floor: int = empty_floor  # kafe taşındıktan sonra buradan satıldı, hücre yine boş
+	check(g.can_place_room("cafe", free_floor, 0), "boş hücreye yerleştirme uygun görünüyor")
+	var rooms_before_place: int = g.rooms.size()
+	var coins_before_place: int = g.coins
+	check(g.place_room("cafe", free_floor, 0), "yeni kafe belirli hücreye yerleştirildi")
+	check(g.rooms.size() == rooms_before_place + 1, "oda listesine eklendi")
+	var placed_idx: int = g.rooms.size() - 1
+	check(int(g.rooms[placed_idx].floor) == free_floor and int(g.rooms[placed_idx].col) == 0,
+		"yerleştirilen odanın konumu istenen kat/sütunla eşleşiyor")
+	check(g.coins == coins_before_place - int(g.room_def("cafe").price), "bedeli düşüldü")
+	check(not g.can_place_room("cafe", free_floor, 0), "artık dolu hücreye tekrar yerleştirme reddedilir")
+	check(not g.place_room("cafe", free_floor, 0), "place_room da aynı şekilde reddeder")
+	check(not g.can_place_room("suite", free_floor, 1), "seviye yetmeyince yerleştirme reddedilir (süit Sv.18)")
+	var poor_coins: int = g.coins
+	g.coins = 0
+	check(not g.can_place_room("cafe", free_floor, 1), "coin yetmeyince yerleştirme reddedilir")
+	g.coins = poor_coins
+
 	var g3 = GameScript.new()
 	g3.eco = g.eco
 	g3.quests = g.quests
