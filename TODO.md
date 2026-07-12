@@ -254,6 +254,19 @@ olsun, orada düzenleme/ekleme vs olsun" (bkz. Gamezebo Hotel City rehberi).
       kutusunun kenarında aniden başlayıp bitiyordu (kesik görünüm). Gerçekten
       temiz bir sütun (x=1120, tüm yükseklik boyunca çizgisiz olduğu
       doğrulandı) kullanılarak yama yeniden yapıldı — artık dikişsiz, düz.
+- [x] On üçüncü geri bildirim turu: kullanıcı asansör kuyruğunun mantığını
+      netleştirdi — "kaldırımdan normal insanlar yürüyecek, çoğunluğu otele
+      gelecek; resepsiyonda sıra olacaksa olsun; müşteriler kapıdan girecek,
+      dümdüz değil." Önceki tasarımda `_queue_count` sessiz bir zamanlayıcıyla
+      artıyordu ve kaldırımda SABİT duran ikonlar gösteriliyordu — ikisi de
+      kaldırıldı. Yerine `_spawn_arriving_pedestrian()`: her ~3sn'de bir
+      kaldırımın sağından gerçekten yürüyen bir yaya beliriyor; %75 ihtimalle
+      kapının gerçek ekran konumuna (`_door_screen_x()`, ortak hâle getirildi)
+      yürüyüp küçülerek girer ve O AN `_queue_count`'a eklenir (spawn anında
+      değil, kapıya VARDIĞINDA); %25 ihtimalle sıradan bir yaya gibi yoluna
+      devam edip ekrandan çıkar (kaçan-misafir/yakalama mekaniğiyle karışmaz,
+      o ayrı kalır). Vardiya açılışındaki 4 kişilik karşılama grubu
+      (`_guest_walk_in`) de artık aynı şekilde kuyruğa ekleniyor.
 - [x] Yeni "Oda Mağazası" rafı eklendi (`build_shop_panel`/`build_shop_row`,
       yalnızca İnşa Modu açıkken görünür): her oda tipi için fiyat/seviye
       kilidi gösteren bir kart; kartı basılı tutup binaya sürükleyip
