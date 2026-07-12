@@ -95,39 +95,166 @@ değişiklik — sabit "N kat × 4 slot" ızgarasından serbest yerleşime geçi
 - [x] 32 bölümlük `sim_check.gd` test paketi yeni API'ye göre güncellendi,
       gerçek kayıt `tests/fixtures/` altına golden-fixture olarak eklendi.
 
+### Bina görünümü ince ayarları (2026-07-12'de kullanıcıyla belirlendi)
+- [x] **Zoom-out sınırı sıkılaştırıldı**: `ZOOM_MIN` artık mutlak taban
+      değil, gerçek alt sınır `_effective_zoom_min()` ile bina boyutuna göre
+      dinamik hesaplanıyor — bina viewport'u tam dolduracağı noktanın
+      ötesine zoom-out ile geçilemiyor (11 katlı bir binayla headless
+      ekran görüntüsüyle doğrulandı: tam sığdığında kenarlıksız duruyor).
+- [x] **"İnşa Modu" eklendi**: bina görünümü üstünde aç/kapa düğmesi
+      (`build_mode_button`). Kapalıyken boş hücreler sade/nötr panel
+      (buton/metin yok), kilitli bloklar yalnızca perde görseli (fiyat
+      etiketi yok); açıkken hücreler vurgulanır ve dokunulabilir olur.
+      (Not: aynı gün içinde bu davranış tekrar değiştirildi — bkz. aşağıdaki
+      "Mağaza rafından sürükle" bölümü; "+ Oda ekle" butonu tamamen
+      kaldırıldı.)
+- [x] **Pan büyük binalarda doğrulandı**: dinamik zoom-min sayesinde artık
+      boş kenar boşluğu bırakacak şekilde aşırı zoom-out mümkün değil;
+      İnşa Modu kapalıyken boş/kilitli hücreler artık fare olaylarını
+      yutmadığından (mouse_filter ignore) sürükle-ile-pan bina geneline
+      daha pürüzsüz yayılıyor. Ayrı bir kamera modeli değişikliğine gerek
+      görülmedi.
+
+### Faz 4/5 — misafir odası kabuğu + eski varyant temizliği (2026-07-12)
+- [x] **Faz 4 — Yeni sanat**: beklenenin aksine yeni AI görsel üretimi
+      gerekmedi — `assets/rooms/guest_wallpaper.svg` (tintable duvar kağıdı
+      deseni) ve `assets/items/bed_basic|bed_wood|bed_canopy` (chibi/pastel
+      yatak sprite'ları) önceki turlardan zaten repoda duruyordu ama hiç
+      koda bağlanmamıştı. `_make_room_button` artık misafir odalarını
+      gerçek kabukla çiziyor: `WALLPAPERS` kademesine göre tonlanan duvar
+      kağıdı + yeni `guest_floor.svg` zemin şeridi + odanın `base.bed`
+      alanına göre seçilen gerçek yatak sprite'ı — daha önce yatak
+      yükseltmenin (`Game.upgrade_base`) görselde HİÇBİR etkisi yoktu
+      (rastgele "hazır sahne" PNG'si oda tipine göre sabitti), bu artık
+      düzeltildi. Yan ürün olarak `bed_wood.png`'nin yanlışlıkla
+      `wardrobe_oak.png` ile aynı gardırop görseli olduğu bulundu (asset
+      eşleştirme hatası) — elle çizilmiş doğru bir `bed_wood.svg` ile
+      değiştirildi.
+- [x] **Faz 5 — Temizlik**: eski `GUEST_ROOM_ART` sabiti (main.gd) ve artık
+      hiçbir yerden kullanılmayan 15 adet `assets/rooms/guest_room_*.png`
+      (+ .import) dosyası silindi.
+
+### Mağaza rafından sürükleyerek oda ekleme (2026-07-12, kullanıcı isteği + Hotel City referansı)
+Kullanıcı isteği: "açık olmayan odalar oluşturulmamış olmalı… odalar mağaza
+gibi bir yerde olup orada seçip tut-sürükle şeklinde eklenmeli… yapım modu
+olsun, orada düzenleme/ekleme vs olsun" (bkz. Gamezebo Hotel City rehberi).
+- [x] Boş açık hücrelerdeki "+ Oda ekle" butonu tamamen kaldırıldı — artık
+      hiçbir hücre kendiliğinden "oluşturulmuş" bir ekleme butonu göstermiyor.
+      İlk halinde İnşa Modu açıkken hâlâ vurgulu bir çerçeve kutusu
+      kalmıştı; kullanıcı geri bildirimiyle (ekran görüntüsü) bu da
+      kaldırıldı — boş hücre artık İnşa Modu açık/kapalı fark etmeksizin
+      HİÇBİR görsel kutu/çerçeve göstermiyor (`_make_add_cell_button`/
+      `_make_plain_empty_cell`, `StyleBoxEmpty`).
+- [x] İkinci geri bildirim turu: kat başına dolgu "zemin şeridi" (`row_bg`,
+      her katı tam genişlikte kaplayan bej `PanelContainer`) de kaldırıldı —
+      odalar ve kilitli bloklar zaten kendi tam kartlarını çiziyor, boş
+      alanlarda artık doğrudan gökyüzü/silüet fonu görünüyor (Hotel City'nin
+      "rooms appear to be floating in midair" total-block estetiğiyle
+      birebir).
+- [x] Üçüncü geri bildirim turu: kilitli blokların kırmızı perde görseli de
+      (`_make_block_cell_button`) İnşa Modu kapalıyken kaldırıldı — artık
+      diğer boş hücreler gibi tamamen görünmez, yalnızca İnşa Modu açıkken
+      perde + fiyat + "blok al" görünüyor. Buna karşılık, artık hem odalar
+      hem boş alan aynı şeffaf fon üzerinde olduğundan odaların net
+      okunması için `_make_room_button`'a belirgin bir duvar çerçevesi
+      eklendi (önceden tanımlı ama hiç kullanılmayan `PALETTE.frame`, kalın
+      4px kenarlık) — kullanıcı isteği: "odaların etrafına duvar gibi bir
+      çerçeve".
+- [x] Dördüncü geri bildirim turu: oda kartları arasındaki `CELL_GAP`
+      boşluğu (o ana kadar çıplak gökyüzü gösteriyordu) yeni bir dokuyla
+      (`assets/ui/brick_wall.svg`, tileable running-bond tuğla deseni)
+      dolduruldu — her odanın TAM hücre alanına (boşluk dahil) döşenip
+      oda kartı bunun üstüne biraz içeriden oturuyor; yan yana odalar
+      bitişik hücrelerde olduğundan tuğla alanları da birleşip kesintisiz
+      tek duvar gibi görünüyor (kullanıcı isteği: "yan yana gelince
+      birbirini tamamlasın").
+- [x] Beşinci geri bildirim turu: çerçeve/tuğla "görsel olarak tutarsız,
+      biraz daha geniş olsun" — `CELL_GAP` 6→12px, oda çerçeve kalınlığı
+      4→7px yapıldı; tuğla dokusu artık tek tek tuğlaların seçilebildiği
+      belirgin bir şerit olarak görünüyor. Ayrıca çok-hücreli oda genişliği
+      (2x1/3x1 vb.) zaten mevcuttu ve doğru çalıştığı doğrulandı — Deluxe/
+      Süit/Havuz/Sinema/Spa/Çatı Bahçesi 2 blok, Restoran 3 blok
+      (`data/economy.json: footprint_w`), ekran görüntüsüyle (Deluxe +
+      Restoran yan yana) doğru orantıda render edildiği teyit edildi.
+- [x] Altıncı geri bildirim turu: lobiye de oda duvar çerçevesiyle aynı
+      muamele eklendi (`lobby_wall`, `_rebuild_hotel`), sağ ucunda `DOOR_W`
+      (60px) genişliğinde duvar kesiliyor. Dört deneme gerekti: (1) ayrıntılı
+      SVG (sıcak ışıklı boşluk + ahşap pervaz) — kullanıcı ne olduğunu
+      anlayamadı; (2) çift kanatlı camlı kapı — kullanıcı "2D dik kesitte
+      gerçek kapı objesi görünmez" dedi; (3) kullanıcının gönderdiği Hotel
+      City ekran görüntüsünü yanlış yorumlayıp düz renkli dikdörtgen +
+      kalın çerçeve eklendi; (4) kullanıcı bunu da reddedip netleştirdi:
+      "boşluk kapı gibi gözükecek zaten" — hiçbir obje/renk YOK, yalnızca
+      duvarın kesilip arka planın (gökyüzü) göründüğü düz bir boşluk kaldı.
+      Vardiya açılışındaki misafir yürüme animasyonu (`_guest_walk_in`) bu
+      boşluğun gerçek tuval konumuna (zoom/pan'e göre çevrilmiş) doğru
+      yürüyor. (Beşinci alt-turda kullanıcı fikrini değiştirip aynı konuma
+      düz mavi bir `ColorRect` — `door_bar` — istedi; ilk hâli çok kalın ve
+      yanlış konumdaydı (tüm `DOOR_W` boşluğunu kaplıyordu, koyu lacivert) —
+      kullanıcı düzeltti: "sağdaki duvarın üstüne gelecek, cam mavisi" →
+      ince (10px, `DOOR_BAR_W`) ve duvarın (`lobby_wall`) hemen sağ
+      kenarına, boşluğa taşmayacak şekilde taşındı, rengi açık cam mavisine
+      (`#bfe6f2`) çevrildi. Ardından kullanıcı çubuğun üst/alt uçlarının
+      duvarın tavan/taban şeridine taştığını işaretledi — `DOOR_BAR_MARGIN`
+      (10px) ile dikeyde içeri çekildi, üst/alt kenarlarda artık duvarın
+      kendi şeridi görünüyor.)
+- [x] Sekizinci geri bildirim turu: `LOBBY_H` 84→120 yapıldı — lobi
+      sahnesindeki (`lobby.svg`) altın asansör önceki yükseklikte dikeyde
+      tam sığmıyordu (`STRETCH_KEEP_ASPECT_COVERED` üst/altını kırpıyordu).
+- [x] Dokuzuncu geri bildirim turu: lobideki komi (`bellboy.svg`) kullanıcının
+      sağladığı bir referans videodan (`ro_ve_ro_arası_gif_şeklinde.mp4` —
+      "R01_Neutral"/"R03_Typing" etiketli chibi resepsiyonist kareleri)
+      kesilen gerçek bir resepsiyonist görseliyle değiştirildi
+      (`assets/guests/receptionist.png` — ffmpeg ile kare çıkarımı +
+      Pillow ile gri arka plan şeffaflaştırma + sıkı kırpma). Portre en-boy
+      oranı yüzünden `_icon()`'ın sabit-kare kutusu yerine özel
+      `TextureRect` + `STRETCH_KEEP_ASPECT_CENTERED` ile yerleştirildi.
+- [x] Yedinci geri bildirim turu: kırmızı tuğla teksturla "sırıttı" —
+      `assets/ui/brick_wall.svg` → `assets/ui/wall_block.svg` olarak sıcak
+      krem/altın taş bloğu tonlarına (`PALETTE.facade`/`facade_line`/`wood`
+      ailesiyle uyumlu) yeniden boyanıp yeniden adlandırıldı; desen (running-
+      bond) aynı kaldı, yalnızca renk değişti.
+- [x] Onuncu geri bildirim turu: kullanıcının gönderdiği bir referans sprite
+      sayfasından (asansör kapısı 8 karesi, kapalı/aralık/açık) kesilen 3
+      görselle (`elevator_closed/half/open.png`) animasyonlu asansör kapısı
+      eklendi (`_update_elevator`, `_elevator_texture_path`, `elevator_tex`).
+      Kapı, kaldırımdaki misafir kuyruğu (`_queue_count`) 1'den büyükse
+      kapalı→aralık→açık→(kuyruk tamamen boşalır)→aralık→kapalı döngüsüyle
+      açılıp kapanıyor; kapanıştan ~1sn sonra asansörün üstünde bir parıltı
+      "misafirlerin odalarına vardığını" temsil ediyor (oda-bazlı varış
+      zamanlaması veri modelinde olmadığı için tam simülasyon yerine bu
+      görsel onaya sadeleştirildi — kullanıcıya bildirildi). Eskiden kuyruk
+      `mini(3 + Game.rooms.size()/2, 8)` sabit bir formüldü ve HİÇ
+      azalmıyordu ("uzun kuyruk" şikâyeti) — artık zamanla büyüyüp (4sn'de
+      bir +1, tavan 6) asansör her açılışta tamamen boşalıyor; 2+ misafir
+      varsa hepsi TEK seferde biniyor (sırayla beklemek yerine).
+      Debug sırasında önemli bir bulgu: `lobby.svg`'ye eklediğim/kaldırdığım
+      değişiklikler hiç etki etmiyordu çünkü `_tex()` `.svg` yanında aynı adlı
+      bir `.png` varsa onu tercih ediyor — `assets/ui/lobby.png` (önceki
+      turlardan kalma "chibi" nihai render) hâlâ eski asansörü içeriyordu,
+      bu yüzden yeni animasyonlu katmanla YAN YANA iki asansör görünüyordu.
+      Çözüm: `lobby.png`'deki eski asansör bölgesi Pillow ile duvarın kendi
+      gradyanından örneklenerek boyandı (temiz, dikişsiz).
+- [x] Yeni "Oda Mağazası" rafı eklendi (`build_shop_panel`/`build_shop_row`,
+      yalnızca İnşa Modu açıkken görünür): her oda tipi için fiyat/seviye
+      kilidi gösteren bir kart; kartı basılı tutup binaya sürükleyip
+      bırakmak `Game.place_room` çağırıyor. Var olan oda-taşıma sürükleme
+      sistemi (`_drag_room_id`/`_update_room_drag`/`_finish_drag`)
+      `_drag_new_type` ile genelleştirildi — ikisi aynı durum makinesini
+      paylaşıyor.
+- [x] Tüm yapısal düzenlemeler (oda ekleme, taşıma, satma) artık yalnızca
+      İnşa Modu açıkken mümkün — kapalıyken oda popup'ında Taşı/Sat butonları
+      yerine bir uyarı metni gösteriliyor. Alt bar "Mağaza" butonu artık eski
+      listeyi açmıyor, doğrudan İnşa Modu'nu açıyor.
+- [x] Eski hedefli mağaza popup'ı (`_build_shop_popup`, `place_target_floor`/
+      `place_target_col`) tamamen silindi — `Game.place_room`/`can_place_room`
+      için önceden hiç birim testi yoktu, `tests/sim_check.gd`'ye eklendi.
+
 ## Yapılacaklar
 
-### Kısa vade — bina görünümü ince ayarları (2026-07-12'de kullanıcıyla belirlendi, henüz yapılmadı)
-- [ ] **Zoom-out sınırı çok gevşek**: bina şu an minicik kalana kadar
-      uzaklaşılabiliyor. `_zoom` alt sınırı (`ZOOM_MIN`, main.gd) sıkılaştırılmalı
-      ya da otel her zaman ekranda makul bir asgari boyutta kalacak şekilde
-      pan/zoom clamp'i yeniden düşünülmeli.
-- [ ] **"Build modu" eklenmeli**: şu an boş/satın alınmamış her hücre sürekli
-      "+ Oda ekle" / "Blok aç" olarak görünüyor — bu, Hotel City'deki gibi
-      değil, gereksiz görsel kalabalık yaratıyor. Bunun yerine: normal
-      görünümde boş hücreler sade/nötr dursun (belki hiç buton göstermesin),
-      ayrı bir "İnşa Modu" aç/kapa düğmesiyle bu moda girilince yerleştirilebilir
-      hücreler belirginleşsin (vurgulanmış çerçeve/parıltı gibi).
-- [ ] **Bina büyüdükçe pan (sağa/sola/yukarı/aşağı bakma) tekrar gözden
-      geçirilmeli**: mevcut sürükleme-ile-pan uygulaması var ama Hotel
-      City'nin serbest kamera mantığına (2D yandan kaydırmalı, engelsiz
-      her yöne bakabilme) göre tekrar incelenip gerekirse iyileştirilmeli
-      — özellikle çok kat + geniş bloklu büyük binalarda.
-
 ### Orta vade
-- [ ] Android'de gerçek cihaz/emülatörde dokunmatik test (şu ana kadar yalnızca headless export doğrulandı)
-- [ ] İkinci bina (prestij sonrası farklı bir bina teması) — şu an tek bina + çarpan modeliyle sınırlı
-- [ ] **Faz 4 — Yeni sanat (yapılmadı)**: boş oda kabuğu + duvar kağıdı/zemin
-      doku + yatak sprite seti gerekiyor. Mantık zaten doğru (taban eşya
-      ayrı yükseltiliyor) ama görsel hâlâ eski "hazır döşenmiş sahne"
-      PNG'leri (`GUEST_ROOM_ART`, main.gd). Bu, yeni AI görsel üretimi
-      gerektiriyor — Claude'da görsel üretme aracı yok, önceki turlardaki
-      gibi kullanıcının referans sprite sayfası göndermesi (veya üretmesi)
-      ve sonra kesip entegre edilmesi gerekiyor.
-- [ ] **Faz 5 — Temizlik (yapılmadı, Faz 4'e bağımlı)**: eski
-      `GUEST_ROOM_ART` varyant havuzunu ve ilişkili kodu/asset'leri sil.
-      Faz 4 bitmeden yapılırsa odaların arka planında hiçbir görsel
-      kalmaz — bu yüzden bilerek ertelendi.
+- [ ] Android'de gerçek cihaz/emülatörde dokunmatik test (şu ana kadar yalnızca headless export doğrulandı) — bu oturumda cihaz/emülatör bağlı değildi (`adb` bulunamadı), elle test gerekiyor
+- [ ] İkinci bina (prestij sonrası farklı bir bina teması) — şu an tek bina + çarpan modeliyle sınırlı, önce ekonomi/tema tasarımı netleşmeli
 
 ### Uzun vade
 - [ ] Gerçek bulut kaydı / platform servisleri (Play Games, Game Center) — şu an cihazlar arası taşıma kod ile yapılıyor
