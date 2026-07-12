@@ -117,9 +117,17 @@ değişiklik — sabit "N kat × 4 slot" ızgarasından serbest yerleşime geçi
 ### Orta vade
 - [ ] Android'de gerçek cihaz/emülatörde dokunmatik test (şu ana kadar yalnızca headless export doğrulandı)
 - [ ] İkinci bina (prestij sonrası farklı bir bina teması) — şu an tek bina + çarpan modeliyle sınırlı
-- [ ] Boş oda kabuğu + duvar kağıdı/zemin doku sanatı (şu an mantık doğru ama
-      görsel hâlâ eski "hazır döşenmiş sahne" PNG'leri — yeni sanat üretimi
-      ayrı bir iş turu gerektiriyor)
+- [ ] **Faz 4 — Yeni sanat (yapılmadı)**: boş oda kabuğu + duvar kağıdı/zemin
+      doku + yatak sprite seti gerekiyor. Mantık zaten doğru (taban eşya
+      ayrı yükseltiliyor) ama görsel hâlâ eski "hazır döşenmiş sahne"
+      PNG'leri (`GUEST_ROOM_ART`, main.gd). Bu, yeni AI görsel üretimi
+      gerektiriyor — Claude'da görsel üretme aracı yok, önceki turlardaki
+      gibi kullanıcının referans sprite sayfası göndermesi (veya üretmesi)
+      ve sonra kesip entegre edilmesi gerekiyor.
+- [ ] **Faz 5 — Temizlik (yapılmadı, Faz 4'e bağımlı)**: eski
+      `GUEST_ROOM_ART` varyant havuzunu ve ilişkili kodu/asset'leri sil.
+      Faz 4 bitmeden yapılırsa odaların arka planında hiçbir görsel
+      kalmaz — bu yüzden bilerek ertelendi.
 
 ### Uzun vade
 - [ ] Gerçek bulut kaydı / platform servisleri (Play Games, Game Center) — şu an cihazlar arası taşıma kod ile yapılıyor
