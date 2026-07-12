@@ -1,20 +1,52 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="48" height="64" viewBox="0 0 48 64">
-  <!-- chibi kadın: koyu kızıl küt saç, camgöbeği elbise (Hotel City stili) -->
-  <rect x="16.5" y="53" width="5.5" height="9" rx="2.5" fill="#e8b48d" stroke="#3a2a1c" stroke-width="1.6"/>
-  <rect x="26" y="53" width="5.5" height="9" rx="2.5" fill="#e8b48d" stroke="#3a2a1c" stroke-width="1.6"/>
-  <path d="M 16 40 L 32 40 L 35.5 57 L 12.5 57 Z" fill="#1f8a8c" stroke="#3a2a1c" stroke-width="2" stroke-linejoin="round"/>
-  <path d="M 17 44 L 14.5 51 M 31 44 L 33.5 51" fill="none" stroke="#166b6d" stroke-width="1.4"/>
-  <circle cx="24" cy="24" r="16.5" fill="#f2c9a0" stroke="#3a2a1c" stroke-width="2"/>
-  <path d="M 7.5 24 C 4.5 5 43.5 5 40.5 24 C 40.5 31 38 36 35 37 C 38 28 36 16 24 16 C 12 16 10 28 13 37 C 10 36 7.5 31 7.5 24 Z" fill="#7a2f22" stroke="#3a2a1c" stroke-width="2" stroke-linejoin="round"/>
-  <path d="M 13 11 C 17 7 23 6 27 7" fill="none" stroke="#a24a37" stroke-width="2" stroke-linecap="round"/>
-  <circle cx="18" cy="26" r="3.6" fill="#ffffff"/>
-  <circle cx="18.9" cy="26.7" r="1.8" fill="#2e1c0c"/>
-  <circle cx="18.2" cy="25.8" r="0.7" fill="#ffffff"/>
-  <circle cx="30" cy="26" r="3.6" fill="#ffffff"/>
-  <circle cx="30.9" cy="26.7" r="1.8" fill="#2e1c0c"/>
-  <circle cx="30.2" cy="25.8" r="0.7" fill="#ffffff"/>
-  <path d="M 14.5 21.5 Q 18 19.8 21 21.2 M 27 21.2 Q 30 19.8 33.5 21.5" fill="none" stroke="#3a2a1c" stroke-width="1.4" stroke-linecap="round"/>
-  <circle cx="13.5" cy="31" r="2" fill="#f0a08a" opacity="0.65"/>
-  <circle cx="34.5" cy="31" r="2" fill="#f0a08a" opacity="0.65"/>
-  <path d="M 21 34 Q 24 36.6 27 34" fill="none" stroke="#3a2a1c" stroke-width="1.7" stroke-linecap="round"/>
+  <!-- chibi kadın: dalgalı kahve saç, çiçekli pastel elbise (tam boy, kalın çizgi) -->
+  <defs>
+    <radialGradient id="ga_skin" cx="42%" cy="35%" r="70%">
+      <stop offset="0%" stop-color="#fce3c2"/>
+      <stop offset="100%" stop-color="#f2c9a0"/>
+    </radialGradient>
+    <linearGradient id="ga_dress" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffd6e6"/>
+      <stop offset="100%" stop-color="#f5aecb"/>
+    </linearGradient>
+    <radialGradient id="ga_hair2" cx="40%" cy="20%" r="80%">
+      <stop offset="0%" stop-color="#9a6136"/>
+      <stop offset="100%" stop-color="#7a4a26"/>
+    </radialGradient>
+  </defs>
+  <ellipse cx="24" cy="62" rx="13" ry="2.2" fill="#241608" opacity="0.2"/>
+  <!-- kollar -->
+  <path d="M 15 42 q -5 2 -6 10 l 0 4" fill="none" stroke="#f2c9a0" stroke-width="5.4" stroke-linecap="round"/>
+  <path d="M 33 42 q 5 2 6 10 l 0 4" fill="none" stroke="#f2c9a0" stroke-width="5.4" stroke-linecap="round"/>
+  <circle cx="9" cy="56" r="3" fill="#f2c9a0" stroke="#2d2416" stroke-width="1.8"/>
+  <circle cx="39" cy="56" r="3" fill="#f2c9a0" stroke="#2d2416" stroke-width="1.8"/>
+  <path d="M 15 42 q -5 2 -6 10 l 0 4" fill="none" stroke="#2d2416" stroke-width="2" stroke-linecap="round"/>
+  <path d="M 33 42 q 5 2 6 10 l 0 4" fill="none" stroke="#2d2416" stroke-width="2" stroke-linecap="round"/>
+  <!-- ayakkabılar -->
+  <path d="M 14 57 h 8 v 5 q 0 2 -2 2 h -6 z" fill="#5a3a2a" stroke="#2d2416" stroke-width="2"/>
+  <path d="M 26 57 h 8 v 5 q 0 2 -2 2 h -6 z" fill="#5a3a2a" stroke="#2d2416" stroke-width="2"/>
+  <!-- bacaklar -->
+  <rect x="16.5" y="50" width="6" height="10" rx="2.5" fill="#f2c9a0" stroke="#2d2416" stroke-width="2"/>
+  <rect x="25.5" y="50" width="6" height="10" rx="2.5" fill="#f2c9a0" stroke="#2d2416" stroke-width="2"/>
+  <!-- elbise -->
+  <path d="M 14.5 39 L 33.5 39 L 37 55 Q 24 58 11 55 Z" fill="url(#ga_dress)" stroke="#2d2416" stroke-width="2.2" stroke-linejoin="round"/>
+  <path d="M 17 42 L 15 51 M 31 42 L 33 51" fill="none" stroke="#e08fb0" stroke-width="1.4"/>
+  <g fill="#e8607f" opacity="0.8">
+    <circle cx="18" cy="46" r="1.3"/><circle cx="26" cy="44" r="1.3"/><circle cx="22" cy="51" r="1.3"/><circle cx="30" cy="50" r="1.3"/>
+  </g>
+  <path d="M 20 39 Q 24 42.5 28 39" fill="none" stroke="#2d2416" stroke-width="1.6"/>
+  <!-- baş + saç -->
+  <circle cx="24" cy="23" r="16.5" fill="url(#ga_skin)" stroke="#2d2416" stroke-width="2.3"/>
+  <path d="M 6.5 23 C 3 3 45 3 41.5 23 C 41.5 32 38 39 33 40 C 30 38 35 30 33 21 C 31 15 28 13.5 24 13.5 C 20 13.5 17 15 15 21 C 13 30 18 38 15 40 C 10 39 6.5 32 6.5 23 Z" fill="url(#ga_hair2)" stroke="#2d2416" stroke-width="2.3" stroke-linejoin="round"/>
+  <path d="M 12 10 C 16 6 22 5 26 6" fill="none" stroke="#c1875a" stroke-width="2" stroke-linecap="round" opacity="0.9"/>
+  <circle cx="18" cy="25" r="3.7" fill="#ffffff" stroke="#2d2416" stroke-width="1.4"/>
+  <circle cx="18.9" cy="25.7" r="1.8" fill="#2e1c0c"/>
+  <circle cx="18.2" cy="24.8" r="0.7" fill="#ffffff"/>
+  <circle cx="30" cy="25" r="3.7" fill="#ffffff" stroke="#2d2416" stroke-width="1.4"/>
+  <circle cx="30.9" cy="25.7" r="1.8" fill="#2e1c0c"/>
+  <circle cx="30.2" cy="24.8" r="0.7" fill="#ffffff"/>
+  <path d="M 14 20 Q 18 18.2 21.5 19.6 M 26.5 19.6 Q 30 18.2 34 20" fill="none" stroke="#2d2416" stroke-width="1.6" stroke-linecap="round"/>
+  <circle cx="13" cy="30.5" r="2.1" fill="#f0879a" opacity="0.65"/>
+  <circle cx="35" cy="30.5" r="2.1" fill="#f0879a" opacity="0.65"/>
+  <path d="M 20.5 33.5 Q 24 36.4 27.5 33.5" fill="none" stroke="#2d2416" stroke-width="1.8" stroke-linecap="round"/>
 </svg>

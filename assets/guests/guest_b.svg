@@ -1,21 +1,49 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="48" height="64" viewBox="0 0 48 64">
-  <!-- chibi adam: afro saç, güneş gözlüğü, hardal gömlek (Hotel City barındaki tip) -->
-  <rect x="16.5" y="53" width="5.5" height="9" rx="2.5" fill="#3a3a3f" stroke="#26262a" stroke-width="1.6"/>
-  <rect x="26" y="53" width="5.5" height="9" rx="2.5" fill="#3a3a3f" stroke="#26262a" stroke-width="1.6"/>
-  <path d="M 16.5 40 L 31.5 40 L 33 56 L 15 56 Z" fill="#d9a13b" stroke="#3a2a1c" stroke-width="2" stroke-linejoin="round"/>
-  <path d="M 24 40 L 24 55 M 21 44 h 6" fill="none" stroke="#a8781f" stroke-width="1.4"/>
-  <circle cx="24" cy="25" r="16" fill="#c68a5b" stroke="#3a2a1c" stroke-width="2"/>
-  <circle cx="12" cy="14" r="7" fill="#2b1a10" stroke="#1a0f08" stroke-width="1.8"/>
-  <circle cx="24" cy="10" r="8" fill="#2b1a10" stroke="#1a0f08" stroke-width="1.8"/>
-  <circle cx="36" cy="14" r="7" fill="#2b1a10" stroke="#1a0f08" stroke-width="1.8"/>
-  <circle cx="8.5" cy="22" r="5.5" fill="#2b1a10" stroke="#1a0f08" stroke-width="1.8"/>
-  <circle cx="39.5" cy="22" r="5.5" fill="#2b1a10" stroke="#1a0f08" stroke-width="1.8"/>
-  <path d="M 9 17 A 16 16 0 0 1 39 17 L 39 22 L 9 22 Z" fill="#2b1a10"/>
-  <circle cx="17" cy="9" r="1.5" fill="#4a2f1c" opacity="0.9"/>
-  <circle cx="31" cy="12" r="1.3" fill="#4a2f1c" opacity="0.9"/>
-  <rect x="12" y="22.5" width="10.5" height="7" rx="3" fill="#26262a" stroke="#1a1a1d" stroke-width="1.5"/>
-  <rect x="25.5" y="22.5" width="10.5" height="7" rx="3" fill="#26262a" stroke="#1a1a1d" stroke-width="1.5"/>
-  <path d="M 22.5 25 h 3" stroke="#1a1a1d" stroke-width="1.8"/>
-  <path d="M 14 25 l 3 1.5 M 27.5 25 l 3 1.5" stroke="#5d5d66" stroke-width="1.3" stroke-linecap="round"/>
-  <path d="M 20.5 35 Q 24 38 27.5 35" fill="none" stroke="#3a2a1c" stroke-width="1.7" stroke-linecap="round"/>
+  <!-- chibi adam: afro saç, güneş gözlüğü, yeşil gömlek (tam boy, kalın çizgi) -->
+  <defs>
+    <radialGradient id="gb_skin" cx="42%" cy="35%" r="70%">
+      <stop offset="0%" stop-color="#e3b381"/>
+      <stop offset="100%" stop-color="#c68a5b"/>
+    </radialGradient>
+    <linearGradient id="gb_shirt" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#5cbf5f"/>
+      <stop offset="100%" stop-color="#3a9640"/>
+    </linearGradient>
+    <linearGradient id="gb_pants" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#8a746a"/>
+      <stop offset="100%" stop-color="#6b5850"/>
+    </linearGradient>
+    <radialGradient id="gb_hair" cx="42%" cy="30%" r="75%">
+      <stop offset="0%" stop-color="#40281a"/>
+      <stop offset="100%" stop-color="#2b1a10"/>
+    </radialGradient>
+  </defs>
+  <ellipse cx="24" cy="62" rx="13" ry="2.2" fill="#241608" opacity="0.2"/>
+  <!-- kollar -->
+  <path d="M 15.5 41 q -5 2 -6 10 l 0 4" fill="none" stroke="url(#gb_shirt)" stroke-width="5.4" stroke-linecap="round"/>
+  <path d="M 32.5 41 q 5 2 6 10 l 0 4" fill="none" stroke="url(#gb_shirt)" stroke-width="5.4" stroke-linecap="round"/>
+  <circle cx="9" cy="56" r="3" fill="#c68a5b" stroke="#2d2416" stroke-width="1.8"/>
+  <circle cx="39" cy="56" r="3" fill="#c68a5b" stroke="#2d2416" stroke-width="1.8"/>
+  <path d="M 15.5 41 q -5 2 -6 10 l 0 4" fill="none" stroke="#2d2416" stroke-width="2" stroke-linecap="round"/>
+  <path d="M 32.5 41 q 5 2 6 10 l 0 4" fill="none" stroke="#2d2416" stroke-width="2" stroke-linecap="round"/>
+  <!-- ayakkabılar -->
+  <path d="M 14 57 h 8 v 5 q 0 2 -2 2 h -6 z" fill="#2d2416" stroke="#1a1208" stroke-width="1.8"/>
+  <path d="M 26 57 h 8 v 5 q 0 2 -2 2 h -6 z" fill="#2d2416" stroke="#1a1208" stroke-width="1.8"/>
+  <!-- pantolon -->
+  <rect x="16.5" y="49" width="6" height="11" rx="2" fill="url(#gb_pants)" stroke="#2d2416" stroke-width="2"/>
+  <rect x="25.5" y="49" width="6" height="11" rx="2" fill="url(#gb_pants)" stroke="#2d2416" stroke-width="2"/>
+  <!-- gömlek -->
+  <path d="M 16 39 L 32 39 L 34 56 Q 24 59 14 56 Z" fill="url(#gb_shirt)" stroke="#2d2416" stroke-width="2.2" stroke-linejoin="round"/>
+  <path d="M 24 39 L 24 54 M 21 43 h 6" fill="none" stroke="#2c7a32" stroke-width="1.6"/>
+  <path d="M 20 39 Q 24 42.5 28 39" fill="none" stroke="#2d2416" stroke-width="1.6"/>
+  <!-- baş + afro -->
+  <circle cx="24" cy="24" r="16" fill="url(#gb_skin)" stroke="#2d2416" stroke-width="2.3"/>
+  <path d="M 6.5 24 C 3 4 45 4 41.5 24 C 41.5 30 38 34 34 35 C 37 27 35 15 24 15 C 13 15 11 27 14 35 C 10 34 6.5 30 6.5 24 Z" fill="url(#gb_hair)" stroke="#1a0f08" stroke-width="2.3" stroke-linejoin="round"/>
+  <circle cx="16" cy="10" r="1.6" fill="#5c3c26" opacity="0.9"/>
+  <circle cx="31" cy="13" r="1.4" fill="#5c3c26" opacity="0.9"/>
+  <rect x="12" y="21.5" width="10.5" height="7" rx="3" fill="#26262a" stroke="#141416" stroke-width="1.7"/>
+  <rect x="25.5" y="21.5" width="10.5" height="7" rx="3" fill="#26262a" stroke="#141416" stroke-width="1.7"/>
+  <path d="M 22.5 24 h 3" stroke="#141416" stroke-width="2"/>
+  <path d="M 14 24 l 3 1.5 M 27.5 24 l 3 1.5" stroke="#8a8a94" stroke-width="1.4" stroke-linecap="round"/>
+  <path d="M 20.5 34 Q 24 37 27.5 34" fill="none" stroke="#2d2416" stroke-width="1.8" stroke-linecap="round"/>
 </svg>
