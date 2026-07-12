@@ -1069,7 +1069,10 @@ func _rebuild_hotel() -> void:
 	queue.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	street_scroll.add_child(queue)
 	if Game.shift_active():
-		for gi in mini(3 + Game.rooms.size() / 2, 8):
+		# Kuyruk artık sabit bir formülle değil, gerçek _queue_count sayacıyla
+		# çiziliyor — asansör her açılışta bu sayacı tamamen boşaltır (bkz.
+		# _update_elevator), böylece kuyruk süresiz büyüyüp sabit kalmıyor.
+		for gi in _queue_count:
 			var gicon := _icon("res://assets/guests/guest_%s.svg" % GUEST_TYPES[gi % GUEST_TYPES.size()], 48)
 			queue.add_child(gicon)
 			_animate_guest(gicon, gi, true)
@@ -1097,6 +1100,16 @@ func _rebuild_hotel() -> void:
 	_clamp_pan()
 	_apply_canvas_transform()
 
+	# İnşa Modu mağaza rafı: yalnızca açıkken görünür ve her yeniden
+	# kurulumda güncel fiyat/seviye kilidiyle tazelenir.
+	build_shop_panel.visible = build_mode
+	if build_mode:
+		for c in build_shop_row.get_children():
+			build_shop_row.remove_child(c)
+			c.queue_free()
+		for type in Game.eco.room_types:
+			build_shop_row.add_child(_make_shop_tray_card(type))
+
 	# Yeni kat (tuvalin dışında, sabit — satın alınca yeni bir kat satırı
 	# tuvale eklenir)
 	new_floor_button.visible = Game.floors < int(Game.eco.building.max_floors)
@@ -1112,16 +1125,40 @@ func _rebuild_hotel() -> void:
 		quest_hint.text = "Görev: %s (%d/%d)" % [q.name, mini(p[0], p[1]), p[1]]
 
 
-## Açık ama boş bir hücre: "+ oda ekle" (taşıma modundaysa hedef olarak da
-## kullanılır — bkz. _on_empty_cell_tapped).
+## Açık ama boş bir hücre: HİÇBİR görsel kutu/çerçeve göstermez (kullanıcı
+## isteği: "açık olmayan odalar oluşturulmamış olmalı, arka plan gözükecek")
+## — kat şeridinin (row_bg) kendi arka planı olduğu gibi görünür. Yeni oda
+## yalnızca mağaza rafından sürükleyip bırakılarak eklenir (bkz.
+## _make_shop_tray_card, _finish_drag; bırakma ham ekran koordinatından
+## hücre bulur, herhangi bir Control'e ihtiyaç duymaz). İnşa Modu kapalıyken
+## tamamen etkileşimsiz de olur; açıkken görünmez ama yine de dokunulabilir
+## kalır — yalnızca "Taşı" modundaki hedef tıklaması için (bkz.
+## _on_empty_cell_move_tapped).
 func _make_add_cell_button(floor_i: int, col: int) -> Control:
-	var b := _button("+\nOda ekle", 13, PALETTE.cream_dark, PALETTE.muted)
-	b.pressed.connect(func(): _on_empty_cell_tapped(floor_i, col))
+	if not build_mode:
+		return _make_plain_empty_cell()
+	var b := Button.new()
+	for state in ["normal", "hover", "pressed", "disabled"]:
+		b.add_theme_stylebox_override(state, StyleBoxEmpty.new())
+	b.pressed.connect(func(): _on_empty_cell_move_tapped(floor_i, col))
 	return b
 
 
-## Henüz satın alınmamış blok: kapalı perde + fiyatıyla "blok al" butonu.
+## Boş hücrenin görünmez hâli: hiçbir Control eklemez, kat şeridinin
+## kendi arka planı olduğu gibi görünür.
+func _make_plain_empty_cell() -> Control:
+	var c := Control.new()
+	c.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return c
+
+
+## Henüz satın alınmamış blok: kullanıcı isteği üzerine kapalı perde görseli
+## de kaldırıldı — İnşa Modu kapalıyken diğer boş hücreler gibi tamamen
+## görünmez (bkz. _make_plain_empty_cell). Perde + fiyat etiketi + "blok al"
+## dokunuşu yalnızca İnşa Modu açıkken görünür.
 func _make_block_cell_button(floor_i: int, col: int) -> Control:
+	if not build_mode:
+		return _make_plain_empty_cell()
 	var b := Button.new()
 	b.clip_text = true
 	for state in ["normal", "hover", "pressed", "disabled"]:
