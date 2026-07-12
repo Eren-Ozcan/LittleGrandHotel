@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <!-- Duvar dokusu (Faz: oda çerçevesi) — odaların CELL_GAP boşluğunda arka
+       plan olarak döşenir (main.gd, STRETCH_TILE); yan yana odalar
+       birleşince kesintisiz tek bir duvar gibi görünür. Standart running-
+       bond desen, 32px'lik tekrar modülüyle her iki yönde de kusursuz
+       döşenir. Kırmızı tuğla temayla ("sırıttı") çakıştığı için sıcak
+       krem/altın taş bloğu tonlarına (PALETTE.facade/facade_line/wood
+       ailesi) çevrildi. -->
+  <rect width="64" height="64" fill="#a9793f"/>
+  <g fill="#f0d9a8" stroke="#8a6642" stroke-width="1.5" stroke-linejoin="round">
+    <rect x="1" y="1" width="30" height="14"/>
+    <rect x="33" y="1" width="30" height="14"/>
+    <rect x="-15" y="17" width="30" height="14"/>
+    <rect x="17" y="17" width="30" height="14"/>
+    <rect x="49" y="17" width="30" height="14"/>
+    <rect x="1" y="33" width="30" height="14"/>
+    <rect x="33" y="33" width="30" height="14"/>
+    <rect x="-15" y="49" width="30" height="14"/>
+    <rect x="17" y="49" width="30" height="14"/>
+    <rect x="49" y="49" width="30" height="14"/>
+  </g>
+</svg>
