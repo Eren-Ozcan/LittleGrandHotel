@@ -3,10 +3,12 @@
 
   "building": {
     "start_floors": 2,
-    "slots_per_floor": 4,
     "max_floors": 6,
     "floor_price": 15000,
-    "floor_mult": 2.2
+    "floor_mult": 2.2,
+    "grid_cols": 8,
+    "block_price": 400,
+    "block_price_mult": 1.12
   },
 
   "shift_rates": { "1": 8, "4": 8, "8": 8, "24": 8 },
@@ -23,36 +25,39 @@
   "tier_mult": [1.0, 1.2, 1.45, 1.75, 2.1],
 
   "room_types": {
-    "standard": { "name": "Standart Oda", "category": "guest", "base_income": 30, "price": 1200, "unlock_level": 1, "stay_hours": 3 },
-    "deluxe":   { "name": "Deluxe Oda", "category": "guest", "base_income": 75, "price": 6500, "unlock_level": 8, "stay_hours": 4 },
-    "suite":    { "name": "Süit", "category": "guest", "base_income": 180, "price": 22000, "unlock_level": 18, "stay_hours": 5 },
+    "standard": { "name": "Standart Oda", "category": "guest", "base_income": 30, "price": 1200, "unlock_level": 1, "stay_hours": 3, "footprint_w": 1 },
+    "deluxe":   { "name": "Deluxe Oda", "category": "guest", "base_income": 75, "price": 6500, "unlock_level": 8, "stay_hours": 4, "footprint_w": 2 },
+    "suite":    { "name": "Süit", "category": "guest", "base_income": 180, "price": 22000, "unlock_level": 18, "stay_hours": 5, "footprint_w": 2 },
 
-    "cafe":     { "name": "Kafe", "category": "facility", "base_income": 40, "price": 3000, "unlock_level": 3, "capacity": 4 },
-    "gym":      { "name": "Spor Salonu", "category": "facility", "base_income": 55, "price": 5200, "unlock_level": 6, "capacity": 2 },
-    "pool":     { "name": "Havuz", "category": "facility", "base_income": 90, "price": 12000, "unlock_level": 12, "capacity": 3 },
-    "cinema":   { "name": "Sinema", "category": "facility", "base_income": 120, "price": 18000, "unlock_level": 16, "capacity": 5 },
-    "spa":      { "name": "Spa", "category": "facility", "base_income": 150, "price": 26000, "unlock_level": 20, "capacity": 3 },
-    "restaurant":  { "name": "Restoran", "category": "facility", "base_income": 200, "price": 34000, "unlock_level": 24, "capacity": 3 },
-    "roof_garden": { "name": "Çatı Bahçesi", "category": "facility", "base_income": 260, "price": 45000, "unlock_level": 28, "capacity": 4 },
+    "cafe":     { "name": "Kafe", "category": "facility", "base_income": 40, "price": 3000, "unlock_level": 3, "capacity": 4, "footprint_w": 1 },
+    "gym":      { "name": "Spor Salonu", "category": "facility", "base_income": 55, "price": 5200, "unlock_level": 6, "capacity": 2, "footprint_w": 1 },
+    "pool":     { "name": "Havuz", "category": "facility", "base_income": 90, "price": 12000, "unlock_level": 12, "capacity": 3, "footprint_w": 2 },
+    "cinema":   { "name": "Sinema", "category": "facility", "base_income": 120, "price": 18000, "unlock_level": 16, "capacity": 5, "footprint_w": 2 },
+    "spa":      { "name": "Spa", "category": "facility", "base_income": 150, "price": 26000, "unlock_level": 20, "capacity": 3, "footprint_w": 2 },
+    "restaurant":  { "name": "Restoran", "category": "facility", "base_income": 200, "price": 34000, "unlock_level": 24, "capacity": 3, "footprint_w": 3 },
+    "roof_garden": { "name": "Çatı Bahçesi", "category": "facility", "base_income": 260, "price": 45000, "unlock_level": 28, "capacity": 4, "footprint_w": 2 },
 
-    "housekeeping": { "name": "Temizlik Odası", "category": "functional", "base_income": 0, "price": 1500, "unlock_level": 2 }
+    "housekeeping": { "name": "Temizlik Odası", "category": "functional", "base_income": 0, "price": 1500, "unlock_level": 2, "footprint_w": 1 }
   },
 
   "items": [
-    { "id": "lamp_desk",    "name": "Masa Lambası",  "sp": 10, "price": 80,  "unlock_level": 1 },
-    { "id": "bed_basic",    "name": "Basit Yatak",   "sp": 20, "price": 150, "unlock_level": 1 },
-    { "id": "plant_fern",   "name": "Saksı Bitkisi", "sp": 12, "price": 110, "unlock_level": 2 },
-    { "id": "art_print",    "name": "Duvar Tablosu", "sp": 18, "price": 190, "unlock_level": 3 },
-    { "id": "chair_arm",    "name": "Berjer Koltuk", "sp": 25, "price": 260, "unlock_level": 4 },
-    { "id": "rug_wool",     "name": "Yün Halı",      "sp": 30, "price": 350, "unlock_level": 5 },
-    { "id": "bed_wood",     "name": "Ahşap Karyola", "sp": 45, "price": 480, "unlock_level": 6 },
-    { "id": "wardrobe_oak", "name": "Meşe Gardırop", "sp": 55, "price": 720, "unlock_level": 8 },
-    { "id": "mirror_gold",  "name": "Varaklı Ayna",  "sp": 70, "price": 1100, "unlock_level": 10 },
-    { "id": "sofa_velvet",  "name": "Kadife Kanepe", "sp": 90, "price": 1600, "unlock_level": 13 },
-    { "id": "chandelier",   "name": "Kristal Avize", "sp": 120, "price": 2600, "unlock_level": 16 },
-    { "id": "bed_canopy",   "name": "Cibinlikli Yatak", "sp": 150, "price": 3800, "unlock_level": 19 },
-    { "id": "statue_gold",    "name": "Altın Heykel",       "sp": 200, "price": 0, "gem_price": 15, "unlock_level": 6 },
-    { "id": "aquarium_royal", "name": "Kraliyet Akvaryumu", "sp": 280, "price": 0, "gem_price": 25, "unlock_level": 12 }
+    { "id": "wallpaper_default", "name": "Sade Duvar Kağıdı", "sp": 0,  "price": 0,   "unlock_level": 1, "slot": "wallpaper" },
+    { "id": "floor_default",     "name": "Sade Zemin",        "sp": 0,  "price": 0,   "unlock_level": 1, "slot": "floor" },
+    { "id": "bed_basic",    "name": "Basit Yatak",   "sp": 20, "price": 0,   "unlock_level": 1,  "slot": "bed" },
+    { "id": "bed_wood",     "name": "Ahşap Karyola", "sp": 45, "price": 480, "unlock_level": 6,  "slot": "bed" },
+    { "id": "bed_canopy",   "name": "Cibinlikli Yatak", "sp": 150, "price": 3800, "unlock_level": 19, "slot": "bed" },
+
+    { "id": "lamp_desk",    "name": "Masa Lambası",  "sp": 10, "price": 80,  "unlock_level": 1,  "anchor": "surface" },
+    { "id": "plant_fern",   "name": "Saksı Bitkisi", "sp": 12, "price": 110, "unlock_level": 2,  "anchor": "floor_side" },
+    { "id": "art_print",    "name": "Duvar Tablosu", "sp": 18, "price": 190, "unlock_level": 3,  "anchor": "wall" },
+    { "id": "chair_arm",    "name": "Berjer Koltuk", "sp": 25, "price": 260, "unlock_level": 4,  "anchor": "floor_side" },
+    { "id": "rug_wool",     "name": "Yün Halı",      "sp": 30, "price": 350, "unlock_level": 5,  "anchor": "floor_rug" },
+    { "id": "wardrobe_oak", "name": "Meşe Gardırop", "sp": 55, "price": 720, "unlock_level": 8,  "anchor": "floor_side" },
+    { "id": "mirror_gold",  "name": "Varaklı Ayna",  "sp": 70, "price": 1100, "unlock_level": 10, "anchor": "wall" },
+    { "id": "sofa_velvet",  "name": "Kadife Kanepe", "sp": 90, "price": 1600, "unlock_level": 13, "anchor": "floor_side" },
+    { "id": "chandelier",   "name": "Kristal Avize", "sp": 120, "price": 2600, "unlock_level": 16, "anchor": "ceiling" },
+    { "id": "statue_gold",    "name": "Altın Heykel",       "sp": 200, "price": 0, "gem_price": 15, "unlock_level": 6,  "anchor": "floor_side" },
+    { "id": "aquarium_royal", "name": "Kraliyet Akvaryumu", "sp": 280, "price": 0, "gem_price": 25, "unlock_level": 12, "anchor": "floor_side" }
   ],
 
   "xp_curve": { "base": 100, "exp": 1.9 },
@@ -75,9 +80,9 @@
   "catch": { "interval_real_seconds": 25, "bonus_hourly_frac": 0.15 },
 
   "bundles": [
-    { "id": "cozy_set",  "name": "Konfor Paketi",   "items": ["bed_basic", "lamp_desk", "rug_wool", "plant_fern"], "discount": 0.1 },
-    { "id": "wood_set",  "name": "Ahşap Paketi",    "items": ["bed_wood", "wardrobe_oak", "chair_arm", "art_print"], "discount": 0.1 },
-    { "id": "royal_set", "name": "Kraliyet Paketi", "items": ["bed_canopy", "chandelier", "sofa_velvet", "mirror_gold"], "discount": 0.12 }
+    { "id": "cozy_set",  "name": "Konfor Paketi",   "items": ["lamp_desk", "rug_wool", "plant_fern", "art_print"], "discount": 0.1 },
+    { "id": "wood_set",  "name": "Ahşap Paketi",    "items": ["wardrobe_oak", "chair_arm", "art_print", "rug_wool"], "discount": 0.1 },
+    { "id": "royal_set", "name": "Kraliyet Paketi", "items": ["chandelier", "sofa_velvet", "mirror_gold", "wardrobe_oak"], "discount": 0.12 }
   ],
 
   "daily_rewards": [
