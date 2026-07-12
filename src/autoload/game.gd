@@ -9,9 +9,12 @@ signal achievement_unlocked(achievement: Dictionary)
 signal leveled_up(new_level: int)
 
 const SAVE_PATH := "user://save.json"
-const SAVE_VERSION := 10
+const SAVE_VERSION := 11
 ## Göçle yükseltilebilen en eski kayıt sürümü
 const MIN_SAVE_VERSION := 2
+## v11 öncesi (sabit "N kat × 4 slot" ızgarası) her katın açık genişliği —
+## göç formülünde ve yeni katların varsayılan ücretsiz genişliğinde kullanılır.
+const DEFAULT_FLOOR_OPEN_WIDTH := 4
 const ECO_PATH := "res://data/economy.json"
 const QUESTS_PATH := "res://data/quests.json"
 const ACHIEVEMENTS_PATH := "res://data/achievements.json"
@@ -30,7 +33,15 @@ var coins: int = 0
 var gems: int = 0
 var xp: int = 0
 var floors: int = 2
-var rooms: Array = []            # {"type":String, "items":Array, "dirty":bool, "clean_left":float}
+## Serbest blok yerleşimi (v11): her kat için açık (satın alınmış) blok
+## genişliği, 0-indexed dizi — floor_blocks[i] = i+1. kat. Bloklar her katta
+## hep soldan sağa bitişik açılır (delik/asılı oda yok — bilinçli sadeleştirme).
+var floor_blocks: Array = []
+var _next_room_id: int = 0
+var rooms: Array = []
+# {"id":String, "type":String, "floor":int, "col":int, "w":int, "items":Array,
+#  "base":{"wallpaper":String,"floor":String,"bed":String?}, "dirty":bool,
+#  "clean_left":float, "dirty_hours":float}
 var shift_end_unix: float = 0.0
 var pending_income: float = 0.0
 var last_sim_unix: float = 0.0
@@ -193,7 +204,11 @@ func new_game() -> void:
 	gems = int(eco.start.gems)
 	xp = 0
 	floors = int(eco.building.start_floors)
-	rooms = [make_room("standard"), make_room("standard")]
+	floor_blocks = []
+	for _i in floors:
+		floor_blocks.append(DEFAULT_FLOOR_OPEN_WIDTH)
+	_next_room_id = 0
+	rooms = [make_room("standard", 1, 0), make_room("standard", 1, 1)]
 	shift_end_unix = 0.0
 	pending_income = 0.0
 	last_sim_unix = now()
@@ -223,21 +238,158 @@ func room_def(type: String) -> Dictionary:
 	return eco.room_types.get(type, {})
 
 
-func make_room(type: String) -> Dictionary:
+func room_footprint(type: String) -> int:
+	return int(room_def(type).get("footprint_w", 1))
+
+
+func _new_room_id() -> String:
+	_next_room_id += 1
+	return "r%d" % _next_room_id
+
+
+## floor_i/col: serbest yerleşimdeki konum (1-indexed kat, 0-indexed sütun).
+## Eski `make_room(type)` çağrıları (testler vb.) floor_i/col vermeden hâlâ
+## çalışır — konum sonradan `place_room`/migrasyon tarafından atanır.
+func make_room(type: String, floor_i: int = 0, col: int = 0) -> Dictionary:
 	var d := room_def(type)
+	var base := {"wallpaper": "wallpaper_default", "floor": "floor_default"}
+	if String(d.get("category", "")) == "guest":
+		base["bed"] = "bed_basic"
 	return {
+		"id": _new_room_id(),
 		"type": type,
+		"floor": floor_i, "col": col, "w": room_footprint(type),
 		"items": [],
+		"base": base,
 		"dirty": false,
 		"clean_left": float(d.get("stay_hours", 0)),
 		"dirty_hours": 0.0,
 	}
 
 
-# --- Bina --------------------------------------------------------------
+# --- Bina: serbest blok yerleşimi ---------------------------------------
 
+## Bir katın açık (satın alınmış) blok genişliği; kat henüz yoksa 0.
+func floor_open_width(floor_i: int) -> int:
+	if floor_i < 1 or floor_i > floor_blocks.size():
+		return 0
+	return int(floor_blocks[floor_i - 1])
+
+
+## Toplam açık blok sayısı — eski "max_slots" (oda sayısı kapasitesi) yerine
+## artık toplam blok kapasitesi; footprint'i büyük odalar birden fazla blok
+## tüketir. Varsayılan (DEFAULT_FLOOR_OPEN_WIDTH) genişlik her yeni katla
+## ücretsiz gelir — eski dengeyle (floors × 4) birebir aynı başlangıç değeri.
 func max_slots() -> int:
-	return floors * int(eco.building.slots_per_floor)
+	var total := 0
+	for w in floor_blocks:
+		total += int(w)
+	return total
+
+
+## Bir odanın (type) belirtilen kat/sütuna SIĞIP SIĞMADIĞI — fiyat/seviye
+## kontrolü YOK, yalnızca geometri (açık genişlik + diğer odalarla çakışma).
+func _room_fits(type: String, floor_i: int, col: int) -> bool:
+	var d := room_def(type)
+	if d.is_empty() or floor_i < 1 or floor_i > floors:
+		return false
+	var w := int(d.get("footprint_w", 1))
+	if w <= 0 or col < 0 or col + w > floor_open_width(floor_i):
+		return false
+	for r in rooms:
+		if int(r.floor) == floor_i:
+			var rw := int(r.w)
+			if col < int(r.col) + rw and int(r.col) < col + w:
+				return false  # çakışma
+	return true
+
+
+func can_place_room(type: String, floor_i: int, col: int) -> bool:
+	var d := room_def(type)
+	if d.is_empty():
+		return false
+	return _room_fits(type, floor_i, col) \
+		and level() >= int(d.unlock_level) \
+		and coins - int(d.price) >= min_shift_reserve(1)
+
+
+func place_room(type: String, floor_i: int, col: int) -> bool:
+	if not can_place_room(type, floor_i, col):
+		return false
+	simulate_to(now())
+	coins -= int(room_def(type).price)
+	rooms.append(make_room(type, floor_i, col))
+	_check_progress()
+	state_changed.emit()
+	return true
+
+
+## Verilen oda tipi için sığan İLK boş hücreyi bulur (kat sonra sütun sırayla) —
+## `buy_room` bunu "nereye koyacağını oyuncu seçmeden hızlı ekle" için kullanır.
+func _find_open_slot(type: String) -> Vector2i:
+	var w := room_footprint(type)
+	for floor_i in range(1, floors + 1):
+		var open_w := floor_open_width(floor_i)
+		for col in range(0, maxi(0, open_w - w + 1)):
+			if _room_fits(type, floor_i, col):
+				return Vector2i(floor_i, col)
+	return Vector2i(-1, -1)
+
+
+func _room_index_by_id(id: String) -> int:
+	for i in rooms.size():
+		if String(rooms[i].get("id", "")) == id:
+			return i
+	return -1
+
+
+func can_move_room_to(room_id: String, floor_i: int, col: int) -> bool:
+	var idx := _room_index_by_id(room_id)
+	if idx < 0:
+		return false
+	if int(rooms[idx].floor) == floor_i and int(rooms[idx].col) == col:
+		return false  # zaten orada — anlamlı bir taşıma değil
+	var type: String = rooms[idx].type
+	var saved: Dictionary = rooms[idx]
+	rooms.remove_at(idx)  # kendi eski yeriyle çakışma sayılmasın diye geçici çıkar
+	var fits := _room_fits(type, floor_i, col)
+	rooms.insert(idx, saved)
+	return fits
+
+
+## Odayı (id ile) yeni bir kat/sütuna taşır — eski `move_room(a,b)` array-swap
+## mekaniğinin serbest-yerleşim karşılığı (bkz. plan, "Riskler").
+func move_room_to(room_id: String, floor_i: int, col: int) -> bool:
+	if not can_move_room_to(room_id, floor_i, col):
+		return false
+	var idx := _room_index_by_id(room_id)
+	rooms[idx]["floor"] = floor_i
+	rooms[idx]["col"] = col
+	state_changed.emit()
+	return true
+
+
+## Bir kata yeni blok (sütun) ekleme fiyatı — katın DEFAULT genişliğin ne kadar
+## ötesine geçtiğine göre artar (Hotel City "toplam blok" ekonomisi).
+func block_price(floor_i: int) -> int:
+	var extra := floor_open_width(floor_i) - DEFAULT_FLOOR_OPEN_WIDTH
+	return int(float(eco.building.block_price) * pow(float(eco.building.block_price_mult), maxf(0.0, float(extra))))
+
+
+func can_buy_block(floor_i: int) -> bool:
+	return floor_i >= 1 and floor_i <= floor_blocks.size() \
+		and floor_open_width(floor_i) < int(eco.building.grid_cols) \
+		and coins >= block_price(floor_i)
+
+
+func buy_block(floor_i: int) -> bool:
+	if not can_buy_block(floor_i):
+		return false
+	simulate_to(now())
+	coins -= block_price(floor_i)
+	floor_blocks[floor_i - 1] = int(floor_blocks[floor_i - 1]) + 1
+	state_changed.emit()
+	return true
 
 
 func floor_price() -> int:
@@ -254,6 +406,7 @@ func buy_floor() -> bool:
 	simulate_to(now())
 	coins -= floor_price()
 	floors += 1
+	floor_blocks.append(DEFAULT_FLOOR_OPEN_WIDTH)
 	_check_progress()
 	state_changed.emit()
 	return true
@@ -272,6 +425,9 @@ func room_score(room: Dictionary) -> int:
 	var total := 0
 	for item_id in room.items:
 		total += int(item_def(item_id).get("sp", 0))
+	var base: Dictionary = room.get("base", {})
+	for slot in base:
+		total += int(item_def(String(base[slot])).get("sp", 0))
 	return total
 
 
@@ -692,17 +848,20 @@ func can_buy_room(type: String) -> bool:
 	var d := room_def(type)
 	if d.is_empty():
 		return false
-	return rooms.size() < max_slots() \
-		and level() >= int(d.unlock_level) \
-		and coins - int(d.price) >= min_shift_reserve(1)
+	if level() < int(d.unlock_level) or coins - int(d.price) < min_shift_reserve(1):
+		return false
+	return _find_open_slot(type).x >= 0
 
 
+## "Nereye koyacağını seçmeden hızlı ekle" — sığan ilk boş hücreye yerleştirir.
+## Oyuncunun belirli bir konum seçtiği akış için bkz. `place_room`.
 func buy_room(type: String) -> bool:
 	if not can_buy_room(type):
 		return false
+	var slot := _find_open_slot(type)
 	simulate_to(now())
 	coins -= int(room_def(type).price)
-	rooms.append(make_room(type))
+	rooms.append(make_room(type, slot.x, slot.y))
 	_check_progress()
 	state_changed.emit()
 	return true
@@ -719,7 +878,10 @@ func item_is_premium(it: Dictionary) -> bool:
 func cheapest_item_price() -> int:
 	var best := -1
 	for it in eco.items:
-		if item_is_premium(it) or level() < int(it.get("unlock_level", 1)):
+		# Yalnızca dekor-eklenti eşyalar (anchor'lı) — taban eşyaları
+		# (wallpaper/floor/bed) ücretsiz varsayılan gelir, "dekore et!"
+		# dürtmesinin kastettiği satın alınabilir bir eşya değildir.
+		if not it.has("anchor") or item_is_premium(it) or level() < int(it.get("unlock_level", 1)):
 			continue
 		if best < 0 or int(it.price) < best:
 			best = int(it.price)
@@ -747,7 +909,10 @@ func buy_item(room_index: int, item_id: String) -> bool:
 	if room_index < 0 or room_index >= rooms.size():
 		return false
 	var it := item_def(item_id)
-	if it.is_empty() or not can_afford_item(it) or level() < int(it.get("unlock_level", 1)):
+	# Yalnızca dekor-eklenti eşyalar (anchor'lı) buradan eklenir; taban
+	# eşyaları (duvar kağıdı/zemin/yatak, "slot"lı) `upgrade_base` üzerinden
+	# değiştirilir — bkz. plan, "base-replace vs decor-additive eşya ayrımı".
+	if it.is_empty() or not it.has("anchor") or not can_afford_item(it) or level() < int(it.get("unlock_level", 1)):
 		return false
 	if room_has_item(room_index, item_id):
 		return false
@@ -757,6 +922,31 @@ func buy_item(room_index: int, item_id: String) -> bool:
 	else:
 		coins -= int(it.price)
 	rooms[room_index].items.append(item_id)
+	_check_progress()
+	state_changed.emit()
+	return true
+
+
+## Oda "taban" eşyasını değiştirir (duvar kağıdı/zemin/yatak) — eskisinin
+## yerine geçer (items[] dizisine EKLENMEZ, biriktirilmez). Her oda ücretsiz
+## varsayılanla gelir (bkz. `make_room`); bu yalnızca YÜKSELTME içindir.
+func upgrade_base(room_index: int, item_id: String) -> bool:
+	if room_index < 0 or room_index >= rooms.size():
+		return false
+	var it := item_def(item_id)
+	var slot: String = String(it.get("slot", ""))
+	if it.is_empty() or slot.is_empty() or not can_afford_item(it) or level() < int(it.get("unlock_level", 1)):
+		return false
+	var base: Dictionary = rooms[room_index].get("base", {})
+	if String(base.get(slot, "")) == item_id:
+		return false  # zaten bu eşyaya sahip — no-op alım reddi
+	simulate_to(now())
+	if item_is_premium(it):
+		gems -= int(it.gem_price)
+	else:
+		coins -= int(it.price)
+	base[slot] = item_id
+	rooms[room_index]["base"] = base
 	_check_progress()
 	state_changed.emit()
 	return true
@@ -818,6 +1008,8 @@ func room_sell_value(index: int) -> int:
 	var total := float(room_def(r.type).price)
 	for iid in r.items:
 		total += float(item_def(iid).get("price", 0))
+	for slot_item in r.get("base", {}).values():
+		total += float(item_def(String(slot_item)).get("price", 0))
 	return int(total * float(eco.sell_refund))
 
 
@@ -826,6 +1018,8 @@ func room_sell_gem_value(index: int) -> int:
 	var total := 0.0
 	for iid in rooms[index].items:
 		total += float(item_def(iid).get("gem_price", 0))
+	for slot_item in rooms[index].get("base", {}).values():
+		total += float(item_def(String(slot_item)).get("gem_price", 0))
 	return int(total * float(eco.sell_refund))
 
 
@@ -836,17 +1030,6 @@ func sell_room(index: int) -> bool:
 	coins += room_sell_value(index)
 	gems += room_sell_gem_value(index)
 	rooms.remove_at(index)
-	state_changed.emit()
-	return true
-
-
-## İki odanın bina içindeki yerini değiştirir (yerleşim düzenleme).
-func move_room(a: int, b: int) -> bool:
-	if a == b or a < 0 or b < 0 or a >= rooms.size() or b >= rooms.size():
-		return false
-	var tmp: Dictionary = rooms[a]
-	rooms[a] = rooms[b]
-	rooms[b] = tmp
 	state_changed.emit()
 	return true
 
@@ -1032,6 +1215,8 @@ func _save_dict() -> Dictionary:
 		"boost_mult": boost_mult,
 		"remove_ads": remove_ads,
 		"permanent_income_mult": permanent_income_mult,
+		"floor_blocks": floor_blocks,
+		"next_room_id": _next_room_id,
 	}
 
 
@@ -1099,6 +1284,55 @@ func _migrate_save(data: Dictionary) -> Dictionary:
 					data["remove_ads"] = false
 				if not data.has("permanent_income_mult"):
 					data["permanent_income_mult"] = 1.0
+			10:
+				# v11: serbest blok yerleşimi (kat/sütun/footprint) + taban eşya
+				# (duvar kağıdı/zemin/yatak) ayrımı eklendi. Eski düz oda dizisi,
+				# sabit DEFAULT_FLOOR_OPEN_WIDTH varsayımıyla eski (kat,sütun)
+				# konumuna geri haritalanır ki göç sonrası görünüm eskisiyle
+				# birebir aynı sırada kalsın (bkz. plan, "En yüksek risk").
+				# Tüm göçen odalara güvenlik için 1x1 footprint verilir —
+				# çakışma riski taşımayan tek seçenek (bkz. plan, "kasıtlı
+				# kapsam daraltmaları").
+				var legacy_spf := DEFAULT_FLOOR_OPEN_WIDTH
+				var old_rooms: Array = data.get("rooms", [])
+				var new_rooms: Array = []
+				var bed_tier := {"bed_basic": 1, "bed_wood": 2, "bed_canopy": 3}
+				for i in old_rooms.size():
+					var r: Dictionary = old_rooms[i]
+					var type: String = String(r.get("type", "standard"))
+					var d: Dictionary = eco.room_types.get(type, {})
+					var old_items: Array = r.get("items", [])
+					var base := {"wallpaper": "wallpaper_default", "floor": "floor_default"}
+					var new_items := []
+					var best_bed := ""
+					var best_bed_rank := 0
+					for iid in old_items:
+						if bed_tier.has(iid):
+							if int(bed_tier[iid]) > best_bed_rank:
+								best_bed_rank = int(bed_tier[iid])
+								best_bed = String(iid)
+						else:
+							new_items.append(iid)
+					if String(d.get("category", "")) == "guest":
+						base["bed"] = best_bed if not best_bed.is_empty() else "bed_basic"
+					new_rooms.append({
+						"id": "r%d" % (i + 1),
+						"type": type,
+						"floor": i / legacy_spf + 1, "col": i % legacy_spf, "w": 1,
+						"items": new_items,
+						"base": base,
+						"dirty": bool(r.get("dirty", false)),
+						"clean_left": float(r.get("clean_left", 0.0)),
+						"dirty_hours": float(r.get("dirty_hours", 0.0)),
+					})
+				data["rooms"] = new_rooms
+				if not data.has("floor_blocks"):
+					var fb: Array = []
+					for _fi in int(data.get("floors", 2)):
+						fb.append(legacy_spf)
+					data["floor_blocks"] = fb
+				if not data.has("next_room_id"):
+					data["next_room_id"] = old_rooms.size()
 		v += 1
 		data["save_version"] = v
 	return data
@@ -1140,6 +1374,8 @@ func _load_from_dict(parsed) -> bool:
 	xp = int(parsed.get("xp", 0))
 	floors = int(parsed.get("floors", int(eco.building.start_floors)))
 	rooms = parsed.get("rooms", [])
+	floor_blocks = parsed.get("floor_blocks", [])
+	_next_room_id = int(parsed.get("next_room_id", rooms.size()))
 	shift_end_unix = float(parsed.get("shift_end_unix", 0.0))
 	pending_income = float(parsed.get("pending_income", 0.0))
 	last_sim_unix = float(parsed.get("last_sim_unix", now()))
