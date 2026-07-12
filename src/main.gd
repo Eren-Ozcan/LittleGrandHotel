@@ -238,10 +238,13 @@ func _update_elevator(delta: float) -> void:
 			_rebuild_hotel()
 		return
 	_elevator_arrival_timer += delta
-	if _elevator_arrival_timer >= 4.0 and _queue_count < 6:
+	if _elevator_arrival_timer >= 3.0 and _queue_count < 6:
 		_elevator_arrival_timer = 0.0
-		_queue_count += 1
-		_rebuild_hotel()
+		# Kullaıcı isteği: kuyruğa sessizce +1 eklemek yerine kaldırımda
+		# gerçekten yürüyen bir yaya görün (çoğunluğu otele girer, bkz.
+		# _spawn_arriving_pedestrian) — _queue_count, yaya kapıya VARDIĞINDA
+		# artıyor, spawn anında değil.
+		_spawn_arriving_pedestrian()
 	_elevator_timer += delta
 	match _elevator_state:
 		"closed":
@@ -1074,15 +1077,11 @@ func _rebuild_hotel() -> void:
 	queue.add_theme_constant_override("separation", 8)
 	queue.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	street_scroll.add_child(queue)
-	if Game.shift_active():
-		# Kuyruk artık sabit bir formülle değil, gerçek _queue_count sayacıyla
-		# çiziliyor — asansör her açılışta bu sayacı tamamen boşaltır (bkz.
-		# _update_elevator), böylece kuyruk süresiz büyüyüp sabit kalmıyor.
-		for gi in _queue_count:
-			var gicon := _icon("res://assets/guests/guest_%s.svg" % GUEST_TYPES[gi % GUEST_TYPES.size()], 48)
-			queue.add_child(gicon)
-			_animate_guest(gicon, gi, true)
-	else:
+	if not Game.shift_active():
+		# Vardiya aktifken kaldırımda artık sabit duran ikonlar YOK —
+		# kullanıcı isteği: "kaldırımdan normal insanlar yürüyecek" — bkz.
+		# _spawn_arriving_pedestrian (gerçek yürüyen yayalar, tuvalin dışında
+		# root seviyesinde ayrı overlay node'lar olarak, bu kutunun dışında).
 		var street_l := _label("· · · sokak sakin — vardiya başlat · · ·", 13, PALETTE.cream)
 		street_l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		queue.add_child(street_l)
@@ -1819,13 +1818,7 @@ func _guest_walk_in() -> void:
 	if street_node == null or not is_instance_valid(street_node):
 		return
 	var walk_y := street_node.global_position.y - 26.0
-	# Giriş boşluğunun gerçek ekran konumu: tuval-yerel x'i (lobinin
-	# sağındaki DOOR_W genişliğindeki duvar kesiğinin ortası) mevcut
-	# zoom/pan ile ekran koordinatına çevrilir — bkz. _rebuild_hotel'deki
-	# lobby_wall yerleşimi.
-	var canvas_w: float = int(Game.eco.building.grid_cols) * CELL_W
-	var door_local_x: float = canvas_w - DOOR_W * 0.5
-	var door_x: float = zoom_viewport.global_position.x + _canvas_pan.x + door_local_x * _zoom
+	var door_x := _door_screen_x()
 	for i in 4:
 		var gicon := _icon("res://assets/guests/guest_%s.svg" % GUEST_TYPES[i % GUEST_TYPES.size()], 36)
 		gicon.position = Vector2(size.x + 24.0 + i * 34.0, walk_y)
@@ -1838,6 +1831,48 @@ func _guest_walk_in() -> void:
 			.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 		tw.tween_property(gicon, "scale", Vector2(0.3, 0.3), 0.25)
 		tw.parallel().tween_property(gicon, "modulate:a", 0.0, 0.25)
+		tw.tween_callback(func():
+			gicon.queue_free()
+			_queue_count = mini(_queue_count + 1, 6))
+
+
+## Giriş boşluğunun (lobinin sağındaki DOOR_W genişliğindeki duvar kesiği)
+## gerçek ekran konumu: tuval-yerel x'i mevcut zoom/pan ile ekran
+## koordinatına çevrilir — bkz. _rebuild_hotel'deki lobby_wall yerleşimi.
+func _door_screen_x() -> float:
+	var canvas_w: float = int(Game.eco.building.grid_cols) * CELL_W
+	var door_local_x: float = canvas_w - DOOR_W * 0.5
+	return zoom_viewport.global_position.x + _canvas_pan.x + door_local_x * _zoom
+
+
+## Vardiya boyunca kaldırımda ara ara gerçekten yürüyen bir yaya belirir
+## (kullanıcı isteği: "kaldırımdan normal insanlar yürüyecek"). Çoğunluğu
+## (%75) kapıya yönelip küçülerek girer ve kuyruğa (_queue_count) eklenir;
+## küçük bir kısmı sıradan bir yaya gibi yoluna devam edip ekrandan çıkar —
+## bu, "kaçan misafir" (kaçıp yakalanabilen, ayrı bir mekanik) ile karışmaz.
+func _spawn_arriving_pedestrian() -> void:
+	if street_node == null or not is_instance_valid(street_node):
+		return
+	var walk_y := street_node.global_position.y - 26.0
+	var gicon := _icon("res://assets/guests/guest_%s.svg" % GUEST_TYPES[randi() % GUEST_TYPES.size()], 36)
+	gicon.position = Vector2(size.x + 24.0, walk_y)
+	gicon.pivot_offset = Vector2(18, 36)
+	gicon.z_index = 55
+	add_child(gicon)
+	_animate_guest(gicon, randi() % GUEST_TYPES.size(), true)
+	var tw := gicon.create_tween()
+	if randf() < 0.75:
+		var door_x := _door_screen_x()
+		tw.tween_property(gicon, "position:x", door_x, randf_range(2.2, 3.2)) \
+			.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+		tw.tween_property(gicon, "scale", Vector2(0.3, 0.3), 0.25)
+		tw.parallel().tween_property(gicon, "modulate:a", 0.0, 0.25)
+		tw.tween_callback(func():
+			gicon.queue_free()
+			_queue_count = mini(_queue_count + 1, 6))
+	else:
+		tw.tween_property(gicon, "position:x", -64.0, randf_range(4.0, 6.0)) \
+			.set_trans(Tween.TRANS_LINEAR)
 		tw.tween_callback(gicon.queue_free)
 
 
