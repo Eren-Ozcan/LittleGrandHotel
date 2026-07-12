@@ -85,8 +85,10 @@ func _initialize() -> void:
 	check(g.facility_diversity() == div_before + 1, "tesis çeşitliliği arttı")
 	check(g.hourly_income() > inc_before, "tesis saatlik geliri artırdı")
 
-	# 7) Dekorasyon → kademe → yıldız
-	g.rooms[0]["items"] = ["bed_wood", "wardrobe_oak", "rug_wool", "chair_arm"]  # SP 155
+	# 7) Dekorasyon → kademe → yıldız (yatak artık taban-eşya/"base" — items[]
+	# yalnızca dekor-eklenti eşyaları tutar, bkz. room_score())
+	g.rooms[0]["items"] = ["wardrobe_oak", "rug_wool", "chair_arm"]
+	g.rooms[0]["base"]["bed"] = "bed_wood"  # 55+30+25 (items) + 45 (taban yatak) = 155
 	check(g.room_score(g.rooms[0]) == 155, "SP toplamı 155")
 	check(g.room_tier(g.rooms[0]) == 2, "SP 155 → Şık (kademe 2)")
 	var star_now: int = g.star_rating()
@@ -173,17 +175,27 @@ func _initialize() -> void:
 	check(g2.shift_history.size() == g.shift_history.size(), "vardiya geçmişi kayıtta korundu")
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(save_path))
 
-	# 12) Oda taşıma / satma
+	# 12) Oda taşıma (serbest yerleşim: id + kat/sütun ile) / satma
 	var idx_cafe := -1
 	for i in g.rooms.size():
 		if g.rooms[i].type == "cafe":
 			idx_cafe = i
 	check(idx_cafe > 0, "kafe bulundu")
-	var t_a: String = g.rooms[0].type
-	check(g.move_room(0, idx_cafe), "odalar yer değişti")
-	check(g.rooms[idx_cafe].type == t_a and g.rooms[0].type == "cafe", "taşıma dizilimi doğru")
-	check(not g.move_room(0, 0), "aynı odaya taşıma reddedilir")
-	g.move_room(0, idx_cafe)  # geri al
+	var cafe_id: String = String(g.rooms[idx_cafe].id)
+	check(g.buy_floor(), "taşıma testi için yeni (boş) kat alındı")
+	var empty_floor: int = g.floors
+	check(g.move_room_to(cafe_id, empty_floor, 0), "kafe boş bir hücreye taşındı")
+	check(int(g.rooms[idx_cafe].floor) == empty_floor and int(g.rooms[idx_cafe].col) == 0,
+		"taşıma sonrası konum doğru")
+	check(not g.move_room_to(cafe_id, empty_floor, 0), "zaten bulunduğu hücreye 'taşıma' reddedilir")
+	var idx_occupied := -1
+	for i in g.rooms.size():
+		if i != idx_cafe and int(g.rooms[i].floor) == 1:
+			idx_occupied = i
+			break
+	check(idx_occupied >= 0, "çakışma testi için dolu bir hücre bulundu")
+	check(not g.move_room_to(cafe_id, int(g.rooms[idx_occupied].floor), int(g.rooms[idx_occupied].col)),
+		"dolu bir hücreye taşıma reddedilir (eski swap mekaniği kaldırıldı)")
 	var sv: int = g.room_sell_value(idx_cafe)
 	check(sv == int(3000 * 0.5), "kafe iade bedeli %%50 (şu an %d)" % sv)
 	var idx_statue := -1
@@ -262,15 +274,22 @@ func _initialize() -> void:
 	check(g5.facility_diversity() == 5, "tesis çeşitliliği 5 (tavan)")
 	while g5.can_buy_room("suite"):
 		g5.buy_room("suite")
-	check(g5.rooms.size() == 24, "tüm yuvalar dolu")
+	# Değişken footprint sonrası kapasite artık "oda sayısı" değil "blok
+	# sayısı" cinsinden dolar (süit 2 blok kaplıyor) — bkz. plan §1.
+	var blocks_used := 0
+	for r in g5.rooms:
+		blocks_used += int(r.w)
+	check(blocks_used == g5.max_slots(), "tüm bloklar dolu (%d/%d)" % [blocks_used, g5.max_slots()])
 	for r in g5.rooms:
 		if g5.room_def(r.type).category == "guest" and r.type == "suite":
-			r["items"] = ["bed_canopy", "bed_canopy", "chandelier", "chandelier", "sofa_velvet"]  # SP 630
+			r["base"]["bed"] = "bed_canopy"  # 150
+			r["items"] = ["chandelier", "chandelier", "sofa_velvet", "statue_gold"]  # +530 = 680
 			check(g5.room_tier(r) == 4, "süit İkonik kademede")
 			break
 	for r in g5.rooms:
 		if r.type == "suite":
-			r["items"] = ["bed_canopy", "bed_canopy", "chandelier", "chandelier", "sofa_velvet"]
+			r["base"]["bed"] = "bed_canopy"
+			r["items"] = ["chandelier", "chandelier", "sofa_velvet", "statue_gold"]
 	check(g5.star_rating() == 5, "geç oyun oteli 5 yıldız (şu an %d)" % g5.star_rating())
 	var lg_cost: float = g5.shift_cost(24)
 	var lg_income: float = g5.hourly_income() * 24.0

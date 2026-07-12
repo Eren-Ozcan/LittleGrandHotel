@@ -97,7 +97,10 @@ func _milestone_setup(level: int, coins: int, rooms_wanted: Array, target_tier: 
 	# tekrar-eşya sömürüsü kullanılmıyor.
 	var affordable_items := []
 	for it in eco.items:
-		if not g.item_is_premium(it) and level >= int(it.get("unlock_level", 1)):
+		# Yalnızca dekor-eklenti eşyalar (anchor'lı) — taban eşyaları
+		# (duvar kağıdı/zemin/yatak, "slot"lı) artık items[] değil
+		# upgrade_base() üzerinden değişir, gerçek buy_item() akışıyla eşleşir.
+		if it.has("anchor") and not g.item_is_premium(it) and level >= int(it.get("unlock_level", 1)):
 			affordable_items.append(it)
 	affordable_items.sort_custom(func(a, b): return int(a.sp) > int(b.sp))
 	for r in g.rooms:
@@ -164,7 +167,7 @@ func _check_room_roi() -> void:
 
 func _check_floor_roi() -> void:
 	var g = new_g()
-	var slots := int(eco.building.slots_per_floor)
+	var slots := int(GameScript.DEFAULT_FLOOR_OPEN_WIDTH)
 	for i in range(int(eco.building.max_floors) - int(eco.building.start_floors)):
 		var price: int = g.floor_price()
 		# Yeni katın 4 yuvası ortalama bir "standart oda" ile dolarsa ek saatlik gelir:
@@ -179,8 +182,8 @@ func _check_floor_roi() -> void:
 func _check_item_efficiency() -> void:
 	print("  id                 sp    fiyat   sp/coin")
 	for it in eco.items:
-		if int(it.get("gem_price", 0)) > 0:
-			continue
+		if int(it.get("gem_price", 0)) > 0 or int(it.get("price", 0)) == 0:
+			continue  # ücretsiz taban varsayılanları (wallpaper/floor/bed_basic) hariç
 		var ratio := float(it.sp) / float(it.price)
 		print("  %-16s %5d  %6d   %.4f" % [String(it.id), int(it.sp), int(it.price), ratio])
 	print("  (Beklenen: seviye arttıkça sp/coin oranı azalmalı — aksi halde erken eşyalar")
