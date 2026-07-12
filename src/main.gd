@@ -31,20 +31,6 @@ const PALETTE := {
 }
 
 ## Misafir oda tipine göre ayrı sanat havuzları: oyuncu daha pahalı oda
-## tipine yükseldikçe (standart → deluxe → süit) arka plan da görsel
-## olarak zenginleşir (referans oda tasarımları sayfasından).
-const GUEST_ROOM_ART := {
-	"standard": ["guest_room_a", "guest_room_budget"],
-	"deluxe": ["guest_room_d", "guest_room_luxury", "guest_room_asiatic"],
-	"suite": [
-		"guest_room_b", "guest_room_c", "guest_room_honeymoon", "guest_room_starry",
-		"guest_room_artdeco", "guest_room_royal", "guest_room_zen", "guest_room_space",
-	],
-}
-# Havuzdan çıkarılanlar: guest_room_forest (oda içi değil, bina dışından bir
-# kesitti — diğerleriyle tutarsız), guest_room_cinema (gerçek "Sinema" tesis
-# odasıyla neredeyse birebir aynı görünüyor, iki farklı mekaniği karıştırıyordu).
-
 ## Misafirler/sokak yürüyüşçüleri için karakter havuzu (referans sayfadaki
 ## 5 temel + 4 ekstra varyant) — tek tip 3'lü rotasyon yerine daha çeşitli.
 const GUEST_TYPES := ["a", "b", "c", "d_elder", "e_couple", "f_business", "g_kid"]
@@ -83,11 +69,21 @@ var speed_index := 0
 ## sabit toplam genişliği (Game.eco.building.grid_cols × CELL_W).
 const CELL_W := 90.0
 const CELL_H := 112.0
-const CELL_GAP := 6.0
+const CELL_GAP := 12.0
 const STREET_H := 90.0
-const LOBBY_H := 84.0
+## Kullanıcı geri bildirimi: eski 84 değerinde lobi sahnesindeki (lobby.svg)
+## altın asansör dikeyde tam sığmıyordu (STRETCH_KEEP_ASPECT_COVERED geniş
+## kesiti kırpıyordu) — yükseklik artırıldı.
+const LOBBY_H := 120.0
 const GRASS_H := 22.0
-const ZOOM_MIN := 0.5
+## Lobinin sağ ucundaki giriş boşluğu: duvar burada kesilir, misafirler
+## vardiya açılışında bu noktaya doğru yürür (bkz. _guest_walk_in).
+const DOOR_W := 60.0
+## ZOOM_MIN artık mutlak taban değil, yalnızca güvenlik altsınırı: gerçek
+## alt sınır _effective_zoom_min()'de bina boyutuna göre dinamik hesaplanır
+## (bina viewport'u tam doldurduğu noktanın ötesine geçilemez — "minicik
+## bina" sorununu önler).
+const ZOOM_MIN := 0.28
 const ZOOM_MAX := 1.5
 const PAN_DRAG_THRESHOLD := 6.0
 
@@ -116,6 +112,18 @@ var quest_hint: Label
 var toast_panel: PanelContainer
 var toast_label: Label
 
+## Asansör: kapı animasyonu (kapalı→aralık→açık→aralık→kapalı) + kaldırımda
+## bekleyen misafir sayacı. Kullanıcı isteği: misafirler yaklaşınca kapı
+## açılsın, binsinler, kapansın, ~1sn sonra "odalarında" belirsinler; 2+
+## misafir varsa hepsi tek seferde binsin (sırayla beklemesinler) — bu da
+## kuyruğun süresiz büyüyüp sabit kalması sorununu çözer (eskiden kuyruk
+## Game.rooms.size()'a bağlı sabit bir sayıydı, hiç azalmıyordu).
+var elevator_tex: TextureRect
+var _queue_count := 0
+var _elevator_state := "closed"  # closed / opening_half / open / closing_half
+var _elevator_timer := 0.0
+var _elevator_arrival_timer := 0.0
+
 ## Serbest yerleşim bina görünümü: zoom_viewport (sabit, clip'li pencere) →
 ## building_canvas (manuel konumlandırılan, ölçeklenen/kaydırılan tuval —
 ## kat sıraları + lobi + sokak + çim hepsi burada, birlikte zoom/pan alır).
@@ -125,6 +133,10 @@ var roof_panel: PanelContainer
 var roof_title_label: Label
 var roof_theme_label: Label
 var new_floor_button: Button
+var build_mode_button: Button
+## İnşa Modu kapalıyken boş/kilitli hücreler sade durur (buton/metin yok);
+## açıkken vurgulanır ve dokunulabilir olur (TODO: görsel kalabalığı azaltma).
+var build_mode := false
 var _zoom := 1.0
 var _canvas_pan := Vector2.ZERO
 var _pan_dragging := false
@@ -139,19 +151,24 @@ var popup_builder: Callable = Callable()
 var selected_room := -1
 ## Taşıma modunda seçili odanın kararlı kimliği ("" = taşıma modu kapalı).
 var move_from := ""
-## "+ Oda ekle" ile açılan mağazada, oyuncunun dokunduğu BOŞ hücre — seçilirse
-## mağazadaki alım o hücreye yerleşir (place_room), yoksa ilk uygun boşluğa
-## (buy_room). -1 = belirli bir hedef seçilmedi.
-var place_target_floor := -1
-var place_target_col := -1
 
 ## Odayı basılı tutup sürükleyerek taşıma (kullanıcı isteği: "Taşı" butonuyla
 ## iki-dokunuşlu seçim yerine gerçek sürükle-bırak). "Taşı" butonu da (bkz.
 ## move_from) hâlâ çalışır — bu, aynı hedefe ULAŞMANIN ikinci bir yolu.
+## Yeni oda eklemek de aynı sürükleme sistemini paylaşır: mağaza rafındaki
+## bir kartı sürüklemek _drag_new_type'ı doldurur (_drag_room_id yerine).
+## İkisi aynı anda dolu olamaz.
 var _drag_room_id := ""
+var _drag_new_type := ""
 var _drag_active := false
 var _drag_start_mouse := Vector2.ZERO
 var _drag_ghost: Control = null
+
+## İnşa Modu mağaza rafı: oda tipi kartları buradan tuvale sürüklenerek
+## yerleştirilir (kullanıcı isteği: "açık olmayan odalar oluşturulmamış
+## olmalı" — boş hücrelerde artık tıklanabilir bir "oda ekle" butonu yok).
+var build_shop_panel: Control
+var build_shop_row: HBoxContainer
 
 var _walker: Control = null
 var _walker_timer := 0.0
