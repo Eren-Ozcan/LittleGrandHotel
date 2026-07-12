@@ -92,22 +92,9 @@
   <ellipse cx="146" cy="60" rx="46" ry="3.4" fill="#a83e35" opacity="0.85"/>
   <ellipse cx="146" cy="60" rx="34" ry="2.3" fill="#c0504a" opacity="0.9"/>
   <ellipse cx="146" cy="59.3" rx="20" ry="1.2" fill="#e5847c" opacity="0.6"/>
-  <!-- altın pediment: asansörün üstünde küçük saray kapısı kemeri -->
-  <path d="M 264 11 L 292 0.5 L 320 11 Z" fill="url(#lb_gold)" stroke="#8a6f28" stroke-width="1.6" stroke-linejoin="round"/>
-  <rect x="262" y="8" width="9" height="4" rx="1.4" fill="#f0d488" stroke="#8a6f28" stroke-width="1.2"/>
-  <rect x="313" y="8" width="9" height="4" rx="1.4" fill="#f0d488" stroke="#8a6f28" stroke-width="1.2"/>
-  <rect x="288" y="1.5" width="8" height="6" rx="1.2" fill="#fdf0c8" stroke="#8a6f28" stroke-width="1"/>
-  <!-- altın asansör -->
-  <ellipse cx="292" cy="59" rx="22" ry="2.2" fill="#241608" opacity="0.15"/>
-  <rect x="272" y="10" width="40" height="48" rx="2" fill="url(#lb_gold)" stroke="#8a6f28" stroke-width="2.5"/>
-  <rect x="277" y="15" width="14" height="43" fill="#e7c86a" stroke="#8a6f28" stroke-width="1.6"/>
-  <rect x="293" y="15" width="14" height="43" fill="#e7c86a" stroke="#8a6f28" stroke-width="1.6"/>
-  <path d="M 279 17 L 279 56" stroke="#fdf0c8" stroke-width="1.2" opacity="0.7"/>
-  <path d="M 295 17 L 295 56" stroke="#fdf0c8" stroke-width="1.2" opacity="0.7"/>
-  <path d="M 281 19 v 35 M 286 19 v 35 M 297 19 v 35 M 302 19 v 35" stroke="#d3af4f" stroke-width="1.3"/>
-  <rect x="284" y="4" width="16" height="5" rx="2" fill="#3a2a1c" stroke="#241608" stroke-width="1.4"/>
-  <circle cx="289" cy="6.5" r="1.4" fill="#f0c75e"/>
-  <circle cx="295" cy="6.5" r="1.4" fill="#e05a4e"/>
+  <!-- Not: asansör (pediment + kapı) burada ARTIK çizilmiyor — main.gd'de
+       ayrı, animasyonlu bir katman olarak (elevator_tex, kapalı/aralık/açık
+       3 kare) bindiriliyor; ikisi aynı anda çizilirse iki asansör görünürdü. -->
   <!-- bagaj arabası -->
   <ellipse cx="345" cy="34" rx="16" ry="2.4" fill="#241608" opacity="0.15"/>
   <rect x="330" y="24" width="30" height="4" rx="2" fill="url(#lb_gold)" stroke="#8a6f28" stroke-width="1.6"/>
