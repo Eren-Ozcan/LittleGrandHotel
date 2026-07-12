@@ -67,11 +67,59 @@ görselleri incelenerek uyarlanan mekanik + görsel turu:
 - [x] **Görsel yenileme**: chibi misafirler (3 karakter), komi + hizmetçi, sütunlu/asansörlü lobi sahnesi, zengin tesis sahneleri (havuz, sinema, spor, spa, temizlik), Hotel City tarzı oda kademe metresi (kırmızı→yeşil).
 - [x] Ekran görüntüsü doğrulama aracı: `tests/shot.tscn` (`-- demo` argümanıyla vardiyalı görünüm).
 
+### Serbest blok yerleşimi + mobilya sistemi (Temmuz 2026)
+Hotel City'nin gerçek "toplam blok" ekonomisine sadık, büyük bir mimari
+değişiklik — sabit "N kat × 4 slot" ızgarasından serbest yerleşime geçiş:
+- [x] Karakter/mobilya/oda/tesis sanatının tamamı referans sayfalardan yeni
+      chibi/pastel görsellerle değiştirildi (`assets/guests`, `assets/items`,
+      `assets/rooms`, `assets/ui`).
+- [x] `data/economy.json`: `slots_per_floor` kaldırıldı, blok ekonomisi
+      (`grid_cols`, `block_price`) eklendi; her oda tipine `footprint_w`
+      (1/2/3 blok); eşyalar taban (`slot`: duvar kağıdı/zemin/yatak — tek
+      seçim, ücretsiz varsayılanla gelir, yükseltilebilir) ve dekor
+      (`anchor`: tavan/duvar/zemin — birikimli) olarak ikiye ayrıldı.
+- [x] `game.gd`: `place_room`/`can_place_room`, `buy_block`/`can_buy_block`,
+      `move_room_to`, `upgrade_base` eklendi; kayıt göçü v10→v11 (gerçek
+      kullanıcı kaydıyla doğrulandı, veri kaybı yok).
+- [x] `main.gd`: bina görünümü `HBoxContainer` satırlarından tek bir manuel
+      konumlandırılan tuvale (`building_canvas`) taşındı — değişken kat
+      genişlikleri (merdiven silüeti), zoom (−/⟳/+ + fare tekerleği + pinch)
+      ve pan (sürükleme).
+- [x] Oda yerleştirme: boş hücreye dokunup mağazadan seçilen oda tam o
+      hücreye oturuyor (`place_room`); ayrıca mevcut bir odayı **basılı
+      tutup sürükleyerek** başka bir boş hücreye taşıma (gerçek
+      sürükle-bırak, ghost önizleme ile).
+- [x] Sokak: düz asfalt şerit yerine kaldırım (döşeme derzli) + bordür +
+      şerit çizgili yol katmanları — bina bir cadde kenarında duruyormuş
+      hissi.
+- [x] 32 bölümlük `sim_check.gd` test paketi yeni API'ye göre güncellendi,
+      gerçek kayıt `tests/fixtures/` altına golden-fixture olarak eklendi.
+
 ## Yapılacaklar
+
+### Kısa vade — bina görünümü ince ayarları (2026-07-12'de kullanıcıyla belirlendi, henüz yapılmadı)
+- [ ] **Zoom-out sınırı çok gevşek**: bina şu an minicik kalana kadar
+      uzaklaşılabiliyor. `_zoom` alt sınırı (`ZOOM_MIN`, main.gd) sıkılaştırılmalı
+      ya da otel her zaman ekranda makul bir asgari boyutta kalacak şekilde
+      pan/zoom clamp'i yeniden düşünülmeli.
+- [ ] **"Build modu" eklenmeli**: şu an boş/satın alınmamış her hücre sürekli
+      "+ Oda ekle" / "Blok aç" olarak görünüyor — bu, Hotel City'deki gibi
+      değil, gereksiz görsel kalabalık yaratıyor. Bunun yerine: normal
+      görünümde boş hücreler sade/nötr dursun (belki hiç buton göstermesin),
+      ayrı bir "İnşa Modu" aç/kapa düğmesiyle bu moda girilince yerleştirilebilir
+      hücreler belirginleşsin (vurgulanmış çerçeve/parıltı gibi).
+- [ ] **Bina büyüdükçe pan (sağa/sola/yukarı/aşağı bakma) tekrar gözden
+      geçirilmeli**: mevcut sürükleme-ile-pan uygulaması var ama Hotel
+      City'nin serbest kamera mantığına (2D yandan kaydırmalı, engelsiz
+      her yöne bakabilme) göre tekrar incelenip gerekirse iyileştirilmeli
+      — özellikle çok kat + geniş bloklu büyük binalarda.
 
 ### Orta vade
 - [ ] Android'de gerçek cihaz/emülatörde dokunmatik test (şu ana kadar yalnızca headless export doğrulandı)
 - [ ] İkinci bina (prestij sonrası farklı bir bina teması) — şu an tek bina + çarpan modeliyle sınırlı
+- [ ] Boş oda kabuğu + duvar kağıdı/zemin doku sanatı (şu an mantık doğru ama
+      görsel hâlâ eski "hazır döşenmiş sahne" PNG'leri — yeni sanat üretimi
+      ayrı bir iş turu gerektiriyor)
 
 ### Uzun vade
 - [ ] Gerçek bulut kaydı / platform servisleri (Play Games, Game Center) — şu an cihazlar arası taşıma kod ile yapılıyor
