@@ -980,18 +980,24 @@ func _rebuild_hotel() -> void:
 	lobby_scene.set_anchors_preset(Control.PRESET_FULL_RECT)
 	lobby_scene.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	lobby.add_child(lobby_scene)
-	# Animasyonlu asansör kapısı: lobby.svg'deki sabit çizilmiş asansörün TAM
-	# üstüne, aynı konuma oturur (kullanıcının gönderdiği referans görselden
-	# kesilmiş 3 kare: kapalı/aralık/açık — bkz. _update_elevator).
+	# Animasyonlu asansör kapısı: eski sabit lobby.png asansörünün TAM olarak
+	# aynı ekran konumuna oturur. lobby_scene STRETCH_KEEP_ASPECT_COVERED
+	# kullandığından basit piksel/viewBox oranı yeterli değil — COVERED
+	# dokunun yatayda kırptığı payı (crop) hesaba katan gerçek dönüşüm
+	# gerekiyor: control 648×108, doku 1920×256, ölçek=max(648/1920,108/256)
+	# =0.421875 (yükseklik baskın) → görünen doku genişliği 810, yatayda
+	# 162px taşar, her yandan 81px (=192 orijinal piksel) kırpılır. Eski
+	# asansörün orijinal lobby.png konumu (x≈850–1040, y≈5–222, 1920×256
+	# üzerinden) bu dönüşümle şu kesirlere karşılık geliyor.
 	elevator_tex = TextureRect.new()
 	elevator_tex.texture = _tex(_elevator_texture_path())
 	elevator_tex.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	elevator_tex.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	elevator_tex.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	elevator_tex.anchor_left = 0.535
-	elevator_tex.anchor_right = 0.685
+	elevator_tex.anchor_left = 0.428
+	elevator_tex.anchor_right = 0.552
 	elevator_tex.anchor_top = 0.02
-	elevator_tex.anchor_bottom = 0.97
+	elevator_tex.anchor_bottom = 0.87
 	lobby_scene.add_child(elevator_tex)
 	# Resepsiyonist (kullanıcının gönderdiği referans karakterden kesilmiş
 	# gerçek görsel — bkz. assets/guests/receptionist.png); bellboy.svg'nin
