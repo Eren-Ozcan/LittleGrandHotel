@@ -890,21 +890,15 @@ func _rebuild_hotel() -> void:
 	building_canvas.custom_minimum_size = Vector2(canvas_w, canvas_h)
 	building_canvas.size = building_canvas.custom_minimum_size
 
-	# Kat sıraları: her kat için tüm grid_cols genişliğinde bir zemin şeridi,
-	# üzerine odalar (floor/col/w'ye göre konumlandırılır), açık-ama-boş
-	# hücrelere "+ oda ekle", henüz satın alınmamış bloklara "blok al" butonu.
+	# Kat sıraları: artık kat başına dolgu bir zemin şeridi YOK (kullanıcı
+	# isteği: boş/kilitsiz alanlarda arka plan — gökyüzü/silüet — görünsün,
+	# odalar sanki havada duruyormuş gibi; bkz. Hotel City'nin "total block"
+	# sistemi). Her oda ve kilitli blok zaten kendi tam kartını çiziyor;
+	# açık-ama-boş hücreler hiçbir Control eklemiyor (bkz. _make_add_cell_button).
 	for floor_i in range(Game.floors, 1 - 1, -1):
 		if floor_i < 1:
 			break
 		var row_y := float(Game.floors - floor_i) * CELL_H
-		var row_bg := PanelContainer.new()
-		var sb := _card_sb(PALETTE.facade, PALETTE.facade_line, 0, 0.1)
-		sb.set_content_margin_all(0)
-		row_bg.add_theme_stylebox_override("panel", sb)
-		row_bg.position = Vector2(0, row_y)
-		row_bg.size = Vector2(canvas_w, CELL_H)
-		row_bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		building_canvas.add_child(row_bg)
 
 		var open_w := Game.floor_open_width(floor_i)
 		var occupied := {}
@@ -912,6 +906,19 @@ func _rebuild_hotel() -> void:
 			var r: Dictionary = Game.rooms[i]
 			if int(r.floor) != floor_i:
 				continue
+			# Duvar çerçevesi: odanın TAM hücre alanını (CELL_GAP boşluğu dahil)
+			# kaplar, oda kartı bunun üstüne biraz içeriden oturur — geriye
+			# kalan ince boşlukta duvar bloğu dokusu görünür. Yan yana odalar
+			# bitişik hücrelerde olduğundan duvar alanları da bitişik oluyor
+			# ve kesintisiz tek duvar hissi veriyor (kullanıcı isteği).
+			var wall_block := TextureRect.new()
+			wall_block.texture = _tex("res://assets/ui/wall_block.svg")
+			wall_block.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			wall_block.stretch_mode = TextureRect.STRETCH_TILE
+			wall_block.position = Vector2(int(r.col) * CELL_W, row_y)
+			wall_block.size = Vector2(int(r.w) * CELL_W, CELL_H)
+			wall_block.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			building_canvas.add_child(wall_block)
 			var btn := _make_room_button(i)
 			btn.position = Vector2(int(r.col) * CELL_W + CELL_GAP * 0.5, row_y + CELL_GAP * 0.5)
 			btn.size = Vector2(int(r.w) * CELL_W - CELL_GAP, CELL_H - CELL_GAP)
@@ -928,8 +935,34 @@ func _rebuild_hotel() -> void:
 			cell.size = Vector2(CELL_W - CELL_GAP, CELL_H - CELL_GAP)
 			building_canvas.add_child(cell)
 
-	# Lobi: sütunlu resepsiyon sahnesi + komi (Hotel City lobisi)
+	# Lobi: sütunlu resepsiyon sahnesi + komi (Hotel City lobisi). Odalarla
+	# aynı duvar çerçevesi muamelesi görür, ama sağ ucunda duvar kesilip
+	# hiçbir şey çizilmeyen bir boşluk bırakılır — kullanıcı isteği: 2D dik
+	# kesitte kapı objesi çizmeye gerek yok, duvardaki boşluğun kendisi
+	# zaten kapı gibi okunuyor (önceki üç deneme — ışıklı boşluk, camlı
+	# çift kanat, düz renkli dikdörtgen — hepsi gereksiz görüldü ve
+	# kaldırıldı). Misafirler oraya doğru yürür (bkz. _guest_walk_in).
 	var lobby_y := floors_h
+	var lobby_wall := TextureRect.new()
+	lobby_wall.texture = _tex("res://assets/ui/wall_block.svg")
+	lobby_wall.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	lobby_wall.stretch_mode = TextureRect.STRETCH_TILE
+	lobby_wall.position = Vector2(0, lobby_y)
+	lobby_wall.size = Vector2(canvas_w - DOOR_W, LOBBY_H)
+	lobby_wall.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	building_canvas.add_child(lobby_wall)
+	# Kullanıcı isteği: ince, cam mavisi bir çubuk — sağ duvarın ÜSTÜNE
+	# gelecek (duvarın son kısmıyla çakışır, boşluğa taşmaz). Üst/alt
+	# kenarlarda duvarın tavan/taban şeridi (lobby.svg) altta kalmasın diye
+	# dikeyde biraz içeriden başlayıp bitiyor.
+	const DOOR_BAR_W := 10.0
+	const DOOR_BAR_MARGIN := 10.0
+	var door_bar := ColorRect.new()
+	door_bar.color = Color("bfe6f2")
+	door_bar.position = Vector2(canvas_w - DOOR_W - DOOR_BAR_W, lobby_y + DOOR_BAR_MARGIN)
+	door_bar.size = Vector2(DOOR_BAR_W, LOBBY_H - DOOR_BAR_MARGIN * 2.0)
+	door_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	building_canvas.add_child(door_bar)
 	var lobby := PanelContainer.new()
 	var lsb := StyleBoxFlat.new()
 	lsb.bg_color = Color("f3e7d8")
@@ -937,8 +970,8 @@ func _rebuild_hotel() -> void:
 	lsb.set_border_width_all(2)
 	lsb.set_content_margin_all(0)
 	lobby.add_theme_stylebox_override("panel", lsb)
-	lobby.position = Vector2(0, lobby_y)
-	lobby.size = Vector2(canvas_w, LOBBY_H)
+	lobby.position = Vector2(CELL_GAP * 0.5, lobby_y + CELL_GAP * 0.5)
+	lobby.size = Vector2(canvas_w - DOOR_W - CELL_GAP, LOBBY_H - CELL_GAP)
 	building_canvas.add_child(lobby)
 	var lobby_scene := TextureRect.new()
 	lobby_scene.texture = _tex("res://assets/ui/lobby.svg")
@@ -947,17 +980,38 @@ func _rebuild_hotel() -> void:
 	lobby_scene.set_anchors_preset(Control.PRESET_FULL_RECT)
 	lobby_scene.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	lobby.add_child(lobby_scene)
-	var bellboy := _icon("res://assets/guests/bellboy.svg", 48)
-	bellboy.anchor_left = 0.16
-	bellboy.anchor_right = 0.16
-	bellboy.anchor_top = 1.0
-	bellboy.anchor_bottom = 1.0
-	bellboy.offset_left = -24
-	bellboy.offset_right = 24
-	bellboy.offset_top = -66
-	bellboy.offset_bottom = -8
-	lobby_scene.add_child(bellboy)
-	_animate_guest(bellboy, 2, false)
+	# Animasyonlu asansör kapısı: lobby.svg'deki sabit çizilmiş asansörün TAM
+	# üstüne, aynı konuma oturur (kullanıcının gönderdiği referans görselden
+	# kesilmiş 3 kare: kapalı/aralık/açık — bkz. _update_elevator).
+	elevator_tex = TextureRect.new()
+	elevator_tex.texture = _tex(_elevator_texture_path())
+	elevator_tex.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	elevator_tex.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	elevator_tex.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	elevator_tex.anchor_left = 0.535
+	elevator_tex.anchor_right = 0.685
+	elevator_tex.anchor_top = 0.02
+	elevator_tex.anchor_bottom = 0.97
+	lobby_scene.add_child(elevator_tex)
+	# Resepsiyonist (kullanıcının gönderdiği referans karakterden kesilmiş
+	# gerçek görsel — bkz. assets/guests/receptionist.png); bellboy.svg'nin
+	# yerini aldı. Boy oranı portre (dar/uzun) olduğu için _icon()'ın
+	# sabit-kare kutusu yerine kendi en-boy oranına göre boyutlandırılıyor.
+	var receptionist := TextureRect.new()
+	receptionist.texture = _tex("res://assets/guests/receptionist.png")
+	receptionist.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	receptionist.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	receptionist.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	receptionist.anchor_left = 0.16
+	receptionist.anchor_right = 0.16
+	receptionist.anchor_top = 1.0
+	receptionist.anchor_bottom = 1.0
+	receptionist.offset_left = -26
+	receptionist.offset_right = 26
+	receptionist.offset_top = -90
+	receptionist.offset_bottom = -8
+	lobby_scene.add_child(receptionist)
+	_animate_guest(receptionist, 2, false)
 
 	# Sokak: bina bir kaldırım kenarında duruyormuş hissi — açık gri kaldırım
 	# (döşeme derzleriyle) + bordür şeridi + koyu asfalt yol, bina ile aynı
