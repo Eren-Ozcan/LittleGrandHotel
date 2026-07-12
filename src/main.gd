@@ -217,10 +217,85 @@ func _process(delta: float) -> void:
 	_update_live_labels()
 	_update_walker(delta)
 	_update_room_drag()
+	_update_elevator(delta)
 	if _toast_timer > 0.0:
 		_toast_timer -= delta
 		if _toast_timer <= 0.0:
 			toast_panel.visible = false
+
+
+## Asansör: kapı animasyonu (kapalı→aralık→açık→aralık→kapalı) + kaldırım
+## kuyruğu sayacı. Bkz. üstteki değişken açıklaması için tasarım gerekçesi.
+func _update_elevator(delta: float) -> void:
+	if elevator_tex == null or not is_instance_valid(elevator_tex):
+		return
+	if not Game.shift_active():
+		if _queue_count != 0 or _elevator_state != "closed":
+			_queue_count = 0
+			_elevator_state = "closed"
+			_elevator_timer = 0.0
+			_elevator_arrival_timer = 0.0
+			_rebuild_hotel()
+		return
+	_elevator_arrival_timer += delta
+	if _elevator_arrival_timer >= 4.0 and _queue_count < 6:
+		_elevator_arrival_timer = 0.0
+		_queue_count += 1
+		_rebuild_hotel()
+	_elevator_timer += delta
+	match _elevator_state:
+		"closed":
+			if _queue_count > 0 and _elevator_timer >= 1.0:
+				_elevator_state = "opening_half"
+				_elevator_timer = 0.0
+				_rebuild_hotel()
+		"opening_half":
+			if _elevator_timer >= 0.35:
+				_elevator_state = "open"
+				_elevator_timer = 0.0
+				# Kapı açılınca kuyruktaki TÜM misafirler biner — 2 veya
+				# daha fazla kişi varsa sırayla beklemek yerine hepsi tek
+				# seferde (kullanıcı isteği) — bu, kuyruğun süresiz büyüyüp
+				# hiç azalmaması sorununu da çözüyor.
+				_queue_count = 0
+				_rebuild_hotel()
+		"open":
+			if _elevator_timer >= 1.0:
+				_elevator_state = "closing_half"
+				_elevator_timer = 0.0
+				_rebuild_hotel()
+		"closing_half":
+			if _elevator_timer >= 0.35:
+				_elevator_state = "closed"
+				_elevator_timer = 0.0
+				_spawn_elevator_arrival_sparkle()
+				_rebuild_hotel()
+
+
+func _elevator_texture_path() -> String:
+	match _elevator_state:
+		"opening_half", "closing_half":
+			return "res://assets/ui/elevator_half.png"
+		"open":
+			return "res://assets/ui/elevator_open.png"
+		_:
+			return "res://assets/ui/elevator_closed.png"
+
+
+## Kapı kapanışından ~1sn sonra misafirlerin "odalarında belirdiğini" temsil
+## eden parıltı. Oda-bazlı varış zamanlaması (hangi misafir hangi odaya, ne
+## zaman) mevcut veri modelinde yok — odalardaki misafir görseli zaten
+## vardiya boyunca (temiz + dolu her odada) sürekli gösteriliyor; bu yüzden
+## burada tam bir "odada belirme" simülasyonu yerine asansörün üstünde basit
+## bir görsel onay (parıltı) veriliyor.
+func _spawn_elevator_arrival_sparkle() -> void:
+	if not is_instance_valid(elevator_tex):
+		return
+	var center := elevator_tex.global_position + elevator_tex.size / 2.0
+	get_tree().create_timer(1.0).timeout.connect(func():
+		if is_instance_valid(elevator_tex):
+			center = elevator_tex.global_position + elevator_tex.size / 2.0
+		_spawn_sparkles(center))
 
 
 ## Kaçan misafir: vardiya sırasında ara ara sokakta bir misafir yürüyüp
