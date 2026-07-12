@@ -1813,7 +1813,13 @@ func _guest_walk_in() -> void:
 	if street_node == null or not is_instance_valid(street_node):
 		return
 	var walk_y := street_node.global_position.y - 26.0
-	var door_x := size.x / 2.0
+	# Giriş boşluğunun gerçek ekran konumu: tuval-yerel x'i (lobinin
+	# sağındaki DOOR_W genişliğindeki duvar kesiğinin ortası) mevcut
+	# zoom/pan ile ekran koordinatına çevrilir — bkz. _rebuild_hotel'deki
+	# lobby_wall yerleşimi.
+	var canvas_w: float = int(Game.eco.building.grid_cols) * CELL_W
+	var door_local_x: float = canvas_w - DOOR_W * 0.5
+	var door_x: float = zoom_viewport.global_position.x + _canvas_pan.x + door_local_x * _zoom
 	for i in 4:
 		var gicon := _icon("res://assets/guests/guest_%s.svg" % GUEST_TYPES[i % GUEST_TYPES.size()], 36)
 		gicon.position = Vector2(size.x + 24.0 + i * 34.0, walk_y)
