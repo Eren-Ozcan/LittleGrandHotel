@@ -1203,10 +1203,22 @@ func _clamp_pan() -> void:
 	_canvas_pan.y = clampf(_canvas_pan.y, min_y, 0.0)
 
 
+## Binanın viewport'u tam olarak dolduracağı (kırpılmadan tamamen sığacağı)
+## zoom seviyesini hesaplar — bunun altına inmek yalnızca boş alan ekler ve
+## binayı gereksiz yere küçültür, bu yüzden gerçek alt sınır budur.
+func _effective_zoom_min() -> float:
+	var content: Vector2 = building_canvas.custom_minimum_size
+	var vp: Vector2 = zoom_viewport.size
+	if content.x <= 0.0 or content.y <= 0.0 or vp.x <= 0.0 or vp.y <= 0.0:
+		return ZOOM_MIN
+	var fit_zoom := minf(vp.x / content.x, vp.y / content.y)
+	return clampf(fit_zoom, ZOOM_MIN, ZOOM_MAX)
+
+
 ## Belirli bir ekran noktasını (ör. tıklanan yer) sabit tutarak yakınlaştırır.
 func _zoom_by(delta: float, around: Vector2) -> void:
 	var old_zoom := _zoom
-	_zoom = clampf(_zoom + delta, ZOOM_MIN, ZOOM_MAX)
+	_zoom = clampf(_zoom + delta, _effective_zoom_min(), ZOOM_MAX)
 	if not is_zero_approx(old_zoom):
 		var local := (around - _canvas_pan) / old_zoom
 		_canvas_pan = around - local * _zoom
