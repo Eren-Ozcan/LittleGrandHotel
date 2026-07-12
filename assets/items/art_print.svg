@@ -1,6 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
-  <rect x="8" y="8" width="48" height="40" rx="3" fill="#d9b25e" stroke="#55402e" stroke-width="2.5"/>
+  <defs>
+    <linearGradient id="ap_frame" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f0d488"/>
+      <stop offset="100%" stop-color="#c9a44c"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="32" cy="50" rx="20" ry="2" fill="#3a2a1c" opacity="0.12"/>
+  <rect x="8" y="8" width="48" height="40" rx="3" fill="url(#ap_frame)" stroke="#55402e" stroke-width="2.5"/>
   <rect x="14" y="14" width="36" height="28" fill="#bfe3f2"/>
-  <circle cx="24" cy="22" r="4" fill="#f0c75e"/>
-  <path d="M 14 38 L 26 26 L 34 34 L 42 24 L 50 34 L 50 42 L 14 42 Z" fill="#74b874"/>
+  <circle cx="24" cy="22" r="4" fill="#ffdd8a"/>
+  <path d="M 14 38 L 26 26 L 34 34 L 42 24 L 50 34 L 50 42 L 14 42 Z" fill="#7bc17c"/>
+  <path d="M 12 11 h 40" stroke="#fbe6ae" stroke-width="1.6" opacity="0.7"/>
 </svg>

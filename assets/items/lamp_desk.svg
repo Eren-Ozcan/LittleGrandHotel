@@ -1,6 +1,18 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
-  <rect x="22" y="52" width="20" height="6" rx="3" fill="#8a6642" stroke="#55402e" stroke-width="2.5"/>
-  <rect x="29" y="30" width="6" height="24" fill="#a8845f" stroke="#55402e" stroke-width="2.5"/>
-  <path d="M 16 30 L 48 30 L 40 12 L 24 12 Z" fill="#f0c75e" stroke="#55402e" stroke-width="2.5" stroke-linejoin="round"/>
+  <defs>
+    <linearGradient id="lp_shade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffdd8a"/>
+      <stop offset="100%" stop-color="#e0a92f"/>
+    </linearGradient>
+    <linearGradient id="lp_wood" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#a8845f"/>
+      <stop offset="100%" stop-color="#8a6642"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="32" cy="58.5" rx="14" ry="2.4" fill="#3a2a1c" opacity="0.18"/>
+  <rect x="22" y="52" width="20" height="6" rx="3" fill="url(#lp_wood)" stroke="#55402e" stroke-width="2.5"/>
+  <rect x="29" y="30" width="6" height="24" fill="url(#lp_wood)" stroke="#55402e" stroke-width="2.5"/>
+  <path d="M 16 30 L 48 30 L 40 12 L 24 12 Z" fill="url(#lp_shade)" stroke="#55402e" stroke-width="2.5" stroke-linejoin="round"/>
+  <path d="M 25 14 L 20 27" stroke="#fff3cf" stroke-width="1.6" opacity="0.6"/>
   <ellipse cx="32" cy="33" rx="10" ry="3" fill="#fff3cf" opacity="0.9"/>
 </svg>

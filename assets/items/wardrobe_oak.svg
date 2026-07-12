@@ -1,7 +1,19 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
-  <rect x="12" y="4" width="40" height="54" rx="4" fill="#a8845f" stroke="#55402e" stroke-width="2.5"/>
-  <rect x="16" y="8" width="14" height="42" rx="2" fill="#c19a6f" stroke="#55402e" stroke-width="2"/>
-  <rect x="34" y="8" width="14" height="42" rx="2" fill="#c19a6f" stroke="#55402e" stroke-width="2"/>
+  <defs>
+    <linearGradient id="wo_body" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#c19a6f"/>
+      <stop offset="100%" stop-color="#966b40"/>
+    </linearGradient>
+    <linearGradient id="wo_door" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#d9b98a"/>
+      <stop offset="100%" stop-color="#b08857"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="32" cy="61" rx="20" ry="2" fill="#3a2a1c" opacity="0.18"/>
+  <rect x="12" y="4" width="40" height="54" rx="4" fill="url(#wo_body)" stroke="#55402e" stroke-width="2.5"/>
+  <rect x="16" y="8" width="14" height="42" rx="2" fill="url(#wo_door)" stroke="#55402e" stroke-width="2"/>
+  <rect x="34" y="8" width="14" height="42" rx="2" fill="url(#wo_door)" stroke="#55402e" stroke-width="2"/>
+  <path d="M 19 11 v 36 M 37 11 v 36" stroke="#e8d2ac" stroke-width="1" opacity="0.5"/>
   <circle cx="28" cy="30" r="2.5" fill="#55402e"/>
   <circle cx="36" cy="30" r="2.5" fill="#55402e"/>
   <rect x="14" y="58" width="8" height="4" fill="#8a6642"/>

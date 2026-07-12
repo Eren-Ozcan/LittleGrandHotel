@@ -1,7 +1,23 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
-  <path d="M 32 34 C 20 26 14 14 18 8 C 28 12 32 22 32 34" fill="#5f9e60" stroke="#3c6b3d" stroke-width="2.5" stroke-linejoin="round"/>
-  <path d="M 32 34 C 44 26 50 14 46 8 C 36 12 32 22 32 34" fill="#74b874" stroke="#3c6b3d" stroke-width="2.5" stroke-linejoin="round"/>
+  <defs>
+    <linearGradient id="pf_leaf1" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#7bc17c"/>
+      <stop offset="100%" stop-color="#4f8a50"/>
+    </linearGradient>
+    <linearGradient id="pf_leaf2" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#93d893"/>
+      <stop offset="100%" stop-color="#5f9e60"/>
+    </linearGradient>
+    <linearGradient id="pf_pot" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#e0975f"/>
+      <stop offset="100%" stop-color="#c96f45"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="32" cy="59.5" rx="13" ry="2.2" fill="#3a2a1c" opacity="0.18"/>
+  <path d="M 32 34 C 20 26 14 14 18 8 C 28 12 32 22 32 34" fill="url(#pf_leaf1)" stroke="#3c6b3d" stroke-width="2.5" stroke-linejoin="round"/>
+  <path d="M 32 34 C 44 26 50 14 46 8 C 36 12 32 22 32 34" fill="url(#pf_leaf2)" stroke="#3c6b3d" stroke-width="2.5" stroke-linejoin="round"/>
   <path d="M 32 36 C 32 24 32 14 32 10" fill="none" stroke="#3c6b3d" stroke-width="3" stroke-linecap="round"/>
-  <path d="M 20 36 L 44 36 L 40 58 L 24 58 Z" fill="#c96f45" stroke="#8a4527" stroke-width="2.5" stroke-linejoin="round"/>
-  <rect x="18" y="33" width="28" height="7" rx="3" fill="#de8555" stroke="#8a4527" stroke-width="2.5"/>
+  <path d="M 20 36 L 44 36 L 40 58 L 24 58 Z" fill="url(#pf_pot)" stroke="#8a4527" stroke-width="2.5" stroke-linejoin="round"/>
+  <path d="M 24 40 L 26 54" stroke="#f0a878" stroke-width="1.4" opacity="0.6"/>
+  <rect x="18" y="33" width="28" height="7" rx="3" fill="#f0a05e" stroke="#8a4527" stroke-width="2.5"/>
 </svg>

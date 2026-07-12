@@ -1,13 +1,24 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="aq_water" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#dff2f7"/>
+      <stop offset="100%" stop-color="#8fd4ec"/>
+    </linearGradient>
+    <linearGradient id="aq_gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f0d488"/>
+      <stop offset="100%" stop-color="#c9a44c"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="32" cy="61" rx="26" ry="2" fill="#3a2a1c" opacity="0.15"/>
   <rect x="6" y="54" width="52" height="6" rx="2" fill="#8a6642" stroke="#6e4f31" stroke-width="2"/>
-  <rect x="10" y="14" width="44" height="40" rx="4" fill="#bfe6f2" stroke="#a07118" stroke-width="3"/>
-  <rect x="10" y="14" width="44" height="8" rx="4" fill="#dff2f7" stroke="#a07118" stroke-width="3"/>
-  <rect x="8" y="10" width="48" height="6" rx="3" fill="#f0c75e" stroke="#a07118" stroke-width="2"/>
-  <path d="M 22 36 C 25 32 30 32 33 36 C 30 40 25 40 22 36 Z" fill="#e8843c" stroke="#b35a1e" stroke-width="1.5"/>
-  <path d="M 33 36 L 38 32 L 38 40 Z" fill="#e8843c" stroke="#b35a1e" stroke-width="1.5"/>
+  <rect x="10" y="14" width="44" height="40" rx="4" fill="url(#aq_water)" stroke="#a07118" stroke-width="3"/>
+  <rect x="10" y="14" width="44" height="8" rx="4" fill="#f3fbfd" stroke="#a07118" stroke-width="3"/>
+  <rect x="8" y="10" width="48" height="6" rx="3" fill="url(#aq_gold)" stroke="#a07118" stroke-width="2"/>
+  <path d="M 22 36 C 25 32 30 32 33 36 C 30 40 25 40 22 36 Z" fill="#f0985c" stroke="#b35a1e" stroke-width="1.5"/>
+  <path d="M 33 36 L 38 32 L 38 40 Z" fill="#f0985c" stroke="#b35a1e" stroke-width="1.5"/>
   <circle cx="25" cy="35" r="1.2" fill="#4a3b2a"/>
-  <path d="M 42 46 C 40 44 40 40 42 38 C 44 40 44 44 42 46 Z" fill="#58b88a"/>
-  <path d="M 16 48 C 15 45 15 42 16 40" fill="none" stroke="#58b88a" stroke-width="2" stroke-linecap="round"/>
+  <path d="M 42 46 C 40 44 40 40 42 38 C 44 40 44 44 42 46 Z" fill="#6fc98f"/>
+  <path d="M 16 48 C 15 45 15 42 16 40" fill="none" stroke="#6fc98f" stroke-width="2" stroke-linecap="round"/>
   <circle cx="46" cy="26" r="1.5" fill="#ffffff" opacity="0.8"/>
   <circle cx="48" cy="21" r="1.1" fill="#ffffff" opacity="0.8"/>
 </svg>

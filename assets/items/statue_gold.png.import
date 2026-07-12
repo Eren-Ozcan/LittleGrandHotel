@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dg6xgpp11to60"
-path="res://.godot/imported/bed_canopy.svg-c39a7d45df34dbc68f624a3e2657473b.ctex"
+uid="uid://dpeyxtoiy2ygn"
+path="res://.godot/imported/statue_gold.png-5f8ecd7d48fa62c80ee84219e84de04a.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/items/bed_canopy.svg"
-dest_files=["res://.godot/imported/bed_canopy.svg-c39a7d45df34dbc68f624a3e2657473b.ctex"]
+source_file="res://assets/items/statue_gold.png"
+dest_files=["res://.godot/imported/statue_gold.png-5f8ecd7d48fa62c80ee84219e84de04a.ctex"]
 
 [params]
 
@@ -38,6 +38,3 @@ process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
 process/size_limit=0
 detect_3d/compress_to=1
-svg/scale=3.0
-editor/scale_with_editor_scale=false
-editor/convert_colors_with_editor_theme=false

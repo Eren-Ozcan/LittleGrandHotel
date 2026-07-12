@@ -1,6 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
-  <ellipse cx="32" cy="26" rx="17" ry="22" fill="#d9b25e" stroke="#a07118" stroke-width="2.5"/>
+  <defs>
+    <linearGradient id="mg_gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f0d488"/>
+      <stop offset="100%" stop-color="#c9a44c"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="32" cy="60" rx="14" ry="2" fill="#3a2a1c" opacity="0.15"/>
+  <ellipse cx="32" cy="26" rx="17" ry="22" fill="url(#mg_gold)" stroke="#a07118" stroke-width="2.5"/>
   <ellipse cx="32" cy="26" rx="11" ry="16" fill="#cfe8ef"/>
   <path d="M 26 16 L 34 34" stroke="#ffffff" stroke-width="4" stroke-linecap="round" opacity="0.8"/>
-  <path d="M 24 48 L 32 44 L 40 48 L 38 58 L 26 58 Z" fill="#d9b25e" stroke="#a07118" stroke-width="2.5" stroke-linejoin="round"/>
+  <path d="M 24 12 a 17 22 0 0 1 10 -2" fill="none" stroke="#fbe6ae" stroke-width="1.6" opacity="0.7"/>
+  <path d="M 24 48 L 32 44 L 40 48 L 38 58 L 26 58 Z" fill="url(#mg_gold)" stroke="#a07118" stroke-width="2.5" stroke-linejoin="round"/>
 </svg>
