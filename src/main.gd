@@ -538,8 +538,18 @@ func _build_ui() -> void:
 
 	var zoom_row := HBoxContainer.new()
 	zoom_row.add_theme_constant_override("separation", 6)
-	zoom_row.alignment = BoxContainer.ALIGNMENT_END
 	root.add_child(zoom_row)
+	build_mode_button = _button("🔨 İnşa Modu", 13, PALETTE.wood, PALETTE.cream_text)
+	build_mode_button.custom_minimum_size = Vector2(0, 36)
+	build_mode_button.toggle_mode = true
+	build_mode_button.toggled.connect(func(on: bool):
+		build_mode = on
+		build_mode_button.text = "🔨 İnşa Modu: Açık" if on else "🔨 İnşa Modu"
+		_rebuild_hotel())
+	zoom_row.add_child(build_mode_button)
+	var zoom_row_spacer := Control.new()
+	zoom_row_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	zoom_row.add_child(zoom_row_spacer)
 	var zoom_out_b := _button("−", 18, PALETTE.wood, PALETTE.cream_text)
 	zoom_out_b.custom_minimum_size = Vector2(40, 36)
 	zoom_out_b.pressed.connect(func(): _zoom_by(-0.15, zoom_viewport.size / 2.0))
@@ -547,7 +557,7 @@ func _build_ui() -> void:
 	var zoom_reset_b := _button("⟳", 16, PALETTE.wood, PALETTE.cream_text)
 	zoom_reset_b.custom_minimum_size = Vector2(40, 36)
 	zoom_reset_b.pressed.connect(func():
-		_zoom = 1.0
+		_zoom = clampf(1.0, _effective_zoom_min(), ZOOM_MAX)
 		_canvas_pan = Vector2.ZERO
 		_clamp_pan()
 		_apply_canvas_transform())
@@ -556,6 +566,22 @@ func _build_ui() -> void:
 	zoom_in_b.custom_minimum_size = Vector2(40, 36)
 	zoom_in_b.pressed.connect(func(): _zoom_by(0.15, zoom_viewport.size / 2.0))
 	zoom_row.add_child(zoom_in_b)
+
+	# İnşa Modu mağaza rafı: yalnızca build_mode açıkken görünür (bkz.
+	# _rebuild_hotel). Oda kartları buradan tuvale sürüklenir — tıklayınca
+	# açılan liste yerine Hotel City'deki gibi "mağazadan seç, sürükle" akışı.
+	build_shop_panel = VBoxContainer.new()
+	build_shop_panel.visible = false
+	build_shop_panel.add_theme_constant_override("separation", 2)
+	root.add_child(build_shop_panel)
+	build_shop_panel.add_child(_label("Oda Mağazası — sürükleyip binaya bırak", 12, PALETTE.wood_dark))
+	var build_shop_scroll := ScrollContainer.new()
+	build_shop_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	build_shop_scroll.custom_minimum_size = Vector2(0, 112)
+	build_shop_panel.add_child(build_shop_scroll)
+	build_shop_row = HBoxContainer.new()
+	build_shop_row.add_theme_constant_override("separation", 6)
+	build_shop_scroll.add_child(build_shop_row)
 
 	# zoom_viewport'u kendi ScrollContainer'ına sarmalıyoruz: içeriği (bina
 	# tuvali) sabit bir yüksekliğe sahip, VBox'ın "kalan alanı" hesabına göre
@@ -603,8 +629,15 @@ func _build_ui() -> void:
 	bottom.add_child(shift_b)
 	shift_bar_label = shift_b.get_meta("label")
 
+	# "Mağaza" artık popup açmıyor — İnşa Modu'nu açıp mağaza rafını gösterir
+	# (oda ekleme tek yol: rafından sürükleyip binaya bırakmak).
+	var shop_b := _bar_button("res://assets/ui/icon_shop.svg", "Mağaza")
+	shop_b.pressed.connect(func():
+		build_mode_button.button_pressed = true
+		_show_toast("İnşa Modu açıldı — bir odayı rafdan sürükleyip binaya bırak"))
+	bottom.add_child(shop_b)
+
 	for def in [
-		["res://assets/ui/icon_shop.svg", "Mağaza", _build_shop_popup],
 		["res://assets/ui/icon_gear.svg", "Personel", _build_staff_popup],
 		["res://assets/ui/icon_quest.svg", "Görevler", _build_quests_popup],
 		["res://assets/ui/icon_stats.svg", "İstatistik", _build_stats_popup],
