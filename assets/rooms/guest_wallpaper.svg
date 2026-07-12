@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96">
+  <!-- Misafir odası duvar kağıdı: BEYAZ çizilir, çalışma zamanında modulate ile
+       oda rengine (ROOM_TINTS) boyanır — desen hafif koyu griler sayesinde
+       boyandığında tonlu desen olarak görünür. -->
+  <rect width="96" height="96" fill="#ffffff"/>
+  <g fill="#e7e7e7">
+    <circle cx="10" cy="10" r="2.4"/><circle cx="42" cy="10" r="2.4"/><circle cx="74" cy="10" r="2.4"/>
+    <circle cx="26" cy="26" r="2.4"/><circle cx="58" cy="26" r="2.4"/><circle cx="90" cy="26" r="2.4"/>
+    <circle cx="10" cy="42" r="2.4"/><circle cx="42" cy="42" r="2.4"/><circle cx="74" cy="42" r="2.4"/>
+    <circle cx="26" cy="58" r="2.4"/><circle cx="58" cy="58" r="2.4"/><circle cx="90" cy="58" r="2.4"/>
+    <circle cx="10" cy="74" r="2.4"/><circle cx="42" cy="74" r="2.4"/><circle cx="74" cy="74" r="2.4"/>
+    <circle cx="26" cy="90" r="2.4"/><circle cx="58" cy="90" r="2.4"/><circle cx="90" cy="90" r="2.4"/>
+  </g>
+  <g fill="#f0f0f0">
+    <path d="M 26 8 l 2.6 2.6 l -2.6 2.6 l -2.6 -2.6 Z"/><path d="M 58 8 l 2.6 2.6 l -2.6 2.6 l -2.6 -2.6 Z"/><path d="M 90 8 l 2.6 2.6 l -2.6 2.6 l -2.6 -2.6 Z"/>
+    <path d="M 10 24 l 2.6 2.6 l -2.6 2.6 l -2.6 -2.6 Z"/><path d="M 42 24 l 2.6 2.6 l -2.6 2.6 l -2.6 -2.6 Z"/><path d="M 74 24 l 2.6 2.6 l -2.6 2.6 l -2.6 -2.6 Z"/>
+    <path d="M 26 40 l 2.6 2.6 l -2.6 2.6 l -2.6 -2.6 Z"/><path d="M 58 40 l 2.6 2.6 l -2.6 2.6 l -2.6 -2.6 Z"/><path d="M 90 40 l 2.6 2.6 l -2.6 2.6 l -2.6 -2.6 Z"/>
+    <path d="M 10 56 l 2.6 2.6 l -2.6 2.6 l -2.6 -2.6 Z"/><path d="M 42 56 l 2.6 2.6 l -2.6 2.6 l -2.6 -2.6 Z"/><path d="M 74 56 l 2.6 2.6 l -2.6 2.6 l -2.6 -2.6 Z"/>
+    <path d="M 26 72 l 2.6 2.6 l -2.6 2.6 l -2.6 -2.6 Z"/><path d="M 58 72 l 2.6 2.6 l -2.6 2.6 l -2.6 -2.6 Z"/><path d="M 90 72 l 2.6 2.6 l -2.6 2.6 l -2.6 -2.6 Z"/>
+  </g>
+  <rect x="0" y="0" width="96" height="4" fill="#e0e0e0"/>
+</svg>

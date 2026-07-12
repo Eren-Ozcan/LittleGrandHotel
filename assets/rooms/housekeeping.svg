@@ -1,22 +1,39 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="96" height="64" viewBox="0 0 96 64">
   <!-- temizlik odası: raflı dolap, deterjanlar, süpürge + faraş, köpüklü kova -->
-  <rect x="0" y="0" width="96" height="56" fill="#efe9db"/>
+  <defs>
+    <linearGradient id="hk_wall" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f6f1e4"/>
+      <stop offset="100%" stop-color="#e5dcc4"/>
+    </linearGradient>
+    <linearGradient id="hk_cabinet" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#c0985f"/>
+      <stop offset="100%" stop-color="#8a6642"/>
+    </linearGradient>
+    <linearGradient id="hk_bucket" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ee6a5e"/>
+      <stop offset="100%" stop-color="#c0392b"/>
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="96" height="56" fill="url(#hk_wall)"/>
   <rect x="0" y="54" width="96" height="10" fill="#b39a72"/>
-  <rect x="6" y="6" width="38" height="48" rx="2" fill="#a8845f" stroke="#55402e" stroke-width="2.5"/>
+  <ellipse cx="25" cy="55" rx="21" ry="2" fill="#3a2a1c" opacity="0.15"/>
+  <rect x="6" y="6" width="38" height="48" rx="2" fill="url(#hk_cabinet)" stroke="#55402e" stroke-width="2.5"/>
   <path d="M 8 22 h 34 M 8 38 h 34" stroke="#55402e" stroke-width="2"/>
-  <rect x="11" y="12" width="7" height="9" rx="1" fill="#4fb3d9" stroke="#2a7fa3" stroke-width="1.4"/>
-  <rect x="21" y="12" width="7" height="9" rx="1" fill="#e05a4e" stroke="#a83e35" stroke-width="1.4"/>
-  <rect x="31" y="14" width="8" height="7" rx="1" fill="#3d9e4f" stroke="#1f6b2d" stroke-width="1.4"/>
+  <rect x="11" y="12" width="7" height="9" rx="1" fill="#63c0e3" stroke="#2a7fa3" stroke-width="1.4"/>
+  <rect x="21" y="12" width="7" height="9" rx="1" fill="#ee6a5e" stroke="#a83e35" stroke-width="1.4"/>
+  <rect x="31" y="14" width="8" height="7" rx="1" fill="#48ac5b" stroke="#1f6b2d" stroke-width="1.4"/>
   <rect x="11" y="27" width="10" height="10" rx="1" fill="#fdf6e3" stroke="#c9b28a" stroke-width="1.4"/>
   <rect x="24" y="27" width="10" height="10" rx="1" fill="#7fc4a0" stroke="#4f9470" stroke-width="1.4"/>
   <circle cx="16" cy="47" r="4" fill="#f0c75e" stroke="#a07118" stroke-width="1.4"/>
   <rect x="26" y="43" width="12" height="9" rx="1.5" fill="#8d8d99" stroke="#5d5d66" stroke-width="1.4"/>
   <path d="M 56 8 L 62 40" stroke="#8a6642" stroke-width="3" stroke-linecap="round"/>
-  <path d="M 58 38 L 70 36 L 74 50 C 68 53 60 54 54 51 Z" fill="#e0a92f" stroke="#a07118" stroke-width="2"/>
+  <path d="M 58 38 L 70 36 L 74 50 C 68 53 60 54 54 51 Z" fill="#f0c052" stroke="#a07118" stroke-width="2"/>
   <path d="M 59 50 v -5 M 63 51 v -6 M 67 51 v -7 M 71 49 v -7" stroke="#a07118" stroke-width="1.4"/>
-  <path d="M 80 26 l 8 0 l 3 8 l -11 0 Z" fill="#4fb3d9" stroke="#2a7fa3" stroke-width="1.6"/>
+  <path d="M 80 26 l 8 0 l 3 8 l -11 0 Z" fill="#63c0e3" stroke="#2a7fa3" stroke-width="1.6"/>
   <path d="M 84 26 l 0 -8" stroke="#2a7fa3" stroke-width="2.2" stroke-linecap="round"/>
-  <path d="M 76 42 L 92 42 L 89 56 L 79 56 Z" fill="#e05a4e" stroke="#a83e35" stroke-width="2"/>
+  <ellipse cx="84" cy="56" rx="10" ry="2" fill="#7a2018" opacity="0.15"/>
+  <path d="M 76 42 L 92 42 L 89 56 L 79 56 Z" fill="url(#hk_bucket)" stroke="#a83e35" stroke-width="2"/>
+  <path d="M 78 44 h 12" stroke="#f5a89e" stroke-width="1.2" opacity="0.6"/>
   <path d="M 76 42 a 8 4 0 0 1 16 0" fill="none" stroke="#a83e35" stroke-width="1.8"/>
   <circle cx="79" cy="39" r="2.4" fill="#ffffff" opacity="0.9"/>
   <circle cx="84" cy="37.5" r="3" fill="#ffffff" opacity="0.9"/>

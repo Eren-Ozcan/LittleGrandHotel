@@ -1,9 +1,20 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="96" height="64" viewBox="0 0 96 64">
   <!-- spa: masaj masası, mumlar, havlular, buhar, bambu, taş dizisi -->
-  <rect x="0" y="0" width="96" height="56" fill="#eaf3e8"/>
+  <defs>
+    <linearGradient id="sp_wall" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f2f8ee"/>
+      <stop offset="100%" stop-color="#dcece0"/>
+    </linearGradient>
+    <linearGradient id="sp_table" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#ece3cf"/>
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="96" height="56" fill="url(#sp_wall)"/>
   <rect x="0" y="54" width="96" height="10" fill="#c8b28a"/>
   <path d="M 20 10 q 3 -5 0 -9 M 27 12 q 3 -5 0 -9 M 34 10 q 3 -5 0 -9" fill="none" stroke="#b9d4c0" stroke-width="2.2" stroke-linecap="round" opacity="0.9"/>
-  <rect x="12" y="30" width="44" height="9" rx="4" fill="#fdf6e3" stroke="#c9b28a" stroke-width="2"/>
+  <ellipse cx="34" cy="55" rx="24" ry="2.2" fill="#3a5040" opacity="0.15"/>
+  <rect x="12" y="30" width="44" height="9" rx="4" fill="url(#sp_table)" stroke="#c9b28a" stroke-width="2"/>
   <rect x="10" y="27" width="12" height="6" rx="3" fill="#e0cdb6" stroke="#c9b28a" stroke-width="1.6"/>
   <path d="M 17 39 l -3 16 M 51 39 l 3 16" stroke="#8a6642" stroke-width="3" stroke-linecap="round"/>
   <rect x="24" y="24" width="20" height="4" rx="2" fill="#7fc4a0" stroke="#4f9470" stroke-width="1.4"/>

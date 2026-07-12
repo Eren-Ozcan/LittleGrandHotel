@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://cilqy4searche"
-path="res://.godot/imported/restaurant.svg-86512ae29c0441b67d7d0d4778582466.ctex"
+uid="uid://c2jvt2b22ac8q"
+path="res://.godot/imported/guest_room_royal.png-b0bbf49ef0329e431489bf0834d934b4.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/rooms/restaurant.svg"
-dest_files=["res://.godot/imported/restaurant.svg-86512ae29c0441b67d7d0d4778582466.ctex"]
+source_file="res://assets/rooms/guest_room_royal.png"
+dest_files=["res://.godot/imported/guest_room_royal.png-b0bbf49ef0329e431489bf0834d934b4.ctex"]
 
 [params]
 
@@ -38,6 +38,3 @@ process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
 process/size_limit=0
 detect_3d/compress_to=1
-svg/scale=3.0
-editor/scale_with_editor_scale=false
-editor/convert_colors_with_editor_theme=false

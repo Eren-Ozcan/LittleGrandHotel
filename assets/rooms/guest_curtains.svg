@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96">
+  <!-- Perdeler + korniş: BEYAZ çizilir, modulate ile perde rengine
+       (ROOM_CURTAINS) boyanır. Griler kıvrım gölgesi olarak tonlanır. -->
+  <defs>
+    <linearGradient id="gcur" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#e2e2e2"/>
+    </linearGradient>
+    <linearGradient id="gcur2" x1="1" y1="0" x2="0" y2="0">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#e2e2e2"/>
+    </linearGradient>
+  </defs>
+  <!-- korniş / saçak -->
+  <path d="M 1 1 H 95 V 8 Q 87 15 79.5 8 Q 72 15 64.5 8 Q 57 15 49.5 8 Q 42 15 34.5 8 Q 27 15 19.5 8 Q 12 15 4.5 8 Z"
+        fill="#ffffff" stroke="#c2c2c2" stroke-width="1.6" stroke-linejoin="round"/>
+  <!-- sol kanat: belde toplanmış -->
+  <path d="M 2 8 C 3 26 6 36 4 46 C 10 50 10 60 5 74 L 22 74 C 15 58 13 50 17 46 C 14 34 15 20 17 8 Z"
+        fill="url(#gcur)" stroke="#bdbdbd" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M 8 12 C 9 24 10 34 9 42 M 13 12 C 13 22 13 32 12.5 42" fill="none" stroke="#e0e0e0" stroke-width="1.6"/>
+  <path d="M 8 52 C 10 60 10 66 8 70 M 13 50 C 15 58 15 64 13 70" fill="none" stroke="#e0e0e0" stroke-width="1.6"/>
+  <ellipse cx="10.5" cy="46" rx="8" ry="3.4" fill="#d4d4d4" stroke="#bdbdbd" stroke-width="1.4"/>
+  <!-- sağ kanat -->
+  <path d="M 94 8 C 93 26 90 36 92 46 C 86 50 86 60 91 74 L 74 74 C 81 58 83 50 79 46 C 82 34 81 20 79 8 Z"
+        fill="url(#gcur2)" stroke="#bdbdbd" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M 88 12 C 87 24 86 34 87 42 M 83 12 C 83 22 83 32 83.5 42" fill="none" stroke="#e0e0e0" stroke-width="1.6"/>
+  <path d="M 88 52 C 86 60 86 66 88 70 M 83 50 C 81 58 81 64 83 70" fill="none" stroke="#e0e0e0" stroke-width="1.6"/>
+  <ellipse cx="85.5" cy="46" rx="8" ry="3.4" fill="#d4d4d4" stroke="#bdbdbd" stroke-width="1.4"/>
+</svg>
