@@ -122,7 +122,33 @@ var elevator_tex: TextureRect
 var _queue_count := 0
 var _elevator_state := "closed"  # closed / opening_half / open / closing_half
 var _elevator_timer := 0.0
-var _elevator_arrival_timer := 0.0
+## Yaya akışı iki bağımsız kanaldan yürür (bkz. _update_pedestrians):
+## 1) "gelip geçen" yayalar — vardiyadan BAĞIMSIZ, seyrek/rastgele aralıkla
+##    (kullanıcı isteği: "vardiya yokken de insanlar yürümeli, ara ara").
+## 2) otele gelen misafirler — yalnızca vardiyada; hız oda sayısına göre
+##    ölçeklenir (~2 dakikada tüm odalar dolacak tempo) ve boş oda kalmadıysa
+##    yeni misafir gelmez (kullanıcı isteği: "çok insan yürüyor, azalt").
+var _ambient_timer := 0.0
+var _next_ambient := 6.0
+var _arrival_timer := 0.0
+var _next_arrival := 8.0
+## Kapıya/lobiye doğru hâlâ YOLDA olan (kuyruğa henüz yazılmamış) misafir
+## sayısı — boş odadan fazla misafir yola çıkmasın diye kotaya dahil edilir.
+var _inbound := 0
+## Asansöre binen (kapı açıkken içeri alınan) misafir sayısı — kapı kapanıp
+## ~1sn geçince _arrived_guests'e aktarılır.
+var _boarding := 0
+## Asansörle YUKARI ÇIKMIŞ toplam misafir: odalardaki misafir görselleri
+## artık vardiya başlar başlamaz hepsi birden değil, ancak misafir gerçekten
+## asansörle çıktıkça beliriyor (kullanıcı isteği: "oyun direkt odada
+## insanlar ile başlıyor" şikâyeti).
+var _arrived_guests := 0
+## Yürüyen yayaların yaşadığı, _rebuild_hotel'in SİLMEDİĞİ kalıcı katman —
+## building_canvas'ın çocuğu olduğu için zoom/pan'i dünyayla birlikte alır
+## (eskiden yayalar ekran-uzayında root'a ekleniyordu; kullanıcı pan/zoom
+## yapınca kaldırımdan kopup havada asılı kalıyorlardı).
+var _walker_layer: Control = null
+var _did_initial_fit := false
 
 ## Serbest yerleşim bina görünümü: zoom_viewport (sabit, clip'li pencere) →
 ## building_canvas (manuel konumlandırılan, ölçeklenen/kaydırılan tuval —
