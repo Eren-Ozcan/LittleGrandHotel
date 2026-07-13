@@ -218,6 +218,12 @@ func _notification(what: int) -> void:
 func _ready() -> void:
 	_build_ui()
 	_init_sfx()
+	# Uygulama, süregelen bir vardiyanın ortasında açıldıysa misafirler
+	# çoktan yerleşmiş sayılır (gelir zaten akıyor) — odalar boş görünüp
+	# yeniden dolmaya başlamasın. Taze vardiyada 0'dan başlar (asansör
+	# teslim ettikçe artar, bkz. _deliver_guests / _make_room_button).
+	if Game.shift_active():
+		_arrived_guests = 999
 	Game.state_changed.connect(_refresh)
 	Game.quest_completed.connect(_on_quest_completed)
 	Game.achievement_unlocked.connect(_on_achievement_unlocked)
@@ -1457,8 +1463,16 @@ func _make_room_button(idx: int) -> Button:
 				it.offset_top = -17
 				it.offset_bottom = 17
 				b.add_child(it)
-		# Misafir (vardiya açık + temiz odada) — dokununca dürtülür (gizli müfettiş)
-		if Game.shift_active() and not is_dirty:
+		# Misafir (vardiya açık + temiz odada) — dokununca dürtülür (gizli
+		# müfettiş). Kullanıcı isteği: vardiya başlar başlamaz TÜM odalar
+		# dolu görünmesin — misafir görseli ancak o odaya sıra gelecek kadar
+		# misafir asansörle YUKARI ÇIKMIŞSA (_arrived_guests) belirir; odalar
+		# Game.rooms sırasına göre teker teker dolar.
+		var guest_order := 0
+		for j in range(idx):
+			if String(Game.room_def(Game.rooms[j].type).get("category", "")) == "guest":
+				guest_order += 1
+		if Game.shift_active() and not is_dirty and guest_order < _arrived_guests:
 			var g_idx := idx % GUEST_TYPES.size()
 			var guest := TextureButton.new()
 			guest.texture_normal = _tex("res://assets/guests/guest_%s.svg" % GUEST_TYPES[g_idx])
@@ -1506,7 +1520,7 @@ func _make_room_button(idx: int) -> Button:
 			b.add_child(maid)
 			_animate_guest(maid, idx, false)
 		# Tesis kapasitesi: vardiyada içerideki müşteriler görünür
-		if cat == "facility" and Game.shift_active():
+		if cat == "facility" and Game.shift_active() and _arrived_guests > 0:
 			var cap_row := HBoxContainer.new()
 			cap_row.add_theme_constant_override("separation", 1)
 			cap_row.anchor_top = 1.0
