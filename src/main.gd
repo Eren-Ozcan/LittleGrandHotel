@@ -265,49 +265,57 @@ func _update_elevator(delta: float) -> void:
 	if elevator_tex == null or not is_instance_valid(elevator_tex):
 		return
 	if not Game.shift_active():
-		if _queue_count != 0 or _elevator_state != "closed":
+		if _queue_count != 0 or _elevator_state != "closed" or _arrived_guests != 0:
 			_queue_count = 0
+			_boarding = 0
+			_inbound = 0
+			_arrived_guests = 0
 			_elevator_state = "closed"
 			_elevator_timer = 0.0
-			_elevator_arrival_timer = 0.0
+			_arrival_timer = 0.0
+			elevator_tex.texture = _tex(_elevator_texture_path())
+			# Vardiya bitti: odalardaki misafir görselleri hemen kalksın —
+			# bu rebuild olmadan doğal süre dolumunda (state_changed sinyali
+			# gelmediği için) misafirler odalarda asılı kalıyordu
+			# ("vardiya bitirme tam çalışmıyor" şikâyetinin UI ayağı).
 			_rebuild_hotel()
 		return
-	_elevator_arrival_timer += delta
-	if _elevator_arrival_timer >= 3.0 and _queue_count < 6:
-		_elevator_arrival_timer = 0.0
-		# Kullaıcı isteği: kuyruğa sessizce +1 eklemek yerine kaldırımda
-		# gerçekten yürüyen bir yaya görün (çoğunluğu otele girer, bkz.
-		# _spawn_arriving_pedestrian) — _queue_count, yaya kapıya VARDIĞINDA
-		# artıyor, spawn anında değil.
-		_spawn_arriving_pedestrian()
 	_elevator_timer += delta
+	# Durum geçişleri artık _rebuild_hotel ÇAĞIRMIYOR (eskiden her saniyede
+	# tam tuval yeniden kurulumu yapıp takılmalara yol açıyordu) — yalnızca
+	# asansör dokusunu değiştiriyor; oda görselleri yalnızca misafir teslim
+	# edilince (aşağıda, _deliver_guests içinde) yenileniyor.
 	match _elevator_state:
 		"closed":
-			if _queue_count > 0 and _elevator_timer >= 1.0:
+			# "Sürekli açılıp kapanıyor" şikâyeti: kapalı durumda en az 9sn
+			# bekleme — kuyruk 3+ kişiye ulaşırsa (kalabalık) erken açılır.
+			if _queue_count > 0 and (_elevator_timer >= 9.0 or _queue_count >= 3):
 				_elevator_state = "opening_half"
 				_elevator_timer = 0.0
-				_rebuild_hotel()
+				elevator_tex.texture = _tex(_elevator_texture_path())
 		"opening_half":
 			if _elevator_timer >= 0.35:
 				_elevator_state = "open"
 				_elevator_timer = 0.0
-				# Kapı açılınca kuyruktaki TÜM misafirler biner — 2 veya
-				# daha fazla kişi varsa sırayla beklemek yerine hepsi tek
-				# seferde (kullanıcı isteği) — bu, kuyruğun süresiz büyüyüp
-				# hiç azalmaması sorununu da çözüyor.
+				# Kapı açılınca kuyruktaki TÜM misafirler biner — 2+ kişi
+				# varsa sırayla beklemek yerine hepsi tek seferde.
+				_boarding = _queue_count
 				_queue_count = 0
-				_rebuild_hotel()
+				elevator_tex.texture = _tex(_elevator_texture_path())
 		"open":
 			if _elevator_timer >= 1.0:
 				_elevator_state = "closing_half"
 				_elevator_timer = 0.0
-				_rebuild_hotel()
+				elevator_tex.texture = _tex(_elevator_texture_path())
 		"closing_half":
 			if _elevator_timer >= 0.35:
 				_elevator_state = "closed"
 				_elevator_timer = 0.0
-				_spawn_elevator_arrival_sparkle()
-				_rebuild_hotel()
+				elevator_tex.texture = _tex(_elevator_texture_path())
+				var delivered := _boarding
+				_boarding = 0
+				if delivered > 0:
+					_deliver_guests(delivered)
 
 
 func _elevator_texture_path() -> String:
@@ -320,20 +328,15 @@ func _elevator_texture_path() -> String:
 			return "res://assets/ui/elevator_closed.png"
 
 
-## Kapı kapanışından ~1sn sonra misafirlerin "odalarında belirdiğini" temsil
-## eden parıltı. Oda-bazlı varış zamanlaması (hangi misafir hangi odaya, ne
-## zaman) mevcut veri modelinde yok — odalardaki misafir görseli zaten
-## vardiya boyunca (temiz + dolu her odada) sürekli gösteriliyor; bu yüzden
-## burada tam bir "odada belirme" simülasyonu yerine asansörün üstünde basit
-## bir görsel onay (parıltı) veriliyor.
-func _spawn_elevator_arrival_sparkle() -> void:
-	if not is_instance_valid(elevator_tex):
-		return
-	var center := elevator_tex.global_position + elevator_tex.size / 2.0
+## Kapı kapanışından ~1sn sonra binen misafirler "odalarına varır":
+## _arrived_guests artar (oda kartları ancak bu sayaca göre misafir gösterir,
+## bkz. _make_room_button) ve asansör üstünde parıltı belirir.
+func _deliver_guests(count: int) -> void:
 	get_tree().create_timer(1.0).timeout.connect(func():
+		_arrived_guests += count
 		if is_instance_valid(elevator_tex):
-			center = elevator_tex.global_position + elevator_tex.size / 2.0
-		_spawn_sparkles(center))
+			_spawn_sparkles(elevator_tex.global_position + elevator_tex.size / 2.0)
+		_rebuild_hotel())
 
 
 ## Kaçan misafir: vardiya sırasında ara ara sokakta bir misafir yürüyüp
