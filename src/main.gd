@@ -1121,7 +1121,10 @@ func _rebuild_hotel() -> void:
 	for dash_x in range(10, int(canvas_w), 46):
 		var dash := ColorRect.new()
 		dash.color = PALETTE.gold_soft
-		dash.position = Vector2(dash_x, SIDEWALK_H + CURB_H + (STREET_H - SIDEWALK_H - CURB_H) * 0.5 - 1.5)
+		# Konum, road'un KENDİ yerel uzayında (road zaten SIDEWALK_H+CURB_H
+		# ofsetinde) — eski çift-ofset çizgileri tuvalin dışına taşırıyordu
+		# (viewport 460px'e kırpılıyken görünmüyordu, tam ekranda ortaya çıktı).
+		dash.position = Vector2(dash_x, (STREET_H - SIDEWALK_H - CURB_H) * 0.5 - 1.5)
 		dash.size = Vector2(22, 3)
 		dash.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		road.add_child(dash)
@@ -1261,9 +1264,14 @@ func _clamp_pan() -> void:
 	var content_size: Vector2 = building_canvas.custom_minimum_size * _zoom
 	var vp_size: Vector2 = zoom_viewport.size
 	var min_x: float = minf(0.0, vp_size.x - content_size.x)
-	var min_y: float = minf(0.0, vp_size.y - content_size.y)
 	_canvas_pan.x = clampf(_canvas_pan.x, min_x, 0.0)
-	_canvas_pan.y = clampf(_canvas_pan.y, min_y, 0.0)
+	if content_size.y >= vp_size.y:
+		_canvas_pan.y = clampf(_canvas_pan.y, vp_size.y - content_size.y, 0.0)
+	else:
+		# Bina viewport'tan kısaysa TABANA hizala — yol/kaldırım ekranın
+		# dibinde durur ("tam ekran otel ve önündeki yol"), bina gökyüzünde
+		# asılı görünmez.
+		_canvas_pan.y = vp_size.y - content_size.y
 
 
 ## Binanın viewport'u tam olarak dolduracağı (kırpılmadan tamamen sığacağı)
