@@ -903,8 +903,15 @@ func _current_theme() -> Dictionary:
 
 func _rebuild_hotel() -> void:
 	for c in building_canvas.get_children():
+		if c == _walker_layer:
+			continue  # yürüyen yayalar rebuild'lerde hayatta kalır
 		building_canvas.remove_child(c)
 		c.queue_free()
+	if _walker_layer == null or not is_instance_valid(_walker_layer):
+		_walker_layer = Control.new()
+		_walker_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_walker_layer.z_index = 50  # bina öğelerinin üstünde çizilsin
+		building_canvas.add_child(_walker_layer)
 
 	# Çatı tabelası (haftalık temaya göre renklenen tente) — sabit, tuvalin
 	# dışında; zoom/pan yalnızca kat sıraları + lobi + sokak + çimi kapsar.
