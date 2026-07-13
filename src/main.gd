@@ -240,10 +240,19 @@ func _maybe_show_offline_popup() -> void:
 
 
 func _process(delta: float) -> void:
+	# İlk kare(ler)de layout oturunca bina genişliğe sığacak şekilde bir kez
+	# otomatik zoom yapılır ("tam ekran otel" — bina soldan kırpık başlamasın).
+	if not _did_initial_fit and zoom_viewport != null and zoom_viewport.size.x > 0.0:
+		_did_initial_fit = true
+		var canvas_w: float = int(Game.eco.building.grid_cols) * CELL_W
+		_zoom = clampf(zoom_viewport.size.x / canvas_w, _effective_zoom_min(), ZOOM_MAX)
+		_clamp_pan()
+		_apply_canvas_transform()
 	_update_live_labels()
 	_update_walker(delta)
 	_update_room_drag()
 	_update_elevator(delta)
+	_update_pedestrians(delta)
 	if _toast_timer > 0.0:
 		_toast_timer -= delta
 		if _toast_timer <= 0.0:
