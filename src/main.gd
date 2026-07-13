@@ -339,24 +339,36 @@ func _update_walker(delta: float) -> void:
 	_spawn_walker()
 
 
+## Kaldırımın tuval-yerel y'si: yayalar building_canvas içindeki
+## _walker_layer'da yaşar (zoom/pan'i dünyayla paylaşırlar — eskiden ekran
+## uzayındaydılar ve pan/zoom sonrası kaldırımdan kopup havada kalıyorlardı).
+## +8: ikon gri kaldırım şeridinin (58px) içinde durur, lobiye taşmaz.
+func _sidewalk_local_y(_icon_h: float) -> float:
+	return float(Game.floors) * CELL_H + LOBBY_H + 8.0
+
+
+## Giriş boşluğunun tuval-yerel x'i (yaya oraya varınca "içeri girer").
+func _door_local_x(icon_w: float) -> float:
+	return float(int(Game.eco.building.grid_cols)) * CELL_W - DOOR_W * 0.5 - icon_w * 0.5
+
+
 func _spawn_walker() -> void:
-	if street_node == null or not is_instance_valid(street_node):
+	if _walker_layer == null or not is_instance_valid(_walker_layer):
 		return
-	var walk_y := street_node.global_position.y - 34.0
+	var canvas_w: float = int(Game.eco.building.grid_cols) * CELL_W
 	var b := TextureButton.new()
 	b.texture_normal = _tex("res://assets/guests/guest_%s.svg" % GUEST_TYPES[randi() % GUEST_TYPES.size()])
 	b.ignore_texture_size = true
 	b.stretch_mode = TextureButton.STRETCH_KEEP_ASPECT_CENTERED
 	b.custom_minimum_size = Vector2(40, 40)
 	b.size = Vector2(40, 40)
-	b.position = Vector2(size.x + 24.0, walk_y)
-	b.z_index = 55
-	add_child(b)
+	b.position = Vector2(canvas_w + 24.0, _sidewalk_local_y(40.0))
+	_walker_layer.add_child(b)
 	_walker = b
 	_animate_guest(b, randi() % 4, true)
 	var tw := b.create_tween()
 	b.set_meta("walk_tween", tw)
-	tw.tween_property(b, "position:x", -64.0, 10.0)
+	tw.tween_property(b, "position:x", -64.0, 12.0)
 	tw.tween_callback(b.queue_free)
 	b.pressed.connect(func(): _on_walker_caught(b))
 
@@ -373,11 +385,12 @@ func _on_walker_caught(b: Control) -> void:
 	b.disabled = true
 	b.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var tw := b.create_tween()
-	tw.tween_property(b, "position:x", size.x / 2.0, 0.8) \
+	tw.tween_property(b, "position:x", _door_local_x(40.0), 0.8) \
 		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-	tw.tween_property(b, "scale", Vector2(0.3, 0.3), 0.25)
-	tw.parallel().tween_property(b, "modulate:a", 0.0, 0.25)
-	tw.tween_callback(b.queue_free)
+	tw.tween_callback(func():
+		b.queue_free()
+		_inbound += 1
+		_spawn_lobby_walker())
 
 
 func _init_sfx() -> void:
