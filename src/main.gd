@@ -1857,69 +1857,135 @@ func _animate_guest(g: Control, seed_i: int, walking: bool) -> void:
 		tw.tween_property(g, "scale", Vector2.ONE, dur * 2.5).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 
 
-## Vardiya açılış sahnesi: misafirler sağ kenardan sokak boyunca kapıya
-## yürür, kapıda küçülerek içeri girer. Overlay olduğu için yerleşimi bozmaz.
-func _guest_walk_in() -> void:
-	await get_tree().process_frame  # yeni yerleşim otursun
-	if street_node == null or not is_instance_valid(street_node):
+## Yaya akışının kalp atışı — iki bağımsız kanal:
+## 1) Gelip geçen yayalar: vardiya olsun olmasın, seyrek/rastgele aralıkla
+##    (kullanıcı isteği: sokak vardiyasız da yaşasın, insanlar ara ara geçsin).
+## 2) Otele gelen misafirler: yalnızca vardiyada, hız oda sayısına
+##    ölçeklenir (~2 dakikada dolacak tempo) ve boş oda kotası dolunca durur.
+func _update_pedestrians(delta: float) -> void:
+	if _walker_layer == null or not is_instance_valid(_walker_layer):
 		return
-	var walk_y := street_node.global_position.y - 26.0
-	var door_x := _door_screen_x()
-	for i in 4:
-		var gicon := _icon("res://assets/guests/guest_%s.svg" % GUEST_TYPES[i % GUEST_TYPES.size()], 36)
-		gicon.position = Vector2(size.x + 24.0 + i * 34.0, walk_y)
-		gicon.pivot_offset = Vector2(18, 36)
-		gicon.z_index = 55
-		add_child(gicon)
-		_animate_guest(gicon, i, true)
-		var tw := gicon.create_tween()
-		tw.tween_property(gicon, "position:x", door_x, 1.5 + i * 0.18) \
-			.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-		tw.tween_property(gicon, "scale", Vector2(0.3, 0.3), 0.25)
-		tw.parallel().tween_property(gicon, "modulate:a", 0.0, 0.25)
-		tw.tween_callback(func():
-			gicon.queue_free()
-			_queue_count = mini(_queue_count + 1, 6))
+	_ambient_timer += delta
+	if _ambient_timer >= _next_ambient:
+		_ambient_timer = 0.0
+		_next_ambient = randf_range(10.0, 22.0)
+		_spawn_passerby()
+	if not Game.shift_active():
+		return
+	var guest_rooms := _guest_room_count()
+	if _arrived_guests + _queue_count + _boarding + _inbound >= guest_rooms:
+		return  # tüm odalara yetecek misafir zaten geldi/yolda — yenisi gelmesin
+	_arrival_timer += delta
+	if _arrival_timer >= _next_arrival:
+		_arrival_timer = 0.0
+		# Oda sayısına ölçekli tempo: N odalı otel ~110 saniyede dolsun
+		# (kullanıcı isteği: "20 odam var, dolması 1-2 dakika almalı").
+		var base := clampf(110.0 / maxf(float(guest_rooms), 1.0), 4.0, 25.0)
+		_next_arrival = base * randf_range(0.75, 1.35)
+		_spawn_arriving_pedestrian()
 
 
-## Giriş boşluğunun (lobinin sağındaki DOOR_W genişliğindeki duvar kesiği)
-## gerçek ekran konumu: tuval-yerel x'i mevcut zoom/pan ile ekran
-## koordinatına çevrilir — bkz. _rebuild_hotel'deki lobby_wall yerleşimi.
-func _door_screen_x() -> float:
+func _guest_room_count() -> int:
+	var n := 0
+	for r in Game.rooms:
+		if String(Game.room_def(r.type).get("category", "")) == "guest":
+			n += 1
+	return n
+
+
+## Sıradan bir yaya: otele girmez, kaldırım boyunca yürüyüp ekrandan çıkar.
+## Yön rastgeledir; vardiya gerekmez.
+func _spawn_passerby() -> void:
 	var canvas_w: float = int(Game.eco.building.grid_cols) * CELL_W
-	var door_local_x: float = canvas_w - DOOR_W * 0.5
-	return zoom_viewport.global_position.x + _canvas_pan.x + door_local_x * _zoom
-
-
-## Vardiya boyunca kaldırımda ara ara gerçekten yürüyen bir yaya belirir
-## (kullanıcı isteği: "kaldırımdan normal insanlar yürüyecek"). Çoğunluğu
-## (%75) kapıya yönelip küçülerek girer ve kuyruğa (_queue_count) eklenir;
-## küçük bir kısmı sıradan bir yaya gibi yoluna devam edip ekrandan çıkar —
-## bu, "kaçan misafir" (kaçıp yakalanabilen, ayrı bir mekanik) ile karışmaz.
-func _spawn_arriving_pedestrian() -> void:
-	if street_node == null or not is_instance_valid(street_node):
-		return
-	var walk_y := street_node.global_position.y - 26.0
+	var walk_y := _sidewalk_local_y(36.0)
 	var gicon := _icon("res://assets/guests/guest_%s.svg" % GUEST_TYPES[randi() % GUEST_TYPES.size()], 36)
-	gicon.position = Vector2(size.x + 24.0, walk_y)
 	gicon.pivot_offset = Vector2(18, 36)
-	gicon.z_index = 55
-	add_child(gicon)
+	_walker_layer.add_child(gicon)
 	_animate_guest(gicon, randi() % GUEST_TYPES.size(), true)
 	var tw := gicon.create_tween()
-	if randf() < 0.75:
-		var door_x := _door_screen_x()
-		tw.tween_property(gicon, "position:x", door_x, randf_range(2.2, 3.2)) \
+	if randf() < 0.5:
+		gicon.position = Vector2(canvas_w + 24.0, walk_y)
+		tw.tween_property(gicon, "position:x", -64.0, randf_range(7.0, 11.0)) \
+			.set_trans(Tween.TRANS_LINEAR)
+	else:
+		gicon.position = Vector2(-64.0, walk_y)
+		tw.tween_property(gicon, "position:x", canvas_w + 24.0, randf_range(7.0, 11.0)) \
+			.set_trans(Tween.TRANS_LINEAR)
+	tw.tween_callback(gicon.queue_free)
+
+
+## Otele gelen bir misafir: soldan kaldırım boyunca sağ uçtaki kapıya yürür;
+## kapıda kaldırım ikonu kaldırılır ve misafir LOBİDE görünür şekilde
+## kapıdan asansöre yürür (bkz. _spawn_lobby_walker) — kullanıcı isteği:
+## "lobide yürümeleri gözükmüyor".
+func _spawn_arriving_pedestrian() -> void:
+	var walk_y := _sidewalk_local_y(36.0)
+	var gicon := _icon("res://assets/guests/guest_%s.svg" % GUEST_TYPES[randi() % GUEST_TYPES.size()], 36)
+	gicon.pivot_offset = Vector2(18, 36)
+	gicon.position = Vector2(-40.0, walk_y)
+	_walker_layer.add_child(gicon)
+	_animate_guest(gicon, randi() % GUEST_TYPES.size(), true)
+	_inbound += 1
+	var tw := gicon.create_tween()
+	tw.tween_property(gicon, "position:x", _door_local_x(36.0), randf_range(4.5, 6.0)) \
+		.set_trans(Tween.TRANS_LINEAR)
+	tw.tween_callback(func():
+		gicon.queue_free()
+		_spawn_lobby_walker())
+
+
+## Kapıdan giren misafirin lobi içindeki yürüyüşü: giriş boşluğundan
+## resepsiyona/asansöre doğru yürür, asansörün önünde sönümlenir ve ancak
+## O ZAMAN asansör kuyruğuna (_queue_count) yazılır.
+func _spawn_lobby_walker() -> void:
+	if _walker_layer == null or not is_instance_valid(_walker_layer):
+		_inbound = maxi(0, _inbound - 1)
+		return
+	var canvas_w: float = int(Game.eco.building.grid_cols) * CELL_W
+	var lobby_y := float(Game.floors) * CELL_H
+	var gicon := _icon("res://assets/guests/guest_%s.svg" % GUEST_TYPES[randi() % GUEST_TYPES.size()], 36)
+	gicon.pivot_offset = Vector2(18, 36)
+	# Lobi zemininde: ikon tabanı lobinin taban şeridine otursun.
+	gicon.position = Vector2(canvas_w - DOOR_W - 10.0, lobby_y + LOBBY_H - 50.0)
+	_walker_layer.add_child(gicon)
+	_animate_guest(gicon, randi() % GUEST_TYPES.size(), true)
+	# Asansörün tuval-yerel merkezi: lobi paneli CELL_GAP/2'de başlar,
+	# genişliği canvas_w - DOOR_W - CELL_GAP; asansör lobinin ~%49'unda
+	# (bkz. elevator_tex anchor'ları).
+	var elev_x := CELL_GAP * 0.5 + (canvas_w - DOOR_W - CELL_GAP) * 0.49 - 18.0
+	var tw := gicon.create_tween()
+	tw.tween_property(gicon, "position:x", elev_x, 2.8).set_trans(Tween.TRANS_LINEAR)
+	tw.tween_property(gicon, "modulate:a", 0.0, 0.3)
+	tw.tween_callback(func():
+		gicon.queue_free()
+		_inbound = maxi(0, _inbound - 1)
+		if Game.shift_active():
+			_queue_count += 1)
+
+
+## Vardiya açılış sahnesi: küçük bir karşılama grubu soldan kaldırım boyunca
+## kapıya yürür ve lobiden geçip asansör kuyruğuna katılır. Grup, boş oda
+## sayısını aşmayacak kadar küçük tutulur.
+func _guest_walk_in() -> void:
+	await get_tree().process_frame  # yeni yerleşim otursun
+	if _walker_layer == null or not is_instance_valid(_walker_layer):
+		return
+	var walk_y := _sidewalk_local_y(36.0)
+	var door_x := _door_local_x(36.0)
+	var count := clampi(_guest_room_count(), 1, 3)
+	for i in count:
+		var gicon := _icon("res://assets/guests/guest_%s.svg" % GUEST_TYPES[i % GUEST_TYPES.size()], 36)
+		gicon.position = Vector2(-40.0 - i * 44.0, walk_y)
+		gicon.pivot_offset = Vector2(18, 36)
+		_walker_layer.add_child(gicon)
+		_animate_guest(gicon, i, true)
+		_inbound += 1
+		var tw := gicon.create_tween()
+		tw.tween_property(gicon, "position:x", door_x, 3.6 + i * 0.4) \
 			.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-		tw.tween_property(gicon, "scale", Vector2(0.3, 0.3), 0.25)
-		tw.parallel().tween_property(gicon, "modulate:a", 0.0, 0.25)
 		tw.tween_callback(func():
 			gicon.queue_free()
-			_queue_count = mini(_queue_count + 1, 6))
-	else:
-		tw.tween_property(gicon, "position:x", -64.0, randf_range(4.0, 6.0)) \
-			.set_trans(Tween.TRANS_LINEAR)
-		tw.tween_callback(gicon.queue_free)
+			_spawn_lobby_walker())
 
 
 ## Temizlik geri bildirimi: önce süpürge sağa sola süpürür, ardından parıltılar.
