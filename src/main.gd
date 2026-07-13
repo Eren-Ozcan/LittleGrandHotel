@@ -472,18 +472,8 @@ func _build_ui() -> void:
 	sky.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(sky)
 
-	var skyline := TextureRect.new()
-	skyline.texture = _tex("res://assets/ui/skyline.svg")
-	skyline.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	skyline.stretch_mode = TextureRect.STRETCH_SCALE
-	skyline.anchor_left = 0.0
-	skyline.anchor_right = 1.0
-	skyline.anchor_top = 1.0
-	skyline.anchor_bottom = 1.0
-	skyline.offset_top = -320
-	skyline.offset_bottom = -150
-	skyline.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(skyline)
+	# Şehir silüeti (skyline.svg) kaldırıldı — kullanıcı isteği: "diğer bina
+	# resimlerini kaldır, tam ekran otel ve otelin önündeki yol olacak".
 
 	for cdef in [[40, 130, 130], [420, 210, 170], [230, 620, 110]]:
 		var cloud := TextureRect.new()
@@ -652,11 +642,15 @@ func _build_ui() -> void:
 	root.add_child(view_scroll)
 	var view_col := VBoxContainer.new()
 	view_col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	view_col.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	view_scroll.add_child(view_col)
 
 	zoom_viewport = Control.new()
 	zoom_viewport.clip_contents = true
+	# Kullanıcı isteği ("tam ekran otel"): sabit 460px yerine bina görünümü
+	# ekranın kalan tüm dikey alanını doldurur.
 	zoom_viewport.custom_minimum_size = Vector2(0, 460)
+	zoom_viewport.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	zoom_viewport.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	zoom_viewport.mouse_filter = Control.MOUSE_FILTER_PASS
 	zoom_viewport.gui_input.connect(_on_viewport_gui_input)
