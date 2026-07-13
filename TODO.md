@@ -267,6 +267,60 @@ olsun, orada düzenleme/ekleme vs olsun" (bkz. Gamezebo Hotel City rehberi).
       devam edip ekrandan çıkar (kaçan-misafir/yakalama mekaniğiyle karışmaz,
       o ayrı kalır). Vardiya açılışındaki 4 kişilik karşılama grubu
       (`_guest_walk_in`) de artık aynı şekilde kuyruğa ekleniyor.
+- [x] On dördüncü geri bildirim turu (dört düzeltme birden, 2026-07-13):
+      (1) **Odalar vardiya başlar başlamaz dolu görünüyordu** — yeni
+      `_arrived_guests` sayacı: oda kartları misafir görselini ancak o
+      odaya sıra gelecek kadar misafir asansörle YUKARI ÇIKMIŞSA gösteriyor
+      (`_deliver_guests` kapı kapanışından ~1sn sonra sayacı artırır);
+      tesis kalabalığı da ilk teslimata kadar gizli. Uygulama süregelen
+      vardiyanın ortasında açılırsa misafirler yerleşmiş sayılır (999).
+      (2) **Arka plandaki şehir silüeti kaldırıldı** (`skyline.svg` silindi);
+      bina görünümü artık ekranın kalan tüm dikey alanını dolduruyor
+      (`zoom_viewport` EXPAND_FILL), açılışta bir kez genişliğe-sığdır
+      zoom'u yapılıyor ve bina viewport'tan kısaysa TABANA hizalanıyor
+      (yol ekranın dibinde). Bu tam-ekran geçişi, yol şerit çizgilerinin
+      yıllardır var olan çift-ofset hatasını da görünür kıldı (çizgiler
+      tuval dışında yüzüyordu) — düzeltildi.
+      (3) **Asansör sürekli açılıp kapanıyordu** — kapalı durumda en az 9sn
+      bekleme (kuyruk 3+ olursa erken açılır); ayrıca durum geçişleri artık
+      tam `_rebuild_hotel` yerine yalnızca doku değiştiriyor (saniyede bir
+      tam tuval kurulumu bitti — takılmaların da ana nedeniydi).
+      (4) **Yayalar kaldırım dışında takılı kalıyordu** — kök neden:
+      yayalar ekran-uzayında root'a ekleniyordu, kullanıcı pan/zoom yapınca
+      kaldırımdan kopuyorlardı. Artık tüm yayalar (`_walker_layer`)
+      building_canvas'ın içinde, tuval-yerel koordinatlarda yaşıyor —
+      zoom/pan'i dünyayla birlikte alıyorlar; `_rebuild_hotel` bu katmanı
+      silmeden koruyor. Giren misafirler soldan yürüyüp sağdaki kapıya
+      varıyor; kaçan-misafir yakalanınca da kapıya dönüp kuyruğa ekleniyor.
+- [x] On beşinci geri bildirim turu (beş düzeltme birden, 2026-07-13):
+      (1) **Vardiyasız sokak boştu** — yaya akışı iki bağımsız kanala
+      ayrıldı (`_update_pedestrians`): "gelip geçen" yayalar artık vardiya
+      olsun olmasın 10–22sn rastgele aralıkla iki yönde geçiyor
+      (`_spawn_passerby`); otele gelen misafirler ayrı kanal.
+      (2) **"Elmasla şimdi bitir" çalışmıyor gibiydi** — kök neden:
+      `skip_shift()` vardiyayı bitiriyordu ama otomatik yenileme (varsayılan
+      açık) BİR SONRAKİ karede aynı vardiyayı anında yeniden başlatıyordu
+      (test dosyasındaki bir yorum bile bu tuhaflığı belgelemişti).
+      `skip_shift()` artık `last_shift_hours = 0` yapıyor: bilerek bitirilen
+      vardiya kendini yenilemiyor; sonraki elle başlatılan vardiyayla
+      otomatik yenileme yine devrede. Ayrıca UI ayağı: vardiya doğal süreyle
+      bittiğinde `state_changed` sinyali gelmediği için odalardaki misafir
+      görselleri asılı kalıyordu — asansör sıfırlama dalına `_rebuild_hotel`
+      eklendi.
+      (3+4) **Yayalar art arda ve çok fazlaydı** — otele gelen misafir
+      temposu artık oda sayısına ölçekleniyor (`110sn / oda sayısı`,
+      4–25sn bandına kıskaçlı, ±%35 rastgele): 20 odalı otel ~2 dakikada
+      dolar, 2 odalı otelde misafir ~25sn'de bir gelir. Boş odaya yetecek
+      misafir geldiyse/yoldaysa (`_inbound` sayacı dahil) yenisi HİÇ gelmez.
+      Açılış karşılama grubu da 4 sabitinden `min(oda sayısı, 3)`e indirildi.
+      (5) **Lobide yürüyüş görünmüyordu** — kapıya varan misafir artık
+      yok olmuyor: `_spawn_lobby_walker` ile lobinin İÇİNDE kapıdan
+      resepsiyona/asansöre yürüyor, asansör önünde sönümlenince kuyruğa
+      yazılıyor. Yakalanan kaçak misafir de aynı lobi yolunu izliyor.
+      Headless doğrulama: 2 odalı otelde grup kaldırım→lobi→asansör→oda
+      zinciriyle t≈12sn'de odaları doldurdu, kota dolunca akış durdu;
+      `skip_shift` sonrası vardiya kapalı kaldı; ekran görüntüsünde lobi
+      içinde yürüyen misafir teyit edildi.
 - [x] Yeni "Oda Mağazası" rafı eklendi (`build_shop_panel`/`build_shop_row`,
       yalnızca İnşa Modu açıkken görünür): her oda tipi için fiyat/seviye
       kilidi gösteren bir kart; kartı basılı tutup binaya sürükleyip
