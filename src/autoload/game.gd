@@ -618,6 +618,11 @@ func skip_shift() -> bool:
 	gems -= cost
 	_advance(shift_remaining_game_hours())
 	shift_end_unix = now()
+	# Oyuncu vardiyayı BİLEREK bitirdi — otomatik yenileme bir sonraki
+	# karede aynı vardiyayı anında yeniden başlatmasın ("bitirme çalışmıyor"
+	# izlenimi veriyordu). Bir sonraki elle başlatılan vardiyayla otomatik
+	# yenileme yine devreye girer.
+	last_shift_hours = 0
 	_check_progress()
 	state_changed.emit()
 	return true
