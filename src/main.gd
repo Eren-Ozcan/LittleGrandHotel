@@ -975,8 +975,22 @@ func _current_theme() -> Dictionary:
 
 
 func _rebuild_hotel() -> void:
+	# Hangi odaların düğümleri (Button + duvar TextureRect'i) bir önceki
+	# rebuild'den bu yana görsel olarak DEĞİŞMEDİ — bunlar teardown'dan
+	# muaf tutulup aynen korunacak (bkz. _room_visual_signature, üstteki
+	# _room_visual_cache açıklaması).
+	var next_room_cache := {}
+	var kept_nodes := {}
+	for i in Game.rooms.size():
+		var rid := String(Game.rooms[i].id)
+		var prev = _room_visual_cache.get(rid)
+		if prev != null and is_instance_valid(prev.button) and is_instance_valid(prev.wall) \
+				and prev.sig == _room_visual_signature(i):
+			next_room_cache[rid] = prev
+			kept_nodes[prev.button] = true
+			kept_nodes[prev.wall] = true
 	for c in building_canvas.get_children():
-		if c == _walker_layer:
+		if c == _walker_layer or kept_nodes.has(c):
 			continue  # yürüyen yayalar rebuild'lerde hayatta kalır
 		building_canvas.remove_child(c)
 		c.queue_free()
@@ -1015,23 +1029,27 @@ func _rebuild_hotel() -> void:
 			var r: Dictionary = Game.rooms[i]
 			if int(r.floor) != floor_i:
 				continue
-			# Duvar çerçevesi: odanın TAM hücre alanını (CELL_GAP boşluğu dahil)
-			# kaplar, oda kartı bunun üstüne biraz içeriden oturur — geriye
-			# kalan ince boşlukta duvar bloğu dokusu görünür. Yan yana odalar
-			# bitişik hücrelerde olduğundan duvar alanları da bitişik oluyor
-			# ve kesintisiz tek duvar hissi veriyor (kullanıcı isteği).
-			var wall_block := TextureRect.new()
-			wall_block.texture = _tex("res://assets/ui/wall_block.svg")
-			wall_block.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-			wall_block.stretch_mode = TextureRect.STRETCH_TILE
-			wall_block.position = Vector2(int(r.col) * CELL_W, row_y)
-			wall_block.size = Vector2(int(r.w) * CELL_W, CELL_H)
-			wall_block.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			building_canvas.add_child(wall_block)
-			var btn := _make_room_button(i)
-			btn.position = Vector2(int(r.col) * CELL_W + CELL_GAP * 0.5, row_y + CELL_GAP * 0.5)
-			btn.size = Vector2(int(r.w) * CELL_W - CELL_GAP, CELL_H - CELL_GAP)
-			building_canvas.add_child(btn)
+			var rid := String(r.id)
+			if not next_room_cache.has(rid):
+				# Duvar çerçevesi: odanın TAM hücre alanını (CELL_GAP boşluğu
+				# dahil) kaplar, oda kartı bunun üstüne biraz içeriden oturur —
+				# geriye kalan ince boşlukta duvar bloğu dokusu görünür. Yan
+				# yana odalar bitişik hücrelerde olduğundan duvar alanları da
+				# bitişik oluyor ve kesintisiz tek duvar hissi veriyor
+				# (kullanıcı isteği).
+				var wall_block := TextureRect.new()
+				wall_block.texture = _tex("res://assets/ui/wall_block.svg")
+				wall_block.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+				wall_block.stretch_mode = TextureRect.STRETCH_TILE
+				wall_block.position = Vector2(int(r.col) * CELL_W, row_y)
+				wall_block.size = Vector2(int(r.w) * CELL_W, CELL_H)
+				wall_block.mouse_filter = Control.MOUSE_FILTER_IGNORE
+				building_canvas.add_child(wall_block)
+				var btn := _make_room_button(i)
+				btn.position = Vector2(int(r.col) * CELL_W + CELL_GAP * 0.5, row_y + CELL_GAP * 0.5)
+				btn.size = Vector2(int(r.w) * CELL_W - CELL_GAP, CELL_H - CELL_GAP)
+				building_canvas.add_child(btn)
+				next_room_cache[rid] = {"sig": _room_visual_signature(i), "button": btn, "wall": wall_block}
 			for cc in range(int(r.col), int(r.col) + int(r.w)):
 				occupied[cc] = true
 
@@ -1237,6 +1255,8 @@ func _rebuild_hotel() -> void:
 	else:
 		var p: Array = Game.quest_progress(q)
 		quest_hint.text = "Görev: %s (%d/%d)" % [q.name, mini(p[0], p[1]), p[1]]
+
+	_room_visual_cache = next_room_cache
 
 
 ## Açık ama boş bir hücre: HİÇBİR görsel kutu/çerçeve göstermez (kullanıcı
