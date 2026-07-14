@@ -126,6 +126,14 @@ var elevator_tex: TextureRect
 var _queue_count := 0
 var _elevator_state := "closed"  # closed / opening_half / open / closing_half
 var _elevator_timer := 0.0
+## Asansörün önünde GÖRÜNÜR biçimde bekleyen (henüz binmemiş) misafir
+## ikonları. _spawn_lobby_walker artık misafiri elev_x'e varır varmaz
+## soldurup silmiyor — proximity tetikleyicisiyle _queue_count'a yazıldığı
+## anda burada tutulup, kapı gerçekten açılıp (_boarding'e aktarılınca)
+## _board_waiting_guests() ile "biniyor" gibi kayboluyor. Eskiden misafir
+## kapı önünde beklerken görünmez olup kapının tepkisiz görünmesine yol
+## açabiliyordu ("asansör müşterinin yanında açılmıyor" şikâyeti).
+var _waiting_guest_icons: Array = []
 ## Yaya akışı iki bağımsız kanaldan yürür (bkz. _update_pedestrians):
 ## 1) "gelip geçen" yayalar — vardiyadan BAĞIMSIZ, seyrek/rastgele aralıkla
 ##    (kullanıcı isteği: "vardiya yokken de insanlar yürümeli, ara ara").
@@ -283,6 +291,10 @@ func _update_elevator(delta: float) -> void:
 			_elevator_state = "closed"
 			_elevator_timer = 0.0
 			_arrival_timer = 0.0
+			for gicon in _waiting_guest_icons:
+				if is_instance_valid(gicon):
+					gicon.queue_free()
+			_waiting_guest_icons.clear()
 			elevator_tex.texture = _tex(_elevator_texture_path())
 			# Vardiya bitti: odalardaki misafir görselleri hemen kalksın —
 			# bu rebuild olmadan doğal süre dolumunda (state_changed sinyali
@@ -318,6 +330,7 @@ func _update_elevator(delta: float) -> void:
 				_boarding = _queue_count
 				_queue_count = 0
 				elevator_tex.texture = _tex(_elevator_texture_path())
+				_board_waiting_guests()
 		"open":
 			if _elevator_timer >= 1.0:
 				_elevator_state = "closing_half"
@@ -342,6 +355,21 @@ func _elevator_texture_path() -> String:
 			return "res://assets/ui/elevator_open.png"
 		_:
 			return "res://assets/ui/elevator_closed.png"
+
+
+## Kapı tam açılıp kuyruktaki misafirler _boarding'e aktarılınca çağrılır:
+## asansörün önünde görünür şekilde bekleyen ikonlar (_waiting_guest_icons)
+## artık gerçekten "biniyor" — kısa bir sönümle kaybolur. Önceden misafir
+## elev_x'e varır varmaz (kapı henüz kapalıyken bile) hemen soluyordu; bu da
+## misafirin kapı önünde beklerken görünmez olup kapının "tepkisiz" görünmesi
+## hissini veriyordu.
+func _board_waiting_guests() -> void:
+	for gicon in _waiting_guest_icons:
+		if is_instance_valid(gicon):
+			var tw: Tween = gicon.create_tween()
+			tw.tween_property(gicon, "modulate:a", 0.0, 0.25)
+			tw.tween_callback(gicon.queue_free)
+	_waiting_guest_icons.clear()
 
 
 ## Kapı kapanışından ~1sn sonra binen misafirler "odalarına varır":
@@ -1973,13 +2001,12 @@ func _spawn_arriving_pedestrian() -> void:
 
 
 ## Kapıdan giren misafirin lobi içindeki yürüyüşü: giriş boşluğundan
-## resepsiyona/asansöre doğru yürür, asansörün önünde sönümlenir ve ancak
-## O ZAMAN asansör kuyruğuna (_queue_count) yazılır.
-## Kapıdan giren misafirin lobi içindeki yürüyüşü: giriş boşluğundan
 ## resepsiyona/asansöre doğru yürür. Konumu `tween_method` ile her karede
 ## izlenir; ELEVATOR_PROXIMITY_RADIUS içine girdiği AN (yürüyüş bitmeden,
 ## kapının tam önüne varır varmaz) asansör kuyruğuna (_queue_count) yazılır
 ## — sabit bir varış/bekleme süresi yerine gerçek konuma dayalı bir tetik.
+## Misafir bu noktada solmaz; kapı gerçekten açılıp bindiğinde
+## _board_waiting_guests() onu kaybettirir.
 func _spawn_lobby_walker() -> void:
 	if _walker_layer == null or not is_instance_valid(_walker_layer):
 		_inbound = maxi(0, _inbound - 1)
@@ -2008,9 +2035,9 @@ func _spawn_lobby_walker() -> void:
 			_inbound = maxi(0, _inbound - 1)
 			if Game.shift_active():
 				_queue_count += 1
-			var fade := gicon.create_tween()
-			fade.tween_property(gicon, "modulate:a", 0.0, 0.3)
-			fade.tween_callback(gicon.queue_free)
+				_waiting_guest_icons.append(gicon)
+			else:
+				gicon.queue_free()
 		, start_x, elev_x, 2.8).set_trans(Tween.TRANS_LINEAR)
 
 
