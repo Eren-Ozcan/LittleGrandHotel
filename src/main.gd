@@ -122,6 +122,14 @@ var elevator_tex: TextureRect
 var _queue_count := 0
 var _elevator_state := "closed"  # closed / opening_half / open / closing_half
 var _elevator_timer := 0.0
+## Kuyrukta misafir OLDUĞU SÜRECE artan ayrı sayaç — _elevator_timer kapının
+## en son kapanışından beri geçen süreyi tutar ve kapı uzun süre boşta
+## kapalı kaldıysa misafir varır varmaz yanıltıcı biçimde hemen dolabilir;
+## bu da tam tersi durumda ("asansör müşterinin yanında açılmıyor") misafirin
+## kapı önünde kaybolup kapının hâlâ ~9sn kapalı kalmasına yol açıyordu.
+## Bu sayaç yalnızca kuyruk doluyken sayar, böylece bekleme misafirin VARIŞ
+## anından itibaren ölçülür.
+var _queue_wait_timer := 0.0
 ## Yaya akışı iki bağımsız kanaldan yürür (bkz. _update_pedestrians):
 ## 1) "gelip geçen" yayalar — vardiyadan BAĞIMSIZ, seyrek/rastgele aralıkla
 ##    (kullanıcı isteği: "vardiya yokken de insanlar yürümeli, ara ara").
@@ -278,6 +286,7 @@ func _update_elevator(delta: float) -> void:
 			_arrived_guests = 0
 			_elevator_state = "closed"
 			_elevator_timer = 0.0
+			_queue_wait_timer = 0.0
 			_arrival_timer = 0.0
 			elevator_tex.texture = _tex(_elevator_texture_path())
 			# Vardiya bitti: odalardaki misafir görselleri hemen kalksın —
@@ -293,11 +302,22 @@ func _update_elevator(delta: float) -> void:
 	# edilince (aşağıda, _deliver_guests içinde) yenileniyor.
 	match _elevator_state:
 		"closed":
-			# "Sürekli açılıp kapanıyor" şikâyeti: kapalı durumda en az 9sn
-			# bekleme — kuyruk 3+ kişiye ulaşırsa (kalabalık) erken açılır.
-			if _queue_count > 0 and (_elevator_timer >= 9.0 or _queue_count >= 3):
+			# "Sürekli açılıp kapanıyor" şikâyetini çözmek için eklenen sabit
+			# 9sn'lik bekleme, kapının en son kapanışından beri geçen süreyi
+			# esas aldığından; misafir kapı yeni kapanmışken varırsa görseli
+			# kaybolduktan sonra kapı ~9sn daha açılmıyordu ("asansör
+			# müşterinin yanında açılmıyor" şikâyeti). Bunun yerine kuyruk
+			# doluyken sayan _queue_wait_timer kullanılır: misafir VARIŞINDAN
+			# itibaren en fazla 2.5sn beklenir — kalabalıkta (3+) yine erken
+			# açılır, tekli/ikili varışta da makul sürede yanıt verir.
+			if _queue_count > 0:
+				_queue_wait_timer += delta
+			else:
+				_queue_wait_timer = 0.0
+			if _queue_count > 0 and (_queue_wait_timer >= 2.5 or _queue_count >= 3):
 				_elevator_state = "opening_half"
 				_elevator_timer = 0.0
+				_queue_wait_timer = 0.0
 				elevator_tex.texture = _tex(_elevator_texture_path())
 		"opening_half":
 			if _elevator_timer >= 0.35:
