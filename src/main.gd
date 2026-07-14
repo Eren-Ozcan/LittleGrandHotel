@@ -79,6 +79,10 @@ const GRASS_H := 22.0
 ## Lobinin sağ ucundaki giriş boşluğu: duvar burada kesilir, misafirler
 ## vardiya açılışında bu noktaya doğru yürür (bkz. _guest_walk_in).
 const DOOR_W := 60.0
+## Asansör "yakınlık" tetikleyicisi: lobi yürüyüşü sırasında misafirin gerçek
+## x konumu asansör merkezine (elev_x) bu mesafeden daha çok yaklaşınca kapı
+## tepki verir — sabit bir bekleme süresi yerine (bkz. _spawn_lobby_walker).
+const ELEVATOR_PROXIMITY_RADIUS := 28.0
 ## ZOOM_MIN artık mutlak taban değil, yalnızca güvenlik altsınırı: gerçek
 ## alt sınır _effective_zoom_min()'de bina boyutuna göre dinamik hesaplanır
 ## (bina viewport'u tam doldurduğu noktanın ötesine geçilemez — "minicik
@@ -122,14 +126,6 @@ var elevator_tex: TextureRect
 var _queue_count := 0
 var _elevator_state := "closed"  # closed / opening_half / open / closing_half
 var _elevator_timer := 0.0
-## Kuyrukta misafir OLDUĞU SÜRECE artan ayrı sayaç — _elevator_timer kapının
-## en son kapanışından beri geçen süreyi tutar ve kapı uzun süre boşta
-## kapalı kaldıysa misafir varır varmaz yanıltıcı biçimde hemen dolabilir;
-## bu da tam tersi durumda ("asansör müşterinin yanında açılmıyor") misafirin
-## kapı önünde kaybolup kapının hâlâ ~9sn kapalı kalmasına yol açıyordu.
-## Bu sayaç yalnızca kuyruk doluyken sayar, böylece bekleme misafirin VARIŞ
-## anından itibaren ölçülür.
-var _queue_wait_timer := 0.0
 ## Yaya akışı iki bağımsız kanaldan yürür (bkz. _update_pedestrians):
 ## 1) "gelip geçen" yayalar — vardiyadan BAĞIMSIZ, seyrek/rastgele aralıkla
 ##    (kullanıcı isteği: "vardiya yokken de insanlar yürümeli, ara ara").
@@ -286,7 +282,6 @@ func _update_elevator(delta: float) -> void:
 			_arrived_guests = 0
 			_elevator_state = "closed"
 			_elevator_timer = 0.0
-			_queue_wait_timer = 0.0
 			_arrival_timer = 0.0
 			elevator_tex.texture = _tex(_elevator_texture_path())
 			# Vardiya bitti: odalardaki misafir görselleri hemen kalksın —
@@ -302,22 +297,17 @@ func _update_elevator(delta: float) -> void:
 	# edilince (aşağıda, _deliver_guests içinde) yenileniyor.
 	match _elevator_state:
 		"closed":
-			# "Sürekli açılıp kapanıyor" şikâyetini çözmek için eklenen sabit
-			# 9sn'lik bekleme, kapının en son kapanışından beri geçen süreyi
-			# esas aldığından; misafir kapı yeni kapanmışken varırsa görseli
-			# kaybolduktan sonra kapı ~9sn daha açılmıyordu ("asansör
-			# müşterinin yanında açılmıyor" şikâyeti). Bunun yerine kuyruk
-			# doluyken sayan _queue_wait_timer kullanılır: misafir VARIŞINDAN
-			# itibaren en fazla 2.5sn beklenir — kalabalıkta (3+) yine erken
-			# açılır, tekli/ikili varışta da makul sürede yanıt verir.
+			# Artık sabit bir bekleme yok: _queue_count yalnızca bir misafir
+			# lobi yürüyüşünde FİİLEN elev_x'e ELEVATOR_PROXIMITY_RADIUS kadar
+			# yaklaşınca artıyor (bkz. _spawn_lobby_walker) — yani kapı,
+			# misafir gerçekten önündeyken açılıyor, keyfi bir süre
+			# beklemiyor. Eski tasarımda kapı en son kapanışından beri geçen
+			# süreyi sayardı; misafir kapı yeni kapanmışken varırsa görseli
+			# kaybolup kapı hâlâ açılmıyordu ("asansör müşterinin yanında
+			# açılmıyor" şikâyeti) — bu artık yapısal olarak imkânsız.
 			if _queue_count > 0:
-				_queue_wait_timer += delta
-			else:
-				_queue_wait_timer = 0.0
-			if _queue_count > 0 and (_queue_wait_timer >= 2.5 or _queue_count >= 3):
 				_elevator_state = "opening_half"
 				_elevator_timer = 0.0
-				_queue_wait_timer = 0.0
 				elevator_tex.texture = _tex(_elevator_texture_path())
 		"opening_half":
 			if _elevator_timer >= 0.35:
@@ -1985,6 +1975,11 @@ func _spawn_arriving_pedestrian() -> void:
 ## Kapıdan giren misafirin lobi içindeki yürüyüşü: giriş boşluğundan
 ## resepsiyona/asansöre doğru yürür, asansörün önünde sönümlenir ve ancak
 ## O ZAMAN asansör kuyruğuna (_queue_count) yazılır.
+## Kapıdan giren misafirin lobi içindeki yürüyüşü: giriş boşluğundan
+## resepsiyona/asansöre doğru yürür. Konumu `tween_method` ile her karede
+## izlenir; ELEVATOR_PROXIMITY_RADIUS içine girdiği AN (yürüyüş bitmeden,
+## kapının tam önüne varır varmaz) asansör kuyruğuna (_queue_count) yazılır
+## — sabit bir varış/bekleme süresi yerine gerçek konuma dayalı bir tetik.
 func _spawn_lobby_walker() -> void:
 	if _walker_layer == null or not is_instance_valid(_walker_layer):
 		_inbound = maxi(0, _inbound - 1)
@@ -1994,21 +1989,29 @@ func _spawn_lobby_walker() -> void:
 	var gicon := _icon("res://assets/guests/guest_%s.svg" % GUEST_TYPES[randi() % GUEST_TYPES.size()], 36)
 	gicon.pivot_offset = Vector2(18, 36)
 	# Lobi zemininde: ikon tabanı lobinin taban şeridine otursun.
-	gicon.position = Vector2(canvas_w - DOOR_W - 10.0, lobby_y + LOBBY_H - 50.0)
+	var start_x := canvas_w - DOOR_W - 10.0
+	gicon.position = Vector2(start_x, lobby_y + LOBBY_H - 50.0)
 	_walker_layer.add_child(gicon)
 	_animate_guest(gicon, randi() % GUEST_TYPES.size(), true)
 	# Asansörün tuval-yerel merkezi: lobi paneli CELL_GAP/2'de başlar,
 	# genişliği canvas_w - DOOR_W - CELL_GAP; asansör lobinin ~%49'unda
 	# (bkz. elevator_tex anchor'ları).
 	var elev_x := CELL_GAP * 0.5 + (canvas_w - DOOR_W - CELL_GAP) * 0.49 - 18.0
+	var triggered := false
 	var tw := gicon.create_tween()
-	tw.tween_property(gicon, "position:x", elev_x, 2.8).set_trans(Tween.TRANS_LINEAR)
-	tw.tween_property(gicon, "modulate:a", 0.0, 0.3)
-	tw.tween_callback(func():
-		gicon.queue_free()
-		_inbound = maxi(0, _inbound - 1)
-		if Game.shift_active():
-			_queue_count += 1)
+	tw.tween_method(func(x: float):
+		if not is_instance_valid(gicon):
+			return
+		gicon.position.x = x
+		if not triggered and absf(x - elev_x) <= ELEVATOR_PROXIMITY_RADIUS:
+			triggered = true
+			_inbound = maxi(0, _inbound - 1)
+			if Game.shift_active():
+				_queue_count += 1
+			var fade := gicon.create_tween()
+			fade.tween_property(gicon, "modulate:a", 0.0, 0.3)
+			fade.tween_callback(gicon.queue_free)
+		, start_x, elev_x, 2.8).set_trans(Tween.TRANS_LINEAR)
 
 
 ## Vardiya açılış sahnesi: küçük bir karşılama grubu soldan kaldırım boyunca
