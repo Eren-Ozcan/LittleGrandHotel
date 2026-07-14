@@ -212,6 +212,16 @@ var _walker: Control = null
 var _walker_timer := 0.0
 var _toast_timer := 0.0
 var _tex_cache: Dictionary = {}
+## Oda id'sine göre önceki rebuild'de üretilen görsel imza + düğüm çifti
+## ({sig, button, wall}). _rebuild_hotel() artık HER odayı sıfırdan
+## kurmuyor: bir odanın görsel imzası (bkz. _room_visual_signature) bir
+## önceki rebuild'dekiyle aynıysa, o odanın Button/duvar düğümleri teardown
+## sırasında silinmeden AYNEN korunuyor. 48 odalık gerçek üst sınırda tek
+## bir "collect"/"quest tamamlandı" gibi odaları hiç etkilemeyen bir olay,
+## artık 48 odanın hepsini değil, hiçbirini yeniden kurmuyor — asıl maliyet
+## (Button + çoklu TextureRect + tween + sinyal kurulumu, oda başına) yalnızca
+## GERÇEKTEN değişen odalar için ödeniyor (bkz. tests/perf_test.gd bench 1).
+var _room_visual_cache: Dictionary = {}
 var _sfx_players: Dictionary = {}
 var music_player: AudioStreamPlayer
 
@@ -1357,6 +1367,42 @@ func _on_viewport_gui_input(event: InputEvent) -> void:
 		_canvas_pan = _pan_start_canvas_pos + (event.position - _pan_drag_start)
 		_clamp_pan()
 		_apply_canvas_transform()
+
+
+## _make_room_button(idx)'in ÜRETECEĞİ görseli belirleyen her şeyin anlık
+## anlık "imzası" — iki rebuild arasında bu imza aynıysa (Dictionary == ile
+## karşılaştırılır), o odanın düğümleri yeniden kurulmadan aynen korunur.
+## Ham değerler yerine (ör. Game.coins, ham _arrived_guests sayısı) yalnızca
+## SONUÇ booleanları tutulur (guest_visible, show_badge, ...) — aksi halde
+## her coin/misafir değişikliğinde TÜM odaların imzası değişir ve önbellek
+## hiçbir rebuild'de işe yaramazdı.
+func _room_visual_signature(idx: int) -> Dictionary:
+	var room: Dictionary = Game.rooms[idx]
+	var d: Dictionary = Game.room_def(room.type)
+	var cat: String = d.category
+	var is_dirty: bool = cat == "guest" and room.dirty
+	var is_infested: bool = is_dirty and Game.room_infested(room)
+	var shift_active := Game.shift_active()
+	var guest_visible := false
+	var show_badge := false
+	if cat == "guest":
+		var guest_order := 0
+		for j in range(idx):
+			if String(Game.room_def(Game.rooms[j].type).get("category", "")) == "guest":
+				guest_order += 1
+		guest_visible = shift_active and not is_dirty and guest_order < _arrived_guests
+		if room.items.size() == 0 and not is_dirty:
+			var cheapest := Game.cheapest_item_price()
+			show_badge = cheapest > 0 and Game.coins >= cheapest
+	return {
+		"floor": int(room.floor), "col": int(room.col), "w": int(room.w),
+		"type": String(room.type), "dirty": is_dirty, "infested": is_infested,
+		"items": room.items.duplicate(),
+		"bed": String(room.get("base", {}).get("bed", "bed_basic")),
+		"guest_visible": guest_visible, "show_badge": show_badge,
+		"show_capacity": cat == "facility" and shift_active and _arrived_guests > 0,
+		"show_maid": room.type == "housekeeping" and shift_active,
+	}
 
 
 func _make_room_button(idx: int) -> Button:
