@@ -383,6 +383,16 @@ func _initialize() -> void:
 	check(g8.unlocked_achievements.size() == g.unlocked_achievements.size(), "içe aktarılan başarımlar eşleşti")
 	check(not g8.import_save_code("bu-gecerli-bir-kod-degil"), "bozuk kod reddedilir")
 	check(not g8.import_save_code(""), "boş kod reddedilir")
+
+	# 18b) Güvenlik: tip uyuşmayan "rooms" içeren bir kod (ör. başka bir
+	# kaynaktan yapıştırılmış bozuk/kötü niyetli kayıt kodu) main.gd'deki
+	# "var r: Dictionary = Game.rooms[i]" tipli erişimlerde çökmeye yol
+	# açmadan reddedilmeli — mevcut kaydın üzerine de yazılmamalı.
+	var g8_coins_before: int = g8.coins
+	var malicious := {"save_version": g8.SAVE_VERSION, "coins": 999999, "rooms": ["not-a-room", 42]}
+	check(not g8.import_save_code(Marshalls.utf8_to_base64(JSON.stringify(malicious))),
+		"tip uyuşmayan oda listesi içeren kod reddedilir")
+	check(g8.coins == g8_coins_before, "reddedilen içe aktarma mevcut kaydı bozmadı")
 	g8.free()
 
 	# 19) Ekonomi güvenlik ağı: açgözlü harcama oyuncuyu vardiya başlatamaz
