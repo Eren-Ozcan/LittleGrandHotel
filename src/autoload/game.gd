@@ -1367,6 +1367,43 @@ func import_save_code(code: String) -> bool:
 	return _load_from_dict(parsed)
 
 
+## rooms/shift_history gibi alanların Dictionary-tipli alanlara (main.gd'de
+## "var r: Dictionary = Game.rooms[i]" gibi) tip hatası vermeden aktarılabileceğini
+## doğrular. import_save_code() rastgele bir kaynaktan (forum/Discord/vb.)
+## yapıştırılan, tamamen güvenilmeyen bir metni burada JSON'a çevirip doğrudan
+## oyun durumuna yazar — bu doğrulama olmadan bozuk/kötü niyetli bir kod önce
+## mevcut kaydın üzerine yazılır (bkz. main.gd import akışı), sonra render
+## sırasında çökmeye yol açar ve kayıt kurtarılamaz şekilde bozulur.
+func _validate_save_dict(data: Dictionary) -> bool:
+	var rooms = data.get("rooms", [])
+	if typeof(rooms) != TYPE_ARRAY:
+		return false
+	for r in rooms:
+		if typeof(r) != TYPE_DICTIONARY:
+			return false
+		if typeof(r.get("type")) != TYPE_STRING:
+			return false
+		if typeof(r.get("items", [])) != TYPE_ARRAY:
+			return false
+		for num_field in ["floor", "col", "w"]:
+			var val = r.get(num_field)
+			if val != null and typeof(val) != TYPE_FLOAT and typeof(val) != TYPE_INT:
+				return false
+	var floor_blocks = data.get("floor_blocks", [])
+	if typeof(floor_blocks) != TYPE_ARRAY:
+		return false
+	for fb in floor_blocks:
+		if typeof(fb) != TYPE_FLOAT and typeof(fb) != TYPE_INT:
+			return false
+	var shift_history = data.get("shift_history", [])
+	if typeof(shift_history) != TYPE_ARRAY:
+		return false
+	for h in shift_history:
+		if typeof(h) != TYPE_DICTIONARY:
+			return false
+	return true
+
+
 func _load_from_dict(parsed) -> bool:
 	if typeof(parsed) != TYPE_DICTIONARY:
 		return false
@@ -1374,6 +1411,8 @@ func _load_from_dict(parsed) -> bool:
 	if v < MIN_SAVE_VERSION or v > SAVE_VERSION:
 		return false
 	parsed = _migrate_save(parsed)
+	if not _validate_save_dict(parsed):
+		return false
 	coins = int(parsed.get("coins", 0))
 	gems = int(parsed.get("gems", 0))
 	xp = int(parsed.get("xp", 0))
