@@ -35,6 +35,17 @@ const PALETTE := {
 ## 5 temel + 4 ekstra varyant) — tek tip 3'lü rotasyon yerine daha çeşitli.
 const GUEST_TYPES := ["a", "b", "c", "d_elder", "e_couple", "f_business", "g_kid"]
 
+## Açılış tutorial'ı: yalnızca yepyeni bir kayıtta (Game.tutorial_seen == false)
+## sırayla gösterilen basit popup dizisi (bkz. _maybe_show_tutorial).
+const TUTORIAL_STEPS := [
+	{"title": "Hoş Geldin!", "text": "Little Grand Hotel'e hoş geldin! Küçük bir oteli adım adım büyük bir imparatorluğa dönüştüreceksin. Hadi kısaca göz atalım.", "btn": "İleri"},
+	{"title": "1. Vardiyayı Başlat", "text": "Alt bardaki saat ikonuna dokunup bir vardiya başlat — otel yalnızca vardiya sırasında çalışır ve gelir üretir.", "btn": "İleri"},
+	{"title": "2. Misafirleri Karşıla", "text": "Vardiya başlayınca misafirler kapıdan girip asansörle odalarına çıkar. Odalar doldukça gelir birikmeye başlar.", "btn": "İleri"},
+	{"title": "3. Kasadan Topla", "text": "Biriken geliri almak için üstteki coin sayacına dokun. Toplamayı unutma — birikim vardiya bitene kadar kasada bekler.", "btn": "İleri"},
+	{"title": "4. Odaları Dekore Et", "text": "Bir odaya dokunup eşya satın al — Stil Puanı arttıkça oda kademe atlar, otelinin yıldızı yükselir.", "btn": "İleri"},
+	{"title": "5. Görevleri Takip Et", "text": "Alt bardaki görev ikonundan aktif görevini görebilirsin — her görev coin ve elmas ödülü verir. Şimdi kapıları aç!", "btn": "Başla!"},
+]
+
 
 ## Dekor eşyalarının oda kartı içindeki sabit bölgeleri (fractional
 ## anchor konumları, 0..1) — "avizenin olması gerektiği yerde durması gibi"
@@ -249,14 +260,64 @@ func _ready() -> void:
 	Game.state_changed.connect(_refresh)
 	Game.quest_completed.connect(_on_quest_completed)
 	Game.achievement_unlocked.connect(_on_achievement_unlocked)
+	IAP.purchase_result.connect(_on_purchase_restored)
+	Ads.rewarded_ad_result.connect(func(success: bool):
+		if not success:
+			_show_toast("Reklam şu an hazır değil, birazdan tekrar dene."))
 	Game.leveled_up.connect(func(lv):
 		_play("level")
 		_show_toast("Seviye atladın! Seviye %d (+%d elmas)" % [lv, int(Game.eco.levelup_gems)]))
 	_refresh()
+	_maybe_show_tutorial()
+
+
+## Uygulama açılışında sırayla kontrol edilen popup zinciri: önce (yepyeni
+## kayıtta) tutorial, sonra günlük ödül, sonra "sen yokken" özeti.
+func _maybe_show_tutorial() -> void:
+	if Game.tutorial_seen:
+		_after_tutorial()
+		return
+	_show_tutorial_step(0)
+
+
+func _after_tutorial() -> void:
 	if Game.daily_reward_available():
 		_show_daily_reward_popup(_maybe_show_offline_popup)
 	else:
 		_maybe_show_offline_popup()
+
+
+func _show_tutorial_step(step: int) -> void:
+	if step >= TUTORIAL_STEPS.size():
+		Game.tutorial_seen = true
+		Game.save_game()
+		_after_tutorial()
+		return
+	var s: Dictionary = TUTORIAL_STEPS[step]
+	_show_simple_modal(String(s.title), String(s.text), String(s.btn),
+		func(): _show_tutorial_step(step + 1),
+		func():
+			# Dışına tıklayarak/ESC ile atlandı — tüm tutorial'ı görülmüş say.
+			Game.tutorial_seen = true
+			Game.save_game()
+			_after_tutorial())
+
+
+## Gerçek mağazada zaten sahip olunan satın almalar bağlantı kurulunca otomatik
+## geri gelir (cihaz değişimi/yeniden kurulum) — burada sessizce uygulanır; aktif
+## satın alma akışının kendi buton callback'i ayrıca toast gösterir.
+func _on_purchase_restored(product_id: String, success: bool) -> void:
+	if not success:
+		return
+	match product_id:
+		IAP.PRODUCT_REMOVE_ADS:
+			if not Game.remove_ads:
+				Game.remove_ads = true
+				Game.save_game()
+		IAP.PRODUCT_INCOME_2X:
+			if Game.permanent_income_mult <= 1.0:
+				Game.permanent_income_mult = 2.0
+				Game.save_game()
 
 
 func _maybe_show_offline_popup() -> void:
@@ -2194,6 +2255,57 @@ func _cycle_speed() -> void:
 
 # --- Popuplar ----------------------------------------------------------
 
+## Oyunun kendi görsel diliyle (yuvarlak kart, PALETTE renkleri, _panel/_label/
+## _button) tek eylem butonlu basit bir modal — açılış tutorial'ı, günlük ödül
+## ve "sen yokken" popup'ları için ortak. Godot'un varsayılan AcceptDialog'u
+## (native tema, her adımda içeriğe göre değişen boyut/konum) hem oyunun geri
+## kalanıyla görsel olarak uyuşmuyordu hem de art arda açılan popup'larda
+## "kapanmadı" hissi veriyordu — bunun yerine her zaman aynı sabit panelde,
+## dışına tıklayınca/ESC ile de kapanabilen tek bir Control ağacı kullanılır.
+## on_action: eylem butonuna basılınca çağrılır. on_dismiss: dışına tıklayarak/
+## ESC ile kapatılırsa çağrılır (verilmezse hiçbir şey yapılmaz).
+func _show_simple_modal(title: String, text: String, action_text: String,
+		on_action: Callable, on_dismiss: Callable = Callable()) -> void:
+	var dim := ColorRect.new()
+	dim.color = Color(0.2, 0.15, 0.05, 0.5)
+	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dim.z_index = 90
+	var center := CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	dim.add_child(center)
+	var panel := _panel(PALETTE.cream, PALETTE.facade_line)
+	panel.custom_minimum_size = Vector2(420, 0)
+	center.add_child(panel)
+	var pv := VBoxContainer.new()
+	pv.add_theme_constant_override("separation", 14)
+	panel.add_child(pv)
+	pv.add_child(_label(title, 20, PALETTE.wood_dark))
+	var body := _label(text, 15, PALETTE.text)
+	body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	pv.add_child(body)
+	var action_b := _button(action_text, 16, PALETTE.green_deep, PALETTE.cream_text)
+	action_b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pv.add_child(action_b)
+	var closed := false
+	var do_close := func():
+		if closed:
+			return
+		closed = true
+		dim.queue_free()
+	action_b.pressed.connect(func():
+		do_close.call()
+		if on_action.is_valid():
+			on_action.call())
+	dim.gui_input.connect(func(ev):
+		if ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT:
+			do_close.call()
+			if on_dismiss.is_valid():
+				on_dismiss.call())
+	add_child(dim)
+	_play("tap")
+
+
 func _open_popup(title: String, builder: Callable) -> void:
 	_play("tap")
 	popup_title.text = title
@@ -2670,8 +2782,6 @@ func _show_toast(msg: String) -> void:
 
 
 func _show_offline_popup(amount: int, renew_count: int = 0, renew_spent: int = 0) -> void:
-	var dlg := AcceptDialog.new()
-	dlg.title = "Hoş geldin!"
 	var text := ""
 	if amount > 0:
 		text += "Sen yokken otelin çalıştı ve %s coin birikti.\nKasadan toplamayı unutma!" % _fmt(amount)
@@ -2679,15 +2789,13 @@ func _show_offline_popup(amount: int, renew_count: int = 0, renew_spent: int = 0
 		if not text.is_empty():
 			text += "\n\n"
 		text += "Vardiyan bitince otel boş durmadı: %d kez otomatik yenilendi (personel maliyeti %s coin)." % [renew_count, _fmt(renew_spent)]
-	dlg.dialog_text = text
-	dlg.ok_button_text = "Harika"
-	add_child(dlg)
-	dlg.popup_centered()
+	_show_simple_modal("Hoş geldin!", text, "Harika", func(): pass)
 
 
 ## Uygulama açılışında (bugün henüz alınmadıysa) otomatik gösterilen günlük
 ## ödül popup'ı. on_closed, popup ne şekilde kapanırsa kapansın (Al ya da
-## X/ESC) çağrılır — böylece "Hoş geldin" popup'ı üst üste binmeden sırayla açılır.
+## dışına tıklama/ESC) çağrılır — böylece "Hoş geldin" popup'ı üst üste
+## binmeden sırayla açılır.
 func _show_daily_reward_popup(on_closed: Callable = Callable()) -> void:
 	var streak: int = Game.daily_next_streak()
 	var cycle: Array = Game.eco.get("daily_rewards", [])
@@ -2699,23 +2807,15 @@ func _show_daily_reward_popup(on_closed: Callable = Callable()) -> void:
 	var reward_text := "%s coin" % _fmt(int(reward.get("coins", 0)))
 	if int(reward.get("gems", 0)) > 0:
 		reward_text += " + %d elmas" % int(reward.gems)
-	var dlg := AcceptDialog.new()
-	dlg.title = "Günlük Ödül"
-	dlg.dialog_text = "%d. gün serisi!\nÖdülün: %s" % [streak, reward_text]
-	dlg.ok_button_text = "Al"
-	dlg.confirmed.connect(func():
-		var granted := Game.claim_daily_reward()
-		if not granted.is_empty():
-			_play("quest")
-			_show_toast("Günlük ödül alındı — gün %d serisi!" % Game.daily_streak))
-	dlg.visibility_changed.connect(func():
-		if dlg.visible:
-			return
-		dlg.queue_free()
-		if on_closed.is_valid():
-			on_closed.call())
-	add_child(dlg)
-	dlg.popup_centered()
+	_show_simple_modal("Günlük Ödül", "%d. gün serisi!\nÖdülün: %s" % [streak, reward_text], "Al",
+		func():
+			var granted := Game.claim_daily_reward()
+			if not granted.is_empty():
+				_play("quest")
+				_show_toast("Günlük ödül alındı — gün %d serisi!" % Game.daily_streak)
+			if on_closed.is_valid():
+				on_closed.call(),
+		on_closed)
 
 
 func _fmt_hms(game_hours: float) -> String:

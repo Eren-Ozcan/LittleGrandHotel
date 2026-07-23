@@ -9,7 +9,7 @@ signal achievement_unlocked(achievement: Dictionary)
 signal leveled_up(new_level: int)
 
 const SAVE_PATH := "user://save.json"
-const SAVE_VERSION := 11
+const SAVE_VERSION := 12
 ## Göçle yükseltilebilen en eski kayıt sürümü
 const MIN_SAVE_VERSION := 2
 ## v11 öncesi (sabit "N kat × 4 slot" ızgarası) her katın açık genişliği —
@@ -79,6 +79,10 @@ var boost_mult: float = 1.0
 ## yok, bu yüzden yerel kayıt tek doğruluk kaynağı).
 var remove_ads: bool = false
 var permanent_income_mult: float = 1.0
+
+## Açılış tutorial'ı gösterildi mi (yalnızca yepyeni bir kayıtta false başlar —
+## bkz. main.gd _maybe_show_tutorial). Eski kayıtlar göçte true alır.
+var tutorial_seen: bool = false
 
 ## Uygulama açılışında sen-yokken kazanılan gelir (UI popup için; UI okur ve sıfırlar).
 var offline_earned: int = 0
@@ -231,6 +235,7 @@ func new_game() -> void:
 	staff_tier = 0
 	boost_end_unix = 0.0
 	boost_mult = 1.0
+	tutorial_seen = false
 	state_changed.emit()
 
 
@@ -1220,6 +1225,7 @@ func _save_dict() -> Dictionary:
 		"boost_mult": boost_mult,
 		"remove_ads": remove_ads,
 		"permanent_income_mult": permanent_income_mult,
+		"tutorial_seen": tutorial_seen,
 		"floor_blocks": floor_blocks,
 		"next_room_id": _next_room_id,
 	}
@@ -1338,6 +1344,12 @@ func _migrate_save(data: Dictionary) -> Dictionary:
 					data["floor_blocks"] = fb
 				if not data.has("next_room_id"):
 					data["next_room_id"] = old_rooms.size()
+			11:
+				# v12: açılış tutorial'ı eklendi. Mevcut oyuncular zaten
+				# oteli tanıyor sayılır — tutorial'ı görmemiş gibi yeniden
+				# gösterilmesin.
+				if not data.has("tutorial_seen"):
+					data["tutorial_seen"] = true
 		v += 1
 		data["save_version"] = v
 	return data
@@ -1447,6 +1459,7 @@ func _load_from_dict(parsed) -> bool:
 	boost_mult = float(parsed.get("boost_mult", 1.0))
 	remove_ads = bool(parsed.get("remove_ads", false))
 	permanent_income_mult = float(parsed.get("permanent_income_mult", 1.0))
+	tutorial_seen = bool(parsed.get("tutorial_seen", true))
 	# Çevrimdışı kazanç tavanı simulate_to() içinde uygulanır (bkz. orada).
 	var pending_before := pending_income
 	auto_renew_count = 0
