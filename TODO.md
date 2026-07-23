@@ -336,6 +336,41 @@ olsun, orada düzenleme/ekleme vs olsun" (bkz. Gamezebo Hotel City rehberi).
       `place_target_col`) tamamen silindi — `Game.place_room`/`can_place_room`
       için önceden hiç birim testi yoktu, `tests/sim_check.gd`'ye eklendi.
 
+### Google Play yayın hazırlığı (Temmuz 2026)
+- [x] Gerçek Google Play Billing + AdMob (Poing Studios) eklentileri `addons/`
+      altına entegre edildi; `src/autoload/ads.gd`/`iap.gd` gerçek Android
+      derlemesinde bu eklentileri kullanıyor, masaüstü/editör/headless testte
+      (`tests/sim_check.gd`) ise eski mock (anında başarı) davranışı korunuyor
+      (`Engine.has_singleton(...)` guard'ı) — mevcut testler değişmeden geçiyor.
+- [x] Satın alma geri yükleme (`IAP.purchase_result` → `main.gd`) ve reklam
+      hazır değilken toast eklendi.
+- [x] `export_presets.cfg`: gradle build açıldı, min/target SDK 24/36,
+      `gradle_build/export_format=1` (AAB — Play Store zorunluluğu), `icon.svg`'den
+      üretilen adaptive launcher ikonları (`android/icons/`, bkz. `tools/gen_icons.gd`).
+- [x] `android/build/` (Godot'un vendored gradle şablonu) kuruldu — CLI bayrağı
+      `--install-android-build-template` bu ortamda headless modda donduğu için
+      elle `.build_version` işaretiyle kuruldu; `.gitignore` yalnızca üretilen
+      alt yolları (`build/`, `.gradle/`, `libs/` [~200MB motor kütüphaneleri],
+      kopyalanan varlıklar, üretilen ikon kaynakları) hariç tutacak şekilde
+      düzeltildi — `android/build/` altındaki gerçek şablon kaynağı commit edilir.
+- [x] Release keystore oluşturuldu (`android/upload-keystore.jks`), imzalı AAB
+      üretildi ve doğrulandı (`jarsigner -verify`, `aapt2 dump badging/xmltree` ile
+      manifest/izin/plugin entegrasyonu teyit edildi).
+- [ ] **Kullanıcının kendisinin yapması gereken**: Play Console hesabı (~$25),
+      AdMob hesabı + gerçek App ID/ödüllü reklam birimi ID'si (şu an Google test
+      ID'leri kullanılıyor, `ads.gd`'de değiştirilmeli), Play Console'da
+      `remove_ads`/`income_2x` in-app product tanımı, Play App Signing kaydı,
+      gizlilik politikası + mağaza listeleme içerikleri.
+
+### Açılış tutorial'ı + popup yenileme (Temmuz 2026)
+- [x] İlk açılışta (yepyeni kayıtta) 6 adımlık basit popup dizisi eklendi
+      (`Game.tutorial_seen`, kayıt v11→v12 göçü); Ayarlar → Kaydı Sıfırla ile
+      tekrar tetiklenebilir.
+- [x] Günlük ödül, "Hoş geldin" (çevrimdışı kazanç) ve tutorial popup'ları
+      Godot'un native `AcceptDialog`'undan (oyunun geri kalanıyla uyuşmayan
+      görünüm, zincirleme açılışlarda "kapanmıyor" hissi) oyunun kendi
+      `_panel`/`_label`/`_button` diline (`_show_simple_modal()`) taşındı.
+
 ## Yapılacaklar
 
 ### Orta vade
