@@ -4,10 +4,26 @@
 # Motor ikili dosyaları (repo'ya girmez, tools/ altına indirilir)
 tools/
 
-# Yerel dışa aktarım çıktıları
-build/
+# Yerel dışa aktarım çıktıları (yalnızca kök build/ — android/build/ Godot'un
+# gradle şablonudur, commit edilmesi gerekir)
+/build/
 export_presets.cfg.local
 
 # Android imzalama anahtarı (yerelde üretilir, bkz. README "Android dışa aktarma")
 android/debug.keystore
 android/*.jks
+android/RELEASE_KEYSTORE_SECRETS.txt
+
+# android/build/ Godot'un gradle şablonudur (commit edilir — bkz. README), ama
+# aşağıdakiler her export'ta yeniden üretilir, commit edilmemeli:
+android/build/build/
+android/build/.gradle/
+android/build/*/build/
+# Önceden derlenmiş motor kütüphaneleri (~100-200MB, GitHub dosya boyutu
+# limitini aşar) — "Install Android Build Template" ile yeniden iner.
+android/build/libs/
+# Export sırasında proje varlıklarından/PCK'dan kopyalanan içerik.
+android/build/assetPackInstallTime/src/main/assets/
+# launcher_icons ayarından export'ta üretilen Android ikon kaynakları.
+android/build/res/mipmap*/
+android/build/res/drawable/
