@@ -8,7 +8,7 @@ stiliyle biçimlendir.
 
 Son güncelleme: 24 Temmuz 2026
 
-Little Grand Hotel ("uygulama"), Eren Özcan tarafından geliştirilen ücretsiz
+Little Grand Hotel ("uygulama"), Yilk Games tarafından geliştirilen ücretsiz
 bir otel işletme/idle oyunudur. Bu belge, uygulamanın hangi verileri
 işlediğini açıklar.
 
@@ -54,4 +54,4 @@ ayarlarınızı kullanabilirsiniz.
 
 ## 5. İletişim
 
-Sorularınız için: orhan.ozcan41@gmail.com
+Sorularınız için: yilkgamesstudio@gmail.com
