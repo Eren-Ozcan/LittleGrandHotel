@@ -8,6 +8,10 @@
 
 config_version=5
 
+[admob]
+
+general/android/app_id="ca-app-pub-9709993577664180~6521383725"
+
 [application]
 
 config/name="Little Grand Hotel"

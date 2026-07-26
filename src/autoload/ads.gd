@@ -7,10 +7,7 @@ extends Node
 ## `tests/sim_check.gd` de dahil) mock davranış korunur: her yerde anında "izlendi"
 ## sayar, böylece geliştirme/test akışı reklam beklemeden çalışmaya devam eder.
 ##
-## Yayın öncesi TODO: _REWARDED_AD_UNIT_ID şu an Google'ın herkese açık test ID'si —
-## kendi AdMob hesabınızdan alınan gerçek ödüllü reklam birimi ID'siyle değiştirin.
-## Uygulama Kimliği (App ID) `admob/general/android/app_id` proje ayarında tutuluyor
-## (varsayılan yine Google test App ID) — gerçek hesap kurulunca orada güncelleyin.
+## Uygulama Kimliği (App ID) `admob/general/android/app_id` proje ayarında tutuluyor.
 ##
 ## Kasıtlı olarak Game autoload'ına dokunmaz (bkz. iap.gd) — reklam gösterip
 ## göstermeme kararını (örn. "reklamlar kaldırıldı mı") çağıran verir.
@@ -18,7 +15,8 @@ extends Node
 signal rewarded_ad_result(success: bool)
 
 const _REWARDED_SINGLETON := "PoingGodotAdMobRewardedAd"
-const _REWARDED_AD_UNIT_ID := "ca-app-pub-3940256099942544/5224354917"  # Google test ID
+const _REWARDED_AD_UNIT_ID := "ca-app-pub-9709993577664180/1269057042"
+const _INTERSTITIAL_AD_UNIT_ID := "ca-app-pub-9709993577664180/5208302053"
 
 var _rewarded_ad: RewardedAd
 var _loading := false
