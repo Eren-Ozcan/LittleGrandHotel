@@ -20,27 +20,25 @@ adı: **Yilk Games**). Kalanlar:
 Kod tarafında yapılacak bir şey yok — imzalı AAB zaten hazır
 (`android/upload-keystore.jks` ile üretildi, bkz. proje geçmişi).
 
-## 2. AdMob hesabı + gerçek reklam ID'leri
+## 2. AdMob hesabı + gerçek reklam ID'leri — ✅ Tamamlandı
 
-1. https://apps.admob.com adresine `yilkgamesstudio@gmail.com` ile giriş
-   yapıp AdMob hesabı aç (Play Console ile aynı hesap olması, ileride
-   Play Console ↔ AdMob otomatik bağlantısını kolaylaştırır — ücretsiz).
-2. "Uygulamalar → Uygulama ekle" ile Little Grand Hotel'i ekle (Play
-   Console'a henüz yayınlamadıysan "Hayır, mağazalarda yayınlanmıyor"
-   seçip elle paket adını `com.littlegrandhotel.app` gir).
-3. Uygulama oluşunca sana bir **Uygulama Kimliği (App ID)** verilir, formatı
-   `ca-app-pub-XXXXXXXXXXXXXXXX~YYYYYYYYYY`.
-4. "Reklam birimleri → Reklam birimi ekle → Ödüllü" ile bir ödüllü reklam
-   birimi oluştur. Sana `ca-app-pub-XXXXXXXXXXXXXXXX/ZZZZZZZZZZ` formatında
-   bir **Reklam Birimi ID'si** verilir.
+Ödeme profili (AdSense Türkiye) bağlandı, uygulama eklendi, iki reklam birimi
+oluşturuldu ve kod tarafına işlendi:
 
-Bu iki değeri bana verdiğinde şurayı güncelleyeceğim:
-- **App ID** → Godot editöründe Proje → Proje Ayarları →
-  `admob/general/android/app_id` (şu an Google'ın test App ID'si:
-  `ca-app-pub-3940256099942544~3347511713`).
-- **Reklam Birimi ID'si** → `src/autoload/ads.gd:21`
-  (`_REWARDED_AD_UNIT_ID`, şu an Google'ın test ID'si:
-  `ca-app-pub-3940256099942544/5224354917`).
+- **Hesap**: `yilkgamesstudio@gmail.com` (Play Console ile aynı hesap — ilk
+  turda yanlışlıkla farklı bir kişisel hesapta (`crazything5341@gmail.com`)
+  oluşturulmuştu, o hesaptaki uygulama/reklam birimleri silindi).
+- **App ID**: `ca-app-pub-9709993577664180~6521383725`
+  (`project.godot` → `[admob] general/android/app_id`)
+- **Rewarded reklam birimi**: `ca-app-pub-9709993577664180/1269057042`
+  (`src/autoload/ads.gd` → `_REWARDED_AD_UNIT_ID`)
+- **Interstitial reklam birimi**: `ca-app-pub-9709993577664180/5208302053`
+  (`src/autoload/ads.gd` → `_INTERSTITIAL_AD_UNIT_ID`) — ID hazır ama
+  `show_interstitial()` hâlâ boş bir stub (`main.gd`'de hiçbir yerden
+  çağrılmıyor); gösterim mantığı ayrı bir iş olarak eklenmeli.
+
+Not: Yeni reklam birimlerinin gerçek reklam göstermeye başlaması AdMob
+tarafında ~1 saat sürebilir.
 
 ## 3. Play Console'da uygulama içi ürünler
 
