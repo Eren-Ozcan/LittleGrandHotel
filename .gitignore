@@ -27,3 +27,6 @@ android/build/assetPackInstallTime/src/main/assets/
 # launcher_icons ayarından export'ta üretilen Android ikon kaynakları.
 android/build/res/mipmap*/
 android/build/res/drawable/
+
+# Private/local-only store & marketing assets (mirrored to private Eren-Ozcan/pictures repo)
+docs/store-assets-originals/
