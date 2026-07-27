@@ -27,7 +27,13 @@ oluşturuldu ve kod tarafına işlendi:
 
 - **Hesap**: `yilkgamesstudio@gmail.com` (Play Console ile aynı hesap — ilk
   turda yanlışlıkla farklı bir kişisel hesapta (`crazything5341@gmail.com`)
-  oluşturulmuştu, o hesaptaki uygulama/reklam birimleri silindi).
+  da bir AdMob hesabı açılmıştı; o hesap uygulamasız/boş durumda ama
+  silinmedi, ödeme bilgisi hâlâ orada kayıtlı — kafa karıştırmasın diye
+  kapatılması düşünülebilir).
+- ⚠️ **AdMob vergi bilgileri eksik**: `admob.google.com` → Ödemeler → Ödeme
+  bilgileri altında "Türkiye", "ABD" ve "Tayvan" vergi bilgisi alanları boş.
+  ABD kaynaklı reklam gelirinde vergi formu doldurulmadan yüksek stopaj
+  kesilir — doldurulması gerekiyor.
 - **App ID**: `ca-app-pub-9709993577664180~6521383725`
   (`project.godot` → `[admob] general/android/app_id`)
 - **Rewarded reklam birimi**: `ca-app-pub-9709993577664180/1269057042`
@@ -63,6 +69,6 @@ Kod tarafında ekstra değişiklik gerekmiyor, ürün ID'leri zaten kodla eşle�
      `sites.google.com/view/little-grand-hotel-privacy`).
   5. O adresi Play Console → "Politikalar" → "Gizlilik politikası" alanına
      yapıştır.
-- Grafik varlıkları: hi-res simge hazır (`icon_512.png`). Öne çıkan görsel
-  (1024×500) ve telefon ekran görüntüleri henüz yok — `magaza-listeleme.md`
-  içindeki checklist'te detay var, istersen birlikte üretelim.
+- Grafik varlıkları: tamam — hi-res simge (`icon_512.png`), öne çıkan görsel
+  (`feature_graphic_1024x500.png`) ve iki ekran görüntüsü
+  (`screenshot_1_overview.png`, `screenshot_2_lobby.png`) repo'da mevcut.
