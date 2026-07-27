@@ -69,19 +69,16 @@ Ayarlar'dan bir kayıt kodu çıkarıp başka bir cihaza taşıyabilirsin.
 Little Grand Hotel'i indir, kendi küçük otel imparatorluğunu kur!
 ```
 
-## Grafik varlıkları (henüz üretilmedi — hazırlanması gerekiyor)
+## Grafik varlıkları
 
 Play Console şunları zorunlu tutar:
 
 - [x] **Uygulama simgesi**: 512×512 px, 32-bit PNG. `icon.svg`'den
       `tools/gen_store_icon.gd` ile üretildi → `docs/store/icon_512.png`.
-- [ ] **Öne çıkan görsel (feature graphic)**: 1024×500 px, JPG/24-bit PNG
-      (alfasız). Şu an elde hazır bir tasarım yok — oyun görsellerinden
-      (lobi sahnesi, bina görünümü) kolaj olarak hazırlanabilir.
-- [ ] **Telefon ekran görüntüleri**: en az 2, en fazla 8 adet. 16:9 veya 9:16
-      oran. `tests/shot.tscn` (`-- demo` argümanıyla) kullanılarak oyun
-      içinden gerçek ekran görüntüsü alınabilir — bunu birlikte
-      çalıştırabiliriz.
+- [x] **Öne çıkan görsel (feature graphic)**: 1024×500 px →
+      `docs/store/feature_graphic_1024x500.png`.
+- [x] **Telefon ekran görüntüleri**: `docs/store/screenshot_1_overview.png`,
+      `docs/store/screenshot_2_lobby.png`.
 - [ ] **Kategori**: Oyun → Simülasyon (öneri).
 - [ ] **İçerik derecelendirmesi anketi**: Play Console'da doldurulmalı
       (reklam + uygulama içi satın alma var, şiddet/kumar yok → muhtemelen
