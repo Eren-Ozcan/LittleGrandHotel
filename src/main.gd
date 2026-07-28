@@ -30,6 +30,10 @@ const PALETTE := {
 	"grass_dark": Color("4e9e34"),
 }
 
+## Kullanıcı geri bildirimi: "çoğu UI butonu ve yazısı gereksiz küçük" —
+## tüm _label/_button metinleri bu çarpanla büyütülür (bkz. _label, _button).
+const UI_TEXT_SCALE := 1.15
+
 ## Misafir oda tipine göre ayrı sanat havuzları: oyuncu daha pahalı oda
 ## Misafirler/sokak yürüyüşçüleri için karakter havuzu (referans sayfadaki
 ## 5 temel + 4 ekstra varyant) — tek tip 3'lü rotasyon yerine daha çeşitli.
@@ -72,9 +76,6 @@ const WALLPAPERS := {
 	"roof_garden": Color("cdeeb8"),
 	"housekeeping": Color("efe4cc"),
 }
-
-const SPEEDS: Array[float] = [1.0, 60.0, 3600.0]
-var speed_index := 0
 
 ## Serbest blok yerleşimi (v2 render): tek hücre boyutu + bina şeridinin
 ## sabit toplam genişliği (Game.eco.building.grid_cols × CELL_W).
@@ -637,7 +638,7 @@ func _build_ui() -> void:
 	row2.add_child(level_label)
 	xp_bar = ProgressBar.new()
 	xp_bar.show_percentage = false
-	xp_bar.custom_minimum_size = Vector2(0, 12)
+	xp_bar.custom_minimum_size = Vector2(0, 14)
 	xp_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	xp_bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	var xb := StyleBoxFlat.new()
@@ -657,7 +658,7 @@ func _build_ui() -> void:
 	root.add_child(shift_label)
 
 	collect_button = _button("", 22, PALETTE.gold, PALETTE.text)
-	collect_button.custom_minimum_size = Vector2(0, 60)
+	collect_button.custom_minimum_size = Vector2(0, 68)
 	collect_button.pressed.connect(_on_collect)
 	root.add_child(collect_button)
 
@@ -699,7 +700,7 @@ func _build_ui() -> void:
 	zoom_row.add_theme_constant_override("separation", 6)
 	root.add_child(zoom_row)
 	build_mode_button = _button("🔨 İnşa Modu", 13, PALETTE.wood, PALETTE.cream_text)
-	build_mode_button.custom_minimum_size = Vector2(0, 36)
+	build_mode_button.custom_minimum_size = Vector2(0, 42)
 	build_mode_button.toggle_mode = true
 	build_mode_button.toggled.connect(func(on: bool):
 		build_mode = on
@@ -710,11 +711,11 @@ func _build_ui() -> void:
 	zoom_row_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	zoom_row.add_child(zoom_row_spacer)
 	var zoom_out_b := _button("−", 18, PALETTE.wood, PALETTE.cream_text)
-	zoom_out_b.custom_minimum_size = Vector2(40, 36)
+	zoom_out_b.custom_minimum_size = Vector2(46, 42)
 	zoom_out_b.pressed.connect(func(): _zoom_by(-0.15, zoom_viewport.size / 2.0))
 	zoom_row.add_child(zoom_out_b)
 	var zoom_reset_b := _button("⟳", 16, PALETTE.wood, PALETTE.cream_text)
-	zoom_reset_b.custom_minimum_size = Vector2(40, 36)
+	zoom_reset_b.custom_minimum_size = Vector2(46, 42)
 	zoom_reset_b.pressed.connect(func():
 		_zoom = clampf(1.0, _effective_zoom_min(), ZOOM_MAX)
 		_canvas_pan = Vector2.ZERO
@@ -722,7 +723,7 @@ func _build_ui() -> void:
 		_apply_canvas_transform())
 	zoom_row.add_child(zoom_reset_b)
 	var zoom_in_b := _button("+", 18, PALETTE.wood, PALETTE.cream_text)
-	zoom_in_b.custom_minimum_size = Vector2(40, 36)
+	zoom_in_b.custom_minimum_size = Vector2(46, 42)
 	zoom_in_b.pressed.connect(func(): _zoom_by(0.15, zoom_viewport.size / 2.0))
 	zoom_row.add_child(zoom_in_b)
 
@@ -812,15 +813,6 @@ func _build_ui() -> void:
 		b.pressed.connect(func(): _open_popup(title, builder))
 		bottom.add_child(b)
 
-	speed_index = maxi(0, SPEEDS.find(Game.time_scale))
-	var speed_b := _bar_button("", "×%d" % int(SPEEDS[speed_index]))
-	speed_b.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	speed_b.custom_minimum_size = Vector2(64, 66)
-	speed_b.pressed.connect(func():
-		_cycle_speed()
-		speed_b.get_meta("label").text = "×%d" % int(SPEEDS[speed_index]))
-	bottom.add_child(speed_b)
-
 	# --- Popup katmanı
 	overlay = Control.new()
 	overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -902,7 +894,7 @@ func _panel(bg: Color, border: Color) -> PanelContainer:
 func _label(text: String, size: int, color: Color) -> Label:
 	var l := Label.new()
 	l.text = text
-	l.add_theme_font_size_override("font_size", size)
+	l.add_theme_font_size_override("font_size", roundi(size * UI_TEXT_SCALE))
 	l.add_theme_color_override("font_color", color)
 	return l
 
@@ -922,7 +914,7 @@ func _icon(path: String, px: int) -> TextureRect:
 func _bar_button(icon_path: String, text: String) -> Button:
 	var b := Button.new()
 	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	b.custom_minimum_size = Vector2(0, 66)
+	b.custom_minimum_size = Vector2(0, 74)
 	for state in ["normal", "hover", "pressed", "disabled"]:
 		var sb := StyleBoxFlat.new()
 		sb.bg_color = PALETTE.bar_dark
@@ -942,7 +934,7 @@ func _bar_button(icon_path: String, text: String) -> Button:
 	if icon_path != "":
 		var wrap := CenterContainer.new()
 		wrap.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		wrap.add_child(_icon(icon_path, 30))
+		wrap.add_child(_icon(icon_path, 34))
 		v.add_child(wrap)
 	var l := _label(text, 18 if icon_path == "" else 12, PALETTE.cream_text)
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -967,7 +959,7 @@ func _spacer_y(px: int) -> Control:
 func _button(text: String, size: int, bg: Color, fg: Color) -> Button:
 	var b := Button.new()
 	b.text = text
-	b.add_theme_font_size_override("font_size", size)
+	b.add_theme_font_size_override("font_size", roundi(size * UI_TEXT_SCALE))
 	b.add_theme_color_override("font_color", fg)
 	b.add_theme_color_override("font_hover_color", fg)
 	b.add_theme_color_override("font_pressed_color", fg)
@@ -2244,15 +2236,6 @@ func _fly_coins(from: Vector2, amount: int) -> void:
 		tw.tween_callback(cn.queue_free)
 
 
-func _cycle_speed() -> void:
-	speed_index = (speed_index + 1) % SPEEDS.size()
-	Game.simulate_to(Game.now())
-	var remaining_real := maxf(0.0, Game.shift_end_unix - Game.now())
-	Game.shift_end_unix = Game.now() + remaining_real * Game.time_scale / SPEEDS[speed_index]
-	Game.time_scale = SPEEDS[speed_index]
-	_refresh()
-
-
 # --- Popuplar ----------------------------------------------------------
 
 ## Oyunun kendi görsel diliyle (yuvarlak kart, PALETTE renkleri, _panel/_label/
@@ -2275,7 +2258,7 @@ func _show_simple_modal(title: String, text: String, action_text: String,
 	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	dim.add_child(center)
 	var panel := _panel(PALETTE.cream, PALETTE.facade_line)
-	panel.custom_minimum_size = Vector2(420, 0)
+	panel.custom_minimum_size = Vector2(460, 0)
 	center.add_child(panel)
 	var pv := VBoxContainer.new()
 	pv.add_theme_constant_override("separation", 14)
@@ -2334,12 +2317,21 @@ func _build_shift_popup(c: VBoxContainer) -> void:
 		var gem_cost := Game.skip_shift_gem_cost()
 		var skip_b := _button("Elmasla şimdi bitir — %d elmas" % gem_cost, 15, PALETTE.green_deep, PALETTE.cream_text)
 		skip_b.disabled = Game.gems < gem_cost
+		var hk_active := Game.housekeeping_active()
 		skip_b.pressed.connect(func():
+			if not hk_active and not skip_b.get_meta("armed", false):
+				skip_b.set_meta("armed", true)
+				skip_b.text = "Temizlik Odası yok — bazı odalar tam ücret vermeyebilir. Yine de bitirmek için tekrar dokun"
+				return
 			if Game.skip_shift():
 				_play("buy")
 				_show_toast("Vardiya elmasla tamamlandı — birikim kasada!")
 				_close_popup())
 		c.add_child(skip_b)
+		if hk_active:
+			c.add_child(_label("Temizlik Odası var — vardiya sonuna kadar misafirler kesintisiz gelmiş gibi tam ücret alırsın.", 12, PALETTE.green_deep))
+		else:
+			c.add_child(_label("Temizlik Odası yok — kirli kalan odalar bu süre için gelir üretmez.", 12, PALETTE.muted))
 		if Game.now() < Game.boost_end_unix:
 			var left_min := int((Game.boost_end_unix - Game.now()) / 60.0)
 			c.add_child(_label("Reklam bonusu aktif: gelir ×%.1f (%d dk kaldı)" % [Game.boost_mult, maxi(0, left_min)], 13, PALETTE.green_deep))
@@ -2367,10 +2359,10 @@ func _build_shift_popup(c: VBoxContainer) -> void:
 				_show_toast("%d saatlik vardiya başladı!" % hours)
 				_close_popup())
 		c.add_child(b)
-	if Game.auto_renew_shift:
-		c.add_child(_label("Otomatik yenileme açık: vardiya bitince coin yeterse kendiliğinden devam eder.", 12, PALETTE.green_deep))
+	if Game.auto_renew_hours_left > 0.0:
+		c.add_child(_label("Otomatik yenileme hakkı: %s saat — vardiya bitince coin yeterse kendiliğinden devam eder." % _fmt_hms(Game.auto_renew_hours_left), 12, PALETTE.green_deep))
 	else:
-		c.add_child(_label("Otomatik yenileme kapalı: vardiya bitince elle yeniden başlatman gerekir (Ayarlar).", 12, PALETTE.muted))
+		c.add_child(_label("Otomatik yenileme hakkın yok — vardiya bitince elle yeniden başlatman gerekir (Ayarlar'dan satın alabilirsin).", 12, PALETTE.muted))
 	c.add_child(_label("Not: temizlenmeyen odalar gelir üretmez. Uzun vardiyada Temizlik Odası şart!", 13, PALETTE.banner_red))
 
 
@@ -2615,15 +2607,21 @@ func _build_settings_popup(c: VBoxContainer) -> void:
 		_rebuild_popup())
 	c.add_child(m_b)
 
-	var ar_b := _button("Vardiya otomatik yenilensin: %s" % ("Açık" if Game.auto_renew_shift else "Kapalı"), 15,
-		PALETTE.wood if Game.auto_renew_shift else PALETTE.wood_dark, PALETTE.cream_text)
-	ar_b.pressed.connect(func():
-		Game.auto_renew_shift = not Game.auto_renew_shift
-		Game.save_game()
-		_play("tap")
-		_rebuild_popup())
-	c.add_child(ar_b)
-	c.add_child(_label("Açıkken bir vardiya bitince, coin yeterse aynı süreyle otomatik yenilenir — otel sen yokken de üretime devam eder.", 12, PALETTE.muted))
+	c.add_child(_label("Otomatik yenileme hakkı: %s saat" % _fmt_hms(Game.auto_renew_hours_left),
+		15, PALETTE.wood_dark if Game.auto_renew_hours_left > 0.0 else PALETTE.muted))
+	c.add_child(_label("Hakkın varken bir vardiya bitince, coin yeterse aynı süreyle otomatik yenilenir ve yenilenen saat kadar haktan düşer — otel sen yokken de üretime devam eder.", 12, PALETTE.muted))
+	for hours: int in [1, 4, 8, 24]:
+		var ar_cost := Game.auto_renew_buy_cost(hours)
+		var ar_b := _button("%d saat yenileme hakkı satın al — %s coin" % [hours, _fmt(ar_cost)], 14,
+			PALETTE.wood, PALETTE.cream_text)
+		ar_b.disabled = Game.coins < ar_cost
+		ar_b.pressed.connect(func():
+			if Game.buy_auto_renew(hours):
+				Game.save_game()
+				_play("buy")
+				_show_toast("%d saatlik otomatik yenileme hakkı satın alındı!" % hours)
+				_rebuild_popup())
+		c.add_child(ar_b)
 
 	c.add_child(_spacer_y(10))
 	c.add_child(_label("Premium", 15, PALETTE.wood_dark))
@@ -2747,7 +2745,7 @@ func _build_quests_popup(c: VBoxContainer) -> void:
 		row.add_theme_constant_override("separation", 8)
 		c.add_child(row)
 		var mark := _label("✓" if unlocked else "•", 15, PALETTE.green_deep if unlocked else PALETTE.muted)
-		mark.custom_minimum_size = Vector2(18, 0)
+		mark.custom_minimum_size = Vector2(20, 0)
 		row.add_child(mark)
 		var col := VBoxContainer.new()
 		col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
