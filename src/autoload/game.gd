@@ -9,7 +9,7 @@ signal achievement_unlocked(achievement: Dictionary)
 signal leveled_up(new_level: int)
 
 const SAVE_PATH := "user://save.json"
-const SAVE_VERSION := 12
+const SAVE_VERSION := 13
 ## Göçle yükseltilebilen en eski kayıt sürümü
 const MIN_SAVE_VERSION := 2
 ## v11 öncesi (sabit "N kat × 4 slot" ızgarası) her katın açık genişliği —
@@ -87,20 +87,28 @@ var tutorial_seen: bool = false
 ## Uygulama açılışında sen-yokken kazanılan gelir (UI popup için; UI okur ve sıfırlar).
 var offline_earned: int = 0
 
-## Test hızlandırması: 1.0 = gerçek zaman, 3600.0 = 1 sn : 1 oyun-saati
+## Oyun içi zaman ölçeği. Canlı oynanışta her zaman 60.0 (1 gerçek dakika =
+## 1 oyun saati, kullanıcı isteği — eskiden oyuncunun seçtiği bir ×1/×60/×3600
+## hız düğmesi vardı, artık sabit) — bkz. new_game()/_load_from_dict() sonunda
+## zorlanışı. Testler (sim_check.gd/balance_report.gd) hızlı simülasyon için
+## bunu new_game() sonrası elle değiştirebilir (ör. 1.0 = gerçek zaman,
+## 3600.0 = 1 sn : 1 oyun-saati).
 var time_scale: float = 1.0
 
 ## Ayarlar (kayda dahil)
 var sound_on: bool = true
 var music_on: bool = true
 
-## Otomatik vardiya yenileme: bir vardiya bitince ve coin yetiyorsa, oyuncu
-## geri dönmeden aynı süreyle otomatik olarak yeni bir vardiya başlar. Modern
-## boşta-bekleme (idle) oyunlarında beklenen "uzaktayken de üretim sürer"
-## hissini korur — aksi halde vardiya bitince otel tamamen durur ve oyuncu
-## günler sonra geri döndüğünde büyük bir kısmı boşa geçmiş olur. İlk
-## vardiyayı elle başlatmak hâlâ gerekir (last_shift_hours == 0 iken devre dışı).
-var auto_renew_shift: bool = true
+## Otomatik vardiya yenileme: satın alınan tüketilebilir bir "saat hakkı"
+## (bkz. buy_auto_renew). Bir vardiya bitince, hakkı > 0 ve coin yetiyorsa
+## oyuncu geri dönmeden aynı süreyle otomatik olarak yeni bir vardiya başlar
+## ve yenilenen saat kadar hak bankadan düşer (coin maliyeti ayrıca, normal
+## vardiya fiyatıyla aynı şekilde alınır). Modern boşta-bekleme (idle)
+## oyunlarında beklenen "uzaktayken de üretim sürer" hissini korur — ama artık
+## ücretsiz bir aç/kapa değil, tek seferde en fazla 24 saatlik satın alınan bir
+## kolaylık (kullanıcı isteği: "çok ucuz olmasın"). İlk vardiyayı elle
+## başlatmak hâlâ gerekir (last_shift_hours == 0 iken devre dışı).
+var auto_renew_hours_left: float = 0.0
 var last_shift_hours: int = 0
 
 ## Bu oturumda (son state_changed'den bu yana) otomatik yenilenen vardiya
@@ -226,6 +234,8 @@ func new_game() -> void:
 	last_shift_hours = 0
 	auto_renew_count = 0
 	auto_renew_spent = 0
+	auto_renew_hours_left = 0.0
+	time_scale = 60.0
 	daily_streak = 0
 	last_daily_claim_day = -1
 	poke_day = -1
@@ -528,6 +538,28 @@ func shift_cost(hours: int) -> int:
 	return int(staff_count() * hours * int(eco.shift_rates[str(hours)]) * staff_cost_mult())
 
 
+## hours saatlik otomatik yenileme hakkı satın almanın bedeli — normal
+## vardiya maliyetinin eco.auto_renew.price_mult katı (elle her seferinde
+## vardiya başlatmaktan kurtaran bir kolaylık ücreti, kasıtlı olarak normal
+## vardiyadan pahalı — kullanıcı isteği: "çok ucuz olmasın").
+func auto_renew_buy_cost(hours: int) -> int:
+	return ceili(float(shift_cost(hours)) * float(eco.auto_renew.price_mult))
+
+
+## hours saatlik (tek seferde en fazla 24) otomatik yenileme hakkı satın
+## alır; bankaya eklenir ve _try_auto_renew() her yenilemede buradan düşer.
+func buy_auto_renew(hours: int) -> bool:
+	if hours <= 0 or hours > 24:
+		return false
+	var cost := auto_renew_buy_cost(hours)
+	if coins < cost:
+		return false
+	coins -= cost
+	auto_renew_hours_left += float(hours)
+	state_changed.emit()
+	return true
+
+
 # --- Personel kalitesi (geç oyun aktif karar katmanı) -------------------
 
 ## Verilen (veya mevcut) kademenin yükseltme maliyeti. Her kademe bir
@@ -687,12 +719,13 @@ func simulate_to(to_unix: float) -> void:
 ## olarak aynı süreyle bir yenisini başlatmayı dener. Yalnızca en az bir kez
 ## elle vardiya başlatılmışsa (last_shift_hours > 0) devreye girer.
 func _try_auto_renew() -> bool:
-	if not auto_renew_shift or last_shift_hours <= 0:
+	if last_shift_hours <= 0 or auto_renew_hours_left <= 0.0:
 		return false
 	var cost := shift_cost(last_shift_hours)
 	if coins < cost:
 		return false
 	coins -= cost
+	auto_renew_hours_left = maxf(0.0, auto_renew_hours_left - float(last_shift_hours))
 	var started_at := shift_end_unix
 	shift_end_unix += last_shift_hours * 3600.0 / time_scale
 	stat_shifts += 1
@@ -1214,7 +1247,7 @@ func _save_dict() -> Dictionary:
 		"time_scale": time_scale,
 		"sound_on": sound_on,
 		"music_on": music_on,
-		"auto_renew_shift": auto_renew_shift,
+		"auto_renew_hours_left": auto_renew_hours_left,
 		"last_shift_hours": last_shift_hours,
 		"daily_streak": daily_streak,
 		"last_daily_claim_day": last_daily_claim_day,
@@ -1350,6 +1383,13 @@ func _migrate_save(data: Dictionary) -> Dictionary:
 				# gösterilmesin.
 				if not data.has("tutorial_seen"):
 					data["tutorial_seen"] = true
+			12:
+				# v13: vardiya otomatik yenileme ücretsiz aç/kapa yerine
+				# tüketilebilir satın alınan saat hakkına dönüştü (bkz.
+				# buy_auto_renew). Eski auto_renew_shift alanı bırakılır,
+				# göçen oyuncular 0 hakla başlar (satın almaları gerekir).
+				if not data.has("auto_renew_hours_left"):
+					data["auto_renew_hours_left"] = 0.0
 		v += 1
 		data["save_version"] = v
 	return data
@@ -1443,12 +1483,13 @@ func _load_from_dict(parsed) -> bool:
 	shift_history = parsed.get("shift_history", [])
 	unlocked_achievements = parsed.get("unlocked_achievements", [])
 	prestige_level = int(parsed.get("prestige_level", 0))
-	# Vardiya bitişi gerçek saniye tutulur; ölçek geri yüklenmezse
-	# hızlı modda kaydedilen vardiya normal hızda 60/3600 kat kısalır.
-	time_scale = float(parsed.get("time_scale", 1.0))
+	# time_scale artık oyuncu seçimi değil, her zaman sabit 60.0 (kullanıcı
+	# isteği: "1 dakika = 1 saat") — kaydedilmiş değer (eski ×1/×60/×3600
+	# seçiminden kalma olabilir) yok sayılır.
+	time_scale = 60.0
 	sound_on = bool(parsed.get("sound_on", true))
 	music_on = bool(parsed.get("music_on", true))
-	auto_renew_shift = bool(parsed.get("auto_renew_shift", true))
+	auto_renew_hours_left = float(parsed.get("auto_renew_hours_left", 0.0))
 	last_shift_hours = int(parsed.get("last_shift_hours", 0))
 	daily_streak = int(parsed.get("daily_streak", 0))
 	last_daily_claim_day = int(parsed.get("last_daily_claim_day", -1))
