@@ -126,7 +126,7 @@ func _initialize() -> void:
 	# ve sonraki denetimlerin zamanlamaya bağlı hale gelmesine yol açabilir.
 	# Otomatik yenileme kendi bölümünde (20) ayrıca test ediliyor; burada
 	# kapatarak geri kalan denetimleri ondan izole ediyoruz.
-	g.auto_renew_shift = false
+	g.auto_renew_hours_left = 0.0
 
 	# 8c) Premium eşya elmasla alınır
 	var it_prem: Dictionary = g.item_def("statue_gold")
@@ -262,7 +262,7 @@ func _initialize() -> void:
 	g4.save_game(v2_path)
 	var reparsed = JSON.parse_string(FileAccess.get_file_as_string(v2_path))
 	check(int(reparsed.save_version) == int(g4.SAVE_VERSION), "göçen kayıt güncel sürümle yazıldı")
-	check(bool(reparsed.auto_renew_shift) == true and int(reparsed.last_shift_hours) == 0,
+	check(float(reparsed.auto_renew_hours_left) == 0.0 and int(reparsed.last_shift_hours) == 0,
 		"göç otomatik yenileme alanlarını varsayılanla ekledi")
 	check(reparsed.unlocked_achievements is Array, "göç unlocked_achievements alanını ekledi")
 	check(int(reparsed.prestige_level) == 0, "göç prestige_level alanını 0 ile ekledi")
@@ -435,6 +435,7 @@ func _initialize() -> void:
 	g10.new_game()
 	g10.time_scale = 3600.0
 	g10.coins = 100000
+	g10.auto_renew_hours_left = 100.0  # yenileme hakkı satın alınmış gibi
 	check(g10.start_shift(1), "1 saatlik vardiya başladı (yenileme testi)")
 	var shifts_before: int = g10.stat_shifts
 	var real_now10: float = g10.now()
@@ -446,6 +447,8 @@ func _initialize() -> void:
 	check(g10.auto_renew_count >= 5, "yenileme sayacı doğru izleniyor (şu an %d)" % g10.auto_renew_count)
 	check(g10.auto_renew_spent == g10.auto_renew_count * g10.shift_cost(1), "yenileme harcaması doğru toplanıyor")
 	check(g10.pending_income > 0.0, "kesintisiz üretimden gelir birikti")
+	check(absf(g10.auto_renew_hours_left - (100.0 - float(g10.auto_renew_count))) < 0.001,
+		"yenileme hakkı bankası her yenilemede saat kadar düştü")
 	g10.free()
 
 	var g11 = GameScript.new()
@@ -455,14 +458,14 @@ func _initialize() -> void:
 	g11.new_game()
 	g11.time_scale = 3600.0
 	g11.coins = 100000
-	g11.auto_renew_shift = false
-	check(g11.start_shift(1), "1 saatlik vardiya başladı (kapalı yenileme testi)")
+	g11.auto_renew_hours_left = 0.0  # hak satın alınmamış (varsayılan)
+	check(g11.start_shift(1), "1 saatlik vardiya başladı (hak yok yenileme testi)")
 	var real_now11: float = g11.now()
 	g11.last_sim_unix = real_now11 - 6.5
 	g11.shift_end_unix = real_now11 - 5.5
 	g11.simulate_to(g11.now())
-	check(not g11.shift_active(), "yenileme kapalıyken vardiya bitik kalır")
-	check(g11.auto_renew_count == 0, "yenileme kapalıyken hiç tetiklenmez")
+	check(not g11.shift_active(), "yenileme hakkı yokken vardiya bitik kalır")
+	check(g11.auto_renew_count == 0, "yenileme hakkı yokken hiç tetiklenmez")
 	g11.free()
 
 	var g12 = GameScript.new()
@@ -471,6 +474,7 @@ func _initialize() -> void:
 	g12.achievements = g.achievements
 	g12.new_game()
 	g12.time_scale = 3600.0
+	g12.auto_renew_hours_left = 100.0  # coin'in yenilemeden önce tükendiğini test et
 	check(g12.start_shift(1), "1 saatlik vardiya başladı (coin tükenme testi)")
 	g12.coins = g12.shift_cost(1) * 2  # yalnızca 2 yenilemelik coin bırak
 	var real_now12: float = g12.now()
@@ -519,7 +523,7 @@ func _initialize() -> void:
 	# yenilemesi bozmasın diye üçü de bu testte devre dışı.
 	g14.quest_index = g14.quests.size()
 	g14.achievements = []
-	g14.auto_renew_shift = false
+	g14.auto_renew_hours_left = 0.0
 	check(g14.start_shift(24), "istila testi: 24 saatlik vardiya başladı")
 	g14.last_sim_unix -= 12.0  # 12 oyun-saati geçmiş gibi: 3'te kirlenir, 9 saat kirli kalır
 	g14.simulate_to(g14.now())
@@ -606,6 +610,7 @@ func _initialize() -> void:
 	g15.new_game()
 	g15.coins = 1000000
 	g15.time_scale = 3600.0
+	g15.auto_renew_hours_left = 1000000.0  # yenileme hakkı satın alınmış gibi
 	check(g15.start_shift(1), "mobil senaryo: 1 saatlik vardiya başladı")
 	var real_now15: float = g15.now()
 	g15.last_sim_unix = real_now15 - 240.0

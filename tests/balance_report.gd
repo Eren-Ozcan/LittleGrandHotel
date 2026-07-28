@@ -249,6 +249,7 @@ func _check_offline_cap_ghost_renewals() -> void:
 	var g = new_g()
 	g.coins = 1000000
 	g.time_scale = 3600.0
+	g.auto_renew_hours_left = 1000000.0  # yenileme hakkı satın alınmış gibi
 	g.start_shift(1)
 	var real_now: float = g.now()
 	g.last_sim_unix = real_now - 240.0  # 240 "saat" (10 gün) önce
