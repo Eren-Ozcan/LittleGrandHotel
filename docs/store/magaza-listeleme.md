@@ -87,7 +87,6 @@ Play Console şunları zorunlu tutar:
       kullanıldığı için "reklam kimliği" ve "satın alma bilgisi" toplandığı
       beyan edilmeli — bkz. `docs/store/privacy-policy.html` içeriği bu
       beyanla tutarlı yazıldı.
-- [ ] **Gizlilik politikası URL'si**: içerik hazır
-      (`docs/store/privacy-policy-plaintext.md`), Google Sites'ta
-      yayınlanıp elde edilecek public URL Play Console'a girilecek —
-      adımlar için [`hesap-kurulum-checklist.md`](./hesap-kurulum-checklist.md).
+- [x] **Gizlilik politikası URL'si**: `https://yilkgames.com/privacy-policy/`
+      adresinde yayında ve Play Console → Uygulama içeriği → Gizlilik
+      politikası beyanına girilmiş durumda (26 Tem 2026).
