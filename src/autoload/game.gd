@@ -9,7 +9,7 @@ signal achievement_unlocked(achievement: Dictionary)
 signal leveled_up(new_level: int)
 
 const SAVE_PATH := "user://save.json"
-const SAVE_VERSION := 13
+const SAVE_VERSION := 14
 ## Göçle yükseltilebilen en eski kayıt sürümü
 const MIN_SAVE_VERSION := 2
 ## v11 öncesi (sabit "N kat × 4 slot" ızgarası) her katın açık genişliği —
@@ -79,6 +79,10 @@ var boost_mult: float = 1.0
 ## yok, bu yüzden yerel kayıt tek doğruluk kaynağı).
 var remove_ads: bool = false
 var permanent_income_mult: float = 1.0
+
+## Oyuncunun kişiselleştirdiği otel adı — kişisel tercih (sound_on/music_on
+## gibi) sayıldığı için new_game()/reset_game() tarafından silinmez.
+var hotel_name: String = "Little Grand Hotel"
 
 ## Açılış tutorial'ı gösterildi mi (yalnızca yepyeni bir kayıtta false başlar —
 ## bkz. main.gd _maybe_show_tutorial). Eski kayıtlar göçte true alır.
@@ -1261,6 +1265,7 @@ func _save_dict() -> Dictionary:
 		"tutorial_seen": tutorial_seen,
 		"floor_blocks": floor_blocks,
 		"next_room_id": _next_room_id,
+		"hotel_name": hotel_name,
 	}
 
 
@@ -1390,6 +1395,10 @@ func _migrate_save(data: Dictionary) -> Dictionary:
 				# göçen oyuncular 0 hakla başlar (satın almaları gerekir).
 				if not data.has("auto_renew_hours_left"):
 					data["auto_renew_hours_left"] = 0.0
+			13:
+				# v14: otel adı özelleştirilebilir oldu.
+				if not data.has("hotel_name"):
+					data["hotel_name"] = "Little Grand Hotel"
 		v += 1
 		data["save_version"] = v
 	return data
@@ -1472,6 +1481,7 @@ func _load_from_dict(parsed) -> bool:
 	rooms = parsed.get("rooms", [])
 	floor_blocks = parsed.get("floor_blocks", [])
 	_next_room_id = int(parsed.get("next_room_id", rooms.size()))
+	hotel_name = String(parsed.get("hotel_name", "Little Grand Hotel"))
 	shift_end_unix = float(parsed.get("shift_end_unix", 0.0))
 	pending_income = float(parsed.get("pending_income", 0.0))
 	last_sim_unix = float(parsed.get("last_sim_unix", now()))
