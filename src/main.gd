@@ -32,7 +32,8 @@ const PALETTE := {
 
 ## Kullanıcı geri bildirimi: "çoğu UI butonu ve yazısı gereksiz küçük" —
 ## tüm _label/_button metinleri bu çarpanla büyütülür (bkz. _label, _button).
-const UI_TEXT_SCALE := 1.15
+## İlk 1.15 denemesi sonrası "hâlâ küçük" geri bildirimiyle 1.3'e çıkarıldı.
+const UI_TEXT_SCALE := 1.3
 
 ## Misafir oda tipine göre ayrı sanat havuzları: oyuncu daha pahalı oda
 ## Misafirler/sokak yürüyüşçüleri için karakter havuzu (referans sayfadaki
@@ -101,6 +102,8 @@ const ELEVATOR_PROXIMITY_RADIUS := 28.0
 ## bina" sorununu önler).
 const ZOOM_MIN := 0.28
 const ZOOM_MAX := 1.5
+## Zoom +/- butonlarının tek bir dokunuşta uyguladığı adım.
+const ZOOM_STEP := 0.15
 const PAN_DRAG_THRESHOLD := 6.0
 
 ## Haftalık dekorasyon teması: sunucusuz, Game.current_week_index()'e göre
@@ -123,8 +126,11 @@ var xp_bar: ProgressBar
 var shift_label: Label
 var shift_bar_label: Label
 var collect_button: Button
+## Topla butonu birikim varken hafifçe nabız gibi büyüyüp küçülür (dikkat
+## çekmek için) — bkz. _start_collect_pulse/_stop_collect_pulse.
+var _collect_pulse_on := false
+var _collect_tween: Tween
 var street_node: Control
-var quest_hint: Label
 var toast_panel: PanelContainer
 var toast_label: Label
 
@@ -334,8 +340,7 @@ func _process(delta: float) -> void:
 	# otomatik zoom yapılır ("tam ekran otel" — bina soldan kırpık başlamasın).
 	if not _did_initial_fit and zoom_viewport != null and zoom_viewport.size.x > 0.0:
 		_did_initial_fit = true
-		var canvas_w: float = int(Game.eco.building.grid_cols) * CELL_W
-		_zoom = clampf(zoom_viewport.size.x / canvas_w, _effective_zoom_min(), ZOOM_MAX)
+		_zoom = _default_zoom()
 		_clamp_pan()
 		_apply_canvas_transform()
 	_update_live_labels()
@@ -638,7 +643,7 @@ func _build_ui() -> void:
 	row2.add_child(level_label)
 	xp_bar = ProgressBar.new()
 	xp_bar.show_percentage = false
-	xp_bar.custom_minimum_size = Vector2(0, 14)
+	xp_bar.custom_minimum_size = Vector2(0, 16)
 	xp_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	xp_bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	var xb := StyleBoxFlat.new()
@@ -658,16 +663,20 @@ func _build_ui() -> void:
 	root.add_child(shift_label)
 
 	collect_button = _button("", 22, PALETTE.gold, PALETTE.text)
-	collect_button.custom_minimum_size = Vector2(0, 68)
+	collect_button.custom_minimum_size = Vector2(0, 78)
+	_button_icon(collect_button, "res://assets/ui/coin.svg")
+	collect_button.add_theme_constant_override("icon_max_width", 32)
+	# "Daha güzel bir topla butonu" isteği: normal/hover durumlarına kabartma
+	# (koyu alt kenar) + gölge eklendi, disabled'a dokunulmadı (soluk kalsın).
+	for state in ["normal", "hover", "pressed"]:
+		var sb: StyleBoxFlat = collect_button.get_theme_stylebox(state)
+		sb.border_width_bottom = 6
+		sb.border_color = PALETTE.gold.darkened(0.4)
+		sb.shadow_color = Color(0.1, 0.06, 0.02, 0.25)
+		sb.shadow_size = 6
+		sb.shadow_offset = Vector2(0, 3)
 	collect_button.pressed.connect(_on_collect)
 	root.add_child(collect_button)
-
-	# --- Görev ipucu
-	var qp := _panel(PALETTE.green_deep, PALETTE.gold)
-	root.add_child(qp)
-	quest_hint = _label("", 14, PALETTE.gold_soft)
-	quest_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	qp.add_child(quest_hint)
 
 	# --- Otel görünümü: çatı tabelası (sabit) + zoom kontrolleri (sabit) +
 	# zoom/pan alan tuval (kat sıraları + lobi + sokak + çim, serbest blok
@@ -685,11 +694,15 @@ func _build_ui() -> void:
 	roof_sb.shadow_size = 5
 	roof_sb.shadow_offset = Vector2(0, 3)
 	roof_panel.add_theme_stylebox_override("panel", roof_sb)
+	roof_panel.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	roof_panel.gui_input.connect(func(ev):
+		if ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT:
+			_show_rename_hotel_modal())
 	root.add_child(roof_panel)
 	var roof_col := VBoxContainer.new()
 	roof_col.add_theme_constant_override("separation", 2)
 	roof_panel.add_child(roof_col)
-	roof_title_label = _label("★  LITTLE GRAND HOTEL  ★", 18, PALETTE.gold_soft)
+	roof_title_label = _label("", 18, PALETTE.gold_soft)
 	roof_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	roof_col.add_child(roof_title_label)
 	roof_theme_label = _label("", 12, PALETTE.cream_text)
@@ -700,7 +713,7 @@ func _build_ui() -> void:
 	zoom_row.add_theme_constant_override("separation", 6)
 	root.add_child(zoom_row)
 	build_mode_button = _button("🔨 İnşa Modu", 13, PALETTE.wood, PALETTE.cream_text)
-	build_mode_button.custom_minimum_size = Vector2(0, 42)
+	build_mode_button.custom_minimum_size = Vector2(0, 48)
 	build_mode_button.toggle_mode = true
 	build_mode_button.toggled.connect(func(on: bool):
 		build_mode = on
@@ -711,20 +724,20 @@ func _build_ui() -> void:
 	zoom_row_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	zoom_row.add_child(zoom_row_spacer)
 	var zoom_out_b := _button("−", 18, PALETTE.wood, PALETTE.cream_text)
-	zoom_out_b.custom_minimum_size = Vector2(46, 42)
-	zoom_out_b.pressed.connect(func(): _zoom_by(-0.15, zoom_viewport.size / 2.0))
+	zoom_out_b.custom_minimum_size = Vector2(52, 48)
+	zoom_out_b.pressed.connect(func(): _zoom_by(-ZOOM_STEP, zoom_viewport.size / 2.0))
 	zoom_row.add_child(zoom_out_b)
 	var zoom_reset_b := _button("⟳", 16, PALETTE.wood, PALETTE.cream_text)
-	zoom_reset_b.custom_minimum_size = Vector2(46, 42)
+	zoom_reset_b.custom_minimum_size = Vector2(52, 48)
 	zoom_reset_b.pressed.connect(func():
-		_zoom = clampf(1.0, _effective_zoom_min(), ZOOM_MAX)
+		_zoom = _default_zoom()
 		_canvas_pan = Vector2.ZERO
 		_clamp_pan()
 		_apply_canvas_transform())
 	zoom_row.add_child(zoom_reset_b)
 	var zoom_in_b := _button("+", 18, PALETTE.wood, PALETTE.cream_text)
-	zoom_in_b.custom_minimum_size = Vector2(46, 42)
-	zoom_in_b.pressed.connect(func(): _zoom_by(0.15, zoom_viewport.size / 2.0))
+	zoom_in_b.custom_minimum_size = Vector2(52, 48)
+	zoom_in_b.pressed.connect(func(): _zoom_by(ZOOM_STEP, zoom_viewport.size / 2.0))
 	zoom_row.add_child(zoom_in_b)
 
 	# İnşa Modu mağaza rafı: yalnızca build_mode açıkken görünür (bkz.
@@ -914,7 +927,7 @@ func _icon(path: String, px: int) -> TextureRect:
 func _bar_button(icon_path: String, text: String) -> Button:
 	var b := Button.new()
 	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	b.custom_minimum_size = Vector2(0, 74)
+	b.custom_minimum_size = Vector2(0, 84)
 	for state in ["normal", "hover", "pressed", "disabled"]:
 		var sb := StyleBoxFlat.new()
 		sb.bg_color = PALETTE.bar_dark
@@ -934,7 +947,7 @@ func _bar_button(icon_path: String, text: String) -> Button:
 	if icon_path != "":
 		var wrap := CenterContainer.new()
 		wrap.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		wrap.add_child(_icon(icon_path, 34))
+		wrap.add_child(_icon(icon_path, 38))
 		v.add_child(wrap)
 	var l := _label(text, 18 if icon_path == "" else 12, PALETTE.cream_text)
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -999,6 +1012,7 @@ func _refresh() -> void:
 
 
 func _update_live_labels() -> void:
+	roof_title_label.text = "★  %s  ✎  ★" % Game.hotel_name.to_upper()
 	coins_label.text = _fmt(Game.coins)
 	gems_label.text = str(Game.gems)
 	var stars := Game.star_rating()
@@ -1020,7 +1034,35 @@ func _update_live_labels() -> void:
 		shift_bar_label.text = "Vardiya"
 		shift_bar_label.add_theme_color_override("font_color", PALETTE.cream_text)
 	collect_button.text = "TOPLA — %s" % _fmt(int(Game.pending_income))
-	collect_button.disabled = int(Game.pending_income) <= 0
+	var has_income := int(Game.pending_income) > 0
+	collect_button.disabled = not has_income
+	if has_income and not _collect_pulse_on:
+		_collect_pulse_on = true
+		_start_collect_pulse()
+	elif not has_income and _collect_pulse_on:
+		_collect_pulse_on = false
+		_stop_collect_pulse()
+
+
+## Birikim varken topla butonunu hafifçe büyütüp küçültüp durur ("numaraların
+## patlaması" gibi hissettiren dikkat çekici mikro-etkileşim — bkz. 2026 mobil
+## oyun UI araştırması, PR açıklaması).
+func _start_collect_pulse() -> void:
+	if _collect_tween and is_instance_valid(_collect_tween):
+		_collect_tween.kill()
+	collect_button.pivot_offset = collect_button.size / 2.0
+	_collect_tween = collect_button.create_tween()
+	_collect_tween.set_loops()
+	_collect_tween.tween_property(collect_button, "scale", Vector2(1.045, 1.045), 0.55) \
+		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	_collect_tween.tween_property(collect_button, "scale", Vector2(1.0, 1.0), 0.55) \
+		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+
+
+func _stop_collect_pulse() -> void:
+	if _collect_tween and is_instance_valid(_collect_tween):
+		_collect_tween.kill()
+	collect_button.scale = Vector2.ONE
 
 
 func _current_theme() -> Dictionary:
@@ -1302,13 +1344,6 @@ func _rebuild_hotel() -> void:
 		new_floor_button.text = "Yeni kat aç — %s coin" % _fmt(Game.floor_price())
 		new_floor_button.disabled = not Game.can_buy_floor()
 
-	var q: Dictionary = Game.current_quest()
-	if q.is_empty():
-		quest_hint.text = "Tüm görevler tamamlandı — otel senin!"
-	else:
-		var p: Array = Game.quest_progress(q)
-		quest_hint.text = "Görev: %s (%d/%d)" % [q.name, mini(p[0], p[1]), p[1]]
-
 	_room_visual_cache = next_room_cache
 
 
@@ -1405,6 +1440,17 @@ func _effective_zoom_min() -> float:
 		return ZOOM_MIN
 	var fit_zoom := minf(vp.x / content.x, vp.y / content.y)
 	return clampf(fit_zoom, ZOOM_MIN, ZOOM_MAX)
+
+
+## Varsayılan açılış/sıfırlama zoom'u: bina genişliğe tam sığacak seviyeden
+## kullanıcı isteğiyle 2 zoom-in tıkı (2×ZOOM_STEP) daha yakın — "hâlâ küçük,
+## haritaya biraz daha zoomlu baksın" geri bildirimi.
+func _default_zoom() -> float:
+	if zoom_viewport == null or zoom_viewport.size.x <= 0.0:
+		return clampf(1.0 + 2.0 * ZOOM_STEP, ZOOM_MIN, ZOOM_MAX)
+	var canvas_w: float = int(Game.eco.building.grid_cols) * CELL_W
+	var fit := zoom_viewport.size.x / canvas_w
+	return clampf(fit + 2.0 * ZOOM_STEP, _effective_zoom_min(), ZOOM_MAX)
 
 
 ## Belirli bir ekran noktasını (ör. tıklanan yer) sabit tutarak yakınlaştırır.
@@ -2258,7 +2304,7 @@ func _show_simple_modal(title: String, text: String, action_text: String,
 	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	dim.add_child(center)
 	var panel := _panel(PALETTE.cream, PALETTE.facade_line)
-	panel.custom_minimum_size = Vector2(460, 0)
+	panel.custom_minimum_size = Vector2(500, 0)
 	center.add_child(panel)
 	var pv := VBoxContainer.new()
 	pv.add_theme_constant_override("separation", 14)
@@ -2287,6 +2333,65 @@ func _show_simple_modal(title: String, text: String, action_text: String,
 				on_dismiss.call())
 	add_child(dim)
 	_play("tap")
+
+
+## Çatı tabelasına dokununca açılır: otelin adını değiştirmeyi sağlayan
+## küçük bir LineEdit'li onay/vazgeç modalı (kullanıcı isteği: "otelin adı
+## değiştirilebilior mu?"). _show_simple_modal ile aynı dışına-tıkla-kapat
+## deseni, yalnızca metin girişi eklendi.
+func _show_rename_hotel_modal() -> void:
+	var dim := ColorRect.new()
+	dim.color = Color(0.2, 0.15, 0.05, 0.5)
+	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dim.z_index = 90
+	var center := CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	dim.add_child(center)
+	var panel := _panel(PALETTE.cream, PALETTE.facade_line)
+	panel.custom_minimum_size = Vector2(500, 0)
+	center.add_child(panel)
+	var pv := VBoxContainer.new()
+	pv.add_theme_constant_override("separation", 14)
+	panel.add_child(pv)
+	pv.add_child(_label("Otelin adını değiştir", 20, PALETTE.wood_dark))
+	var field := LineEdit.new()
+	field.text = Game.hotel_name
+	field.max_length = 24
+	field.placeholder_text = "Otel adı…"
+	pv.add_child(field)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	pv.add_child(row)
+	var closed := false
+	var do_close := func():
+		if closed:
+			return
+		closed = true
+		dim.queue_free()
+	var cancel_b := _button("Vazgeç", 15, PALETTE.wood_dark, PALETTE.cream_text)
+	cancel_b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	cancel_b.pressed.connect(do_close)
+	row.add_child(cancel_b)
+	var save_b := _button("Kaydet", 15, PALETTE.green_deep, PALETTE.cream_text)
+	save_b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var do_save := func():
+		var new_name := field.text.strip_edges()
+		if not new_name.is_empty():
+			Game.hotel_name = new_name.substr(0, 24)
+			Game.save_game()
+			roof_title_label.text = "★  %s  ✎  ★" % Game.hotel_name.to_upper()
+		do_close.call()
+	save_b.pressed.connect(do_save)
+	row.add_child(save_b)
+	field.text_submitted.connect(func(_t): do_save.call())
+	dim.gui_input.connect(func(ev):
+		if ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT:
+			do_close.call())
+	add_child(dim)
+	_play("tap")
+	field.grab_focus()
+	field.select_all()
 
 
 func _open_popup(title: String, builder: Callable) -> void:
@@ -2745,7 +2850,7 @@ func _build_quests_popup(c: VBoxContainer) -> void:
 		row.add_theme_constant_override("separation", 8)
 		c.add_child(row)
 		var mark := _label("✓" if unlocked else "•", 15, PALETTE.green_deep if unlocked else PALETTE.muted)
-		mark.custom_minimum_size = Vector2(20, 0)
+		mark.custom_minimum_size = Vector2(22, 0)
 		row.add_child(mark)
 		var col := VBoxContainer.new()
 		col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
