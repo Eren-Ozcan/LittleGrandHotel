@@ -362,6 +362,34 @@ olsun, orada düzenleme/ekleme vs olsun" (bkz. Gamezebo Hotel City rehberi).
       `remove_ads`/`income_2x` in-app product tanımı, Play App Signing kaydı,
       gizlilik politikası + mağaza listeleme içerikleri.
 
+### Ana menü ekranı (Temmuz 2026, kullanıcı isteği + 2026 mobil UI araştırması)
+Oyun daha önce hiçbir ana menüsü olmadan doğrudan oynanışa açılıyordu.
+Kullanıcı isteği: "ana menüye güzel tasarımlar yap… kullanıcılar neyi
+beğeniyor ona göre güncelle… görsellerin ve pop-upların üst üste
+gelmediğinden emin ol". Web araştırması (Pixune, Fireart Studio, mobil UI
+trend yazıları) tutarlı bir sonuca işaret etti: oyuncular sade, tek net
+eylemli ("tek CTA"), bol boşluklu, mevcut oyun görsel diliyle uyumlu açılış
+ekranlarını tercih ediyor — ayrı bir görsel stil icat etmek yerine mevcut
+`PALETTE`/`_button`/`_label` diliyle tutarlılık korundu.
+- [x] `_build_start_screen()`: tam ekran, en üstte (son eklenen child)
+      açılış katmanı — sky gradyanı, üst üçte birde sınırlı bulutlar (orta
+      sütunla asla çakışmayan sabit bölge), ortalanmış logo (`icon.svg`) +
+      otel adı + kişiselleştirilmiş alt yazı (yeni oyuncuya davetkâr metin,
+      dönen oyuncuya "Seviye N · X ⭐" özeti) + tek büyük nabız atan "OYNA"/
+      "DEVAM ET" CTA'sı (topla butonuyla aynı kabartma/gölge/nabız dili).
+      Sağ üstte bağımsız köşe-çapalı ses aç/kapa düğmesi, alt kenarda sürüm
+      etiketi — ikisi de merkez sütunun akışı DIŞINDA, ekran boyutundan
+      bağımsız asla üst üste binmiyor.
+- [x] Tutorial/günlük ödül/çevrimdışı popup zinciri (`_maybe_show_tutorial`)
+      artık `_ready()`'de değil, "OYNA"ya basılıp menü solma animasyonuyla
+      kapandıktan SONRA tetikleniyor — aksi halde ilk açılışta tutorial
+      popup'ı menünün arkasında görünmeden açılırdı.
+      `--resolution 540x960` windowed screenshot ile doğrulandı:
+      menü tek başına çakışmasız render ediyor, "OYNA" tıklandığında solup
+      kapanıyor ve altındaki oyun ekranı (üst bar, otel, alt bar) ile
+      üzerine açılan Günlük Ödül popup'ı doğru, çakışmasız yerleşiyor.
+      `tests/sim_check.gd` (ekonomi/kayıt) değişmeden geçmeye devam ediyor.
+
 ### Açılış tutorial'ı + popup yenileme (Temmuz 2026)
 - [x] İlk açılışta (yepyeni kayıtta) 6 adımlık basit popup dizisi eklendi
       (`Game.tutorial_seen`, kayıt v11→v12 göçü); Ayarlar → Kaydı Sıfırla ile
