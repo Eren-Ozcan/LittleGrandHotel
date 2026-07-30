@@ -243,6 +243,15 @@ var _room_visual_cache: Dictionary = {}
 var _sfx_players: Dictionary = {}
 var music_player: AudioStreamPlayer
 
+## Açılış ana menüsü: her başlatmada oyunun ÜSTÜNDE (en son eklenen child,
+## dolayısıyla en üstte) tam ekran kaplar, "OYNA" ile kapanıp kaybolur.
+## Tutorial/günlük ödül/çevrimdışı popup zinciri (bkz. _maybe_show_tutorial)
+## artık _ready()'de değil, bu ekran kapandıktan SONRA tetiklenir — aksi
+## halde ilk açılışta tutorial popup'ı ana menünün ARKASINDA sessizce
+## açılıp kullanıcı hiç göremezdi.
+var start_screen: Control
+var _start_pulse_tween: Tween
+
 
 func _notification(what: int) -> void:
 	# Android geri tuşu: proje ayarında quit_on_go_back kapatıldı, aksi halde
@@ -275,7 +284,9 @@ func _ready() -> void:
 		_play("level")
 		_show_toast("Seviye atladın! Seviye %d (+%d elmas)" % [lv, int(Game.eco.levelup_gems)]))
 	_refresh()
-	_maybe_show_tutorial()
+	# Tutorial/günlük ödül/çevrimdışı zinciri artık ana menü kapanınca
+	# başlar (bkz. _on_play_pressed) — ana menünün arkasında görünmez
+	# şekilde açılmasını önler.
 
 
 ## Uygulama açılışında sırayla kontrol edilen popup zinciri: önce (yepyeni
@@ -880,6 +891,161 @@ func _build_ui() -> void:
 	toast_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	toast_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	toast_panel.add_child(toast_label)
+
+	_build_start_screen()
+
+
+## Ana menü: sky gradyanı + logo rozeti + otel adı + (yeni/dönen oyuncuya göre
+## değişen) alt yazı + tek büyük "OYNA" CTA + sağ üstte bağımsız (merkez
+## sütunla asla çakışmayan, kendi köşe-çapasına sabit) ses aç/kapa düğmesi.
+## 2026 mobil UI araştırması (bkz. PR açıklaması): oyuncular sade, tek net
+## eylemli, bol boşluklu başlangıç ekranlarını tercih ediyor — mevcut oyun
+## içi kart/buton dilini (aynı PALETTE, aynı _button/_label yardımcıları)
+## kullanarak ayrı bir görsel stil icat etmek yerine tutarlılık korunuyor.
+func _build_start_screen() -> void:
+	start_screen = Control.new()
+	start_screen.set_anchors_preset(Control.PRESET_FULL_RECT)
+	start_screen.mouse_filter = Control.MOUSE_FILTER_STOP
+	add_child(start_screen)
+
+	var grad := Gradient.new()
+	grad.offsets = PackedFloat32Array([0.0, 1.0])
+	grad.colors = PackedColorArray([PALETTE.sky_top, PALETTE.sky_bottom])
+	var gt := GradientTexture2D.new()
+	gt.gradient = grad
+	gt.fill_from = Vector2(0, 0)
+	gt.fill_to = Vector2(0, 1)
+	var bg := TextureRect.new()
+	bg.texture = gt
+	bg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	bg.stretch_mode = TextureRect.STRETCH_SCALE
+	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	start_screen.add_child(bg)
+
+	# Bulutlar bilerek yalnızca ÜST üçte birde: logo/başlık/buton sütunu
+	# ekranın ortasında yaşıyor, bulutlar o bölgeye asla taşmıyor (çakışma
+	# yok — "görsellerin üst üste gelmemesi" isteği).
+	for cdef in [[46, 96, 150], [430, 150, 120], [520, 60, 90]]:
+		var cloud := TextureRect.new()
+		cloud.texture = _tex("res://assets/ui/cloud.svg")
+		cloud.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		cloud.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT
+		cloud.position = Vector2(cdef[0], cdef[1])
+		cloud.custom_minimum_size = Vector2(cdef[2], cdef[2] * 0.46)
+		cloud.size = cloud.custom_minimum_size
+		cloud.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		start_screen.add_child(cloud)
+
+	# Sağ üst: ses aç/kapa. Kendi köşe-çapasına sabit (merkez sütunun
+	# akışına dahil DEĞİL) — hangi ekran boyutunda olursa olsun logo/başlık
+	# sütunuyla asla üst üste binmez.
+	var sound_b := _button("🔊" if (Game.sound_on or Game.music_on) else "🔇", 20, PALETTE.wood, PALETTE.cream_text)
+	sound_b.custom_minimum_size = Vector2(60, 60)
+	sound_b.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	sound_b.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	sound_b.offset_left = -76
+	sound_b.offset_top = 24
+	sound_b.offset_right = -16
+	sound_b.offset_bottom = 84
+	sound_b.pressed.connect(func():
+		var on: bool = not (Game.sound_on or Game.music_on)
+		Game.sound_on = on
+		Game.music_on = on
+		Game.save_game()
+		sound_b.text = "🔊" if on else "🔇"
+		if on and music_player and not music_player.playing:
+			music_player.play()
+		elif not on and music_player:
+			music_player.stop())
+	start_screen.add_child(sound_b)
+
+	var center := CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	start_screen.add_child(center)
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 16)
+	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	center.add_child(col)
+
+	var logo_wrap := CenterContainer.new()
+	logo_wrap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_child(logo_wrap)
+	var logo := TextureRect.new()
+	logo.texture = _tex("res://icon.svg")
+	logo.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	logo.custom_minimum_size = Vector2(176, 176)
+	logo.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	logo_wrap.add_child(logo)
+
+	var title := _label(Game.hotel_name.to_upper(), 32, PALETTE.wood_dark)
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	title.custom_minimum_size = Vector2(560, 0)
+	title.add_theme_color_override("font_outline_color", PALETTE.cream)
+	title.add_theme_constant_override("outline_size", 8)
+	title.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_child(title)
+
+	# Dönen oyuncuya kişiselleştirilmiş, yeni oyuncuya davetkâr alt yazı.
+	var subtitle_text := "Küçük bir otelden büyük bir imparatorluğa"
+	var play_text := "▶  OYNA"
+	if Game.tutorial_seen:
+		subtitle_text = "Seviye %d  ·  %d ⭐  ·  otelin seni bekliyor" % [Game.level(), Game.star_rating()]
+		play_text = "▶  DEVAM ET"
+	var subtitle := _label(subtitle_text, 15, PALETTE.muted)
+	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	subtitle.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_child(subtitle)
+
+	col.add_child(_spacer_y(26))
+
+	var play_b := _button(play_text, 24, PALETTE.gold, PALETTE.text)
+	play_b.custom_minimum_size = Vector2(300, 88)
+	play_b.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	for state in ["normal", "hover", "pressed"]:
+		var sb: StyleBoxFlat = play_b.get_theme_stylebox(state)
+		sb.border_width_bottom = 6
+		sb.border_color = PALETTE.gold.darkened(0.4)
+		sb.shadow_color = Color(0.1, 0.06, 0.02, 0.28)
+		sb.shadow_size = 8
+		sb.shadow_offset = Vector2(0, 4)
+	play_b.pressed.connect(_on_play_pressed)
+	col.add_child(play_b)
+
+	# Tek CTA'ya dikkat çekmek için hafif nabız (topla butonuyla aynı dil,
+	# bkz. _start_collect_pulse) — 2026 araştırması: "animasyonlu/duyarlı
+	# CTA" trendi.
+	play_b.pivot_offset = play_b.custom_minimum_size / 2.0
+	_start_pulse_tween = play_b.create_tween()
+	_start_pulse_tween.set_loops()
+	_start_pulse_tween.tween_property(play_b, "scale", Vector2(1.04, 1.04), 0.6) \
+		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	_start_pulse_tween.tween_property(play_b, "scale", Vector2(1.0, 1.0), 0.6) \
+		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+
+	# Alt: sürüm etiketi — köşede, sade, merkez sütundan ayrı çapa.
+	var version_label := _label("v1.0", 11, PALETTE.muted)
+	version_label.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	version_label.offset_top = -34
+	version_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	version_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	version_label.modulate.a = 0.7
+	start_screen.add_child(version_label)
+
+
+func _on_play_pressed() -> void:
+	_play("tap")
+	if _start_pulse_tween and is_instance_valid(_start_pulse_tween):
+		_start_pulse_tween.kill()
+	start_screen.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var t := create_tween()
+	t.tween_property(start_screen, "modulate:a", 0.0, 0.28).set_trans(Tween.TRANS_SINE)
+	t.tween_callback(func():
+		start_screen.queue_free()
+		start_screen = null
+		_maybe_show_tutorial())
 
 
 ## Yuvarlak köşeli + yumuşak gölgeli kart stilbox'u (referans mockup'taki
