@@ -1,8 +1,11 @@
 extends Node
-## Görsel doğrulama aracı: ana sahneyi yükler, 1,5 sn sonra ekran
-## görüntüsünü user://shot.png'ye yazar ve çıkar.
+## Görsel doğrulama aracı: ana sahneyi yükler (açılış yükleme ekranını
+## atlar), kısa bir süre sonra ekran görüntüsünü user://shot.png'ye yazar
+## ve çıkar.
 ## Çalıştırma (pencere açar, headless DEĞİL):
 ##   tools\Godot_v4.7-stable_win64_console.exe --path . res://tests/shot.tscn
+## Argümanlar (-- ile ayrılır): demo, zoomin, out=isim.png,
+## popup=shift|settings|staff|quests|stats|profile|gems (ilgili popup'ı açık yakalar)
 
 
 func _ready() -> void:
@@ -22,9 +25,28 @@ func _ready() -> void:
 		var game := get_node("/root/Game")
 		game.coins += 50000
 		game.start_shift(8)
-	await get_tree().create_timer(1.2).timeout
+	# Açılış yükleme ekranı (~4.2sn büyüme animasyonu, bkz. main.gd
+	# _finish_loading_screen) her çekimde beklemek yerine burada atlanır —
+	# aksi halde popup=... argümanları ekran görüntüsünde hâlâ görünen
+	# yükleme ekranının ARKASINDA açılmış olurdu.
+	main._finish_loading_screen()
+	await get_tree().create_timer(0.6).timeout
 	if "zoomin" in OS.get_cmdline_user_args():
 		main._zoom_by(0.35, main.zoom_viewport.size / 2.0)
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("popup="):
+			var builders := {
+				"shift": ["Vardiya", main._build_shift_popup],
+				"settings": ["Ayarlar", main._build_settings_popup],
+				"staff": ["Personel", main._build_staff_popup],
+				"quests": ["Görevler", main._build_quests_popup],
+				"stats": ["İstatistik", main._build_stats_popup],
+				"profile": ["Profil", main._build_profile_popup],
+				"gems": ["Elmas Satın Al", main._build_gems_popup],
+			}
+			var key: String = arg.substr(6)
+			if builders.has(key):
+				main._open_popup(builders[key][0], builders[key][1])
 	await get_tree().create_timer(0.3).timeout
 	var out_path := "user://shot.png"
 	for arg in OS.get_cmdline_user_args():
