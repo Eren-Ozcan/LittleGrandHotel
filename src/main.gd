@@ -186,8 +186,11 @@ var _did_initial_fit := false
 var zoom_viewport: Control
 var building_canvas: Control
 var roof_panel: PanelContainer
-var roof_title_label: Label
 var roof_theme_label: Label
+## Otel adı artık üst bardaki sabit panelde değil, lobi duvarındaki boş
+## çerçevede (lobby.png) asılı bir tabela gibi gösteriliyor — bkz. _rebuild_hotel.
+var lobby_name_label: Label
+const HOTEL_NAME_MAX_LEN := 16
 var new_floor_button: Button
 var build_mode_button: Button
 ## İnşa Modu kapalıyken boş/kilitli hücreler sade durur (buton/metin yok);
@@ -674,10 +677,10 @@ func _build_ui() -> void:
 	shift_label.add_theme_constant_override("outline_size", 6)
 	root.add_child(shift_label)
 
-	collect_button = _button("", 22, PALETTE.gold, PALETTE.text)
-	collect_button.custom_minimum_size = Vector2(0, 78)
+	collect_button = _button("", 16, PALETTE.gold, PALETTE.text)
+	collect_button.custom_minimum_size = Vector2(0, 52)
 	_button_icon(collect_button, "res://assets/ui/coin.svg")
-	collect_button.add_theme_constant_override("icon_max_width", 32)
+	collect_button.add_theme_constant_override("icon_max_width", 22)
 	# "Daha güzel bir topla butonu" isteği: normal/hover durumlarına kabartma
 	# (koyu alt kenar) + gölge eklendi, disabled'a dokunulmadı (soluk kalsın).
 	for state in ["normal", "hover", "pressed"]:
@@ -706,20 +709,10 @@ func _build_ui() -> void:
 	roof_sb.shadow_size = 5
 	roof_sb.shadow_offset = Vector2(0, 3)
 	roof_panel.add_theme_stylebox_override("panel", roof_sb)
-	roof_panel.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-	roof_panel.gui_input.connect(func(ev):
-		if ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT:
-			_show_rename_hotel_modal())
 	root.add_child(roof_panel)
-	var roof_col := VBoxContainer.new()
-	roof_col.add_theme_constant_override("separation", 2)
-	roof_panel.add_child(roof_col)
-	roof_title_label = _label("", 18, PALETTE.gold_soft)
-	roof_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	roof_col.add_child(roof_title_label)
 	roof_theme_label = _label("", 12, PALETTE.cream_text)
 	roof_theme_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	roof_col.add_child(roof_theme_label)
+	roof_panel.add_child(roof_theme_label)
 
 	var zoom_row := HBoxContainer.new()
 	zoom_row.add_theme_constant_override("separation", 6)
@@ -1177,7 +1170,8 @@ func _refresh() -> void:
 
 
 func _update_live_labels() -> void:
-	roof_title_label.text = "★  %s  ✎  ★" % Game.hotel_name.to_upper()
+	if lobby_name_label:
+		lobby_name_label.text = Game.hotel_name.to_upper()
 	coins_label.text = _fmt(Game.coins)
 	gems_label.text = str(Game.gems)
 	var stars := Game.star_rating()
@@ -1405,6 +1399,29 @@ func _rebuild_hotel() -> void:
 	receptionist.offset_bottom = -8
 	lobby_scene.add_child(receptionist)
 	_animate_guest(receptionist, 2, false)
+
+	# Otel adı tabelası: lobby.png'ye çizili boş duvar çerçevelerinden biri
+	# (asansörün sağındaki) kullanıcı isteğiyle otel adının "asılı durduğu"
+	# yer oldu — üst bardaki eski sabit panel kaldırıldı (bkz. HOTEL_NAME_MAX_LEN).
+	# Çerçevenin lobby.png üzerindeki piksel konumu (1920×256 doku): iç
+	# boşluk x≈1198–1380, y≈59–137. lobby_scene STRETCH_KEEP_ASPECT_COVERED
+	# kullandığından elevator_tex ile aynı kırpma dönüşümü uygulanır
+	# (frac_x=(px-192)/1536, frac_y=py/256 — bkz. elevator_tex yorumu).
+	lobby_name_label = _label(Game.hotel_name.to_upper(), 8, PALETTE.wood_dark)
+	lobby_name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	lobby_name_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	lobby_name_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	lobby_name_label.clip_text = true
+	lobby_name_label.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	lobby_name_label.mouse_filter = Control.MOUSE_FILTER_STOP
+	lobby_name_label.gui_input.connect(func(ev):
+		if ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT:
+			_show_rename_hotel_modal())
+	lobby_name_label.anchor_left = 0.657
+	lobby_name_label.anchor_right = 0.775
+	lobby_name_label.anchor_top = 0.235
+	lobby_name_label.anchor_bottom = 0.53
+	lobby_scene.add_child(lobby_name_label)
 
 	# Sokak: bina bir kaldırım kenarında duruyormuş hissi — açık gri kaldırım
 	# (döşeme derzleriyle) + bordür şeridi + koyu asfalt yol, bina ile aynı
@@ -2520,9 +2537,10 @@ func _show_rename_hotel_modal() -> void:
 	pv.add_theme_constant_override("separation", 14)
 	panel.add_child(pv)
 	pv.add_child(_label("Otelin adını değiştir", 20, PALETTE.wood_dark))
+	pv.add_child(_label("Lobideki tabelaya sığması için en fazla %d karakter." % HOTEL_NAME_MAX_LEN, 12, PALETTE.muted))
 	var field := LineEdit.new()
 	field.text = Game.hotel_name
-	field.max_length = 24
+	field.max_length = HOTEL_NAME_MAX_LEN
 	field.placeholder_text = "Otel adı…"
 	pv.add_child(field)
 	var row := HBoxContainer.new()
@@ -2543,9 +2561,9 @@ func _show_rename_hotel_modal() -> void:
 	var do_save := func():
 		var new_name := field.text.strip_edges()
 		if not new_name.is_empty():
-			Game.hotel_name = new_name.substr(0, 24)
+			Game.hotel_name = new_name.substr(0, HOTEL_NAME_MAX_LEN)
 			Game.save_game()
-			roof_title_label.text = "★  %s  ✎  ★" % Game.hotel_name.to_upper()
+			lobby_name_label.text = Game.hotel_name.to_upper()
 		do_close.call()
 	save_b.pressed.connect(do_save)
 	row.add_child(save_b)
