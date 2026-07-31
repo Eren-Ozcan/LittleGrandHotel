@@ -118,6 +118,15 @@ const WEEKLY_THEMES := [
 	{ "name": "Kış Masalı", "accent": Color("2f6fa8") },
 ]
 
+## Elmas paketleri (gems "+" butonu → _build_gems_popup). Ürün ID'leri
+## Play Console'da yönetilen ürün olarak (bu kez tüketilebilir/consumable
+## türünde) oluşturulmalı — bkz. docs/store/uygulama-ici-urunler.md.
+const GEM_PACKS := [
+	{ "product": "gems_small", "gems": 100, "price": "₺19,99" },
+	{ "product": "gems_medium", "gems": 350, "price": "₺49,99" },
+	{ "product": "gems_large", "gems": 1200, "price": "₺149,99" },
+]
+
 var coins_label: Label
 var gems_label: Label
 var star_icons: Array = []
@@ -626,8 +635,16 @@ func _build_ui() -> void:
 	root.add_theme_constant_override("separation", 10)
 	margin.add_child(root)
 
-	# --- Üst bar (krem panel)
+	# --- Üst bar (krem panel) — tıklanınca Profil açılır (kullanıcı isteği:
+	# "en üstte level para yazan yere tıklayınca profile gitmeli"). Elmas +
+	# butonu kendi STOP filtresiyle bu tıklamayı yutar, satın alma popup'ını
+	# açar (bkz. _build_gems_popup).
 	var top := _panel(PALETTE.cream, PALETTE.facade_line)
+	top.mouse_filter = Control.MOUSE_FILTER_STOP
+	top.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	top.gui_input.connect(func(ev):
+		if ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT:
+			_open_popup("Profil", _build_profile_popup))
 	root.add_child(top)
 	var top_box := VBoxContainer.new()
 	top_box.add_theme_constant_override("separation", 6)
@@ -643,6 +660,10 @@ func _build_ui() -> void:
 	row1.add_child(_icon("res://assets/ui/gem.svg", 26))
 	gems_label = _label("", 21, PALETTE.text)
 	row1.add_child(gems_label)
+	var gem_add_b := _button("+", 16, PALETTE.green_deep, PALETTE.cream_text)
+	gem_add_b.custom_minimum_size = Vector2(32, 32)
+	gem_add_b.pressed.connect(func(): _open_popup("Elmas Satın Al", _build_gems_popup))
+	row1.add_child(gem_add_b)
 	var sp := Control.new()
 	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row1.add_child(sp)
@@ -819,10 +840,11 @@ func _build_ui() -> void:
 		_show_toast("İnşa Modu açıldı — bir odayı rafdan sürükleyip binaya bırak"))
 	bottom.add_child(shop_b)
 
+	# İstatistik ikonu kaldırıldı — kullanıcı isteği: alt bardan Profil'e
+	# taşındı (bkz. _build_profile_popup, üst bar tıklamasıyla açılır).
 	for def in [
 		["res://assets/ui/icon_gear.svg", "Personel", _build_staff_popup],
 		["res://assets/ui/icon_quest.svg", "Görevler", _build_quests_popup],
-		["res://assets/ui/icon_stats.svg", "İstatistik", _build_stats_popup],
 		["res://assets/ui/icon_gear.svg", "Ayarlar", _build_settings_popup],
 	]:
 		var b := _bar_button(def[0], def[1])
@@ -1070,6 +1092,17 @@ func _label(text: String, size: int, color: Color) -> Label:
 	return l
 
 
+## _label()'ın sarmalı hâli — üst bardaki dar HBoxContainer hücrelerinde
+## (coins/level gibi) autowrap varsayılan olsaydı metin dikey harf harf
+## dizilip bozulurdu (autowrap min-width'i ~0'a indiriyor); bu yüzden ortak
+## varsayılan yerine yalnızca uzun açıklama metinlerinde bilinçli kullanılır
+## (Ayarlar/Vardiya/Profil popup'ları — kullanıcı isteği: "görünümü bozuk").
+func _label_wrap(text: String, size: int, color: Color) -> Label:
+	var l := _label(text, size, color)
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	return l
+
+
 func _icon(path: String, px: int) -> TextureRect:
 	var t := TextureRect.new()
 	t.texture = _tex(path)
@@ -1130,6 +1163,11 @@ func _spacer_y(px: int) -> Control:
 func _button(text: String, size: int, bg: Color, fg: Color) -> Button:
 	var b := Button.new()
 	b.text = text
+	# Not: autowrap burada KASITLI OLARAK yok — bir HBoxContainer satırında
+	# (ör. zoom +/- butonları) sarma açık bir buton, genişliği ~0'a sarkıtıp
+	# yüksekliği yüzlerce piksele şişiriyor (min-size hesaplama tuzağı).
+	# Uzun buton metinleri için elle "\n" ile satır kır (bkz. vardiya/otomatik
+	# yenileme butonları) — bu her zaman güvenli ve öngörülebilir.
 	b.add_theme_font_size_override("font_size", roundi(size * UI_TEXT_SCALE))
 	b.add_theme_color_override("font_color", fg)
 	b.add_theme_color_override("font_hover_color", fg)
@@ -2609,7 +2647,7 @@ func _build_shift_popup(c: VBoxContainer) -> void:
 		skip_b.pressed.connect(func():
 			if not hk_active and not skip_b.get_meta("armed", false):
 				skip_b.set_meta("armed", true)
-				skip_b.text = "Temizlik Odası yok — bazı odalar tam ücret vermeyebilir. Yine de bitirmek için tekrar dokun"
+				skip_b.text = "Temizlik Odası yok — bazı odalar tam ücret vermeyebilir.\nYine de bitirmek için tekrar dokun"
 				return
 			if Game.skip_shift():
 				_play("buy")
@@ -2617,9 +2655,9 @@ func _build_shift_popup(c: VBoxContainer) -> void:
 				_close_popup())
 		c.add_child(skip_b)
 		if hk_active:
-			c.add_child(_label("Temizlik Odası var — vardiya sonuna kadar misafirler kesintisiz gelmiş gibi tam ücret alırsın.", 12, PALETTE.green_deep))
+			c.add_child(_label_wrap("Temizlik Odası var — vardiya sonuna kadar misafirler kesintisiz gelmiş gibi tam ücret alırsın.", 12, PALETTE.green_deep))
 		else:
-			c.add_child(_label("Temizlik Odası yok — kirli kalan odalar bu süre için gelir üretmez.", 12, PALETTE.muted))
+			c.add_child(_label_wrap("Temizlik Odası yok — kirli kalan odalar bu süre için gelir üretmez.", 12, PALETTE.muted))
 		if Game.now() < Game.boost_end_unix:
 			var left_min := int((Game.boost_end_unix - Game.now()) / 60.0)
 			c.add_child(_label("Reklam bonusu aktif: gelir ×%.1f (%d dk kaldı)" % [Game.boost_mult, maxi(0, left_min)], 13, PALETTE.green_deep))
@@ -2633,12 +2671,14 @@ func _build_shift_popup(c: VBoxContainer) -> void:
 					_show_toast("Reklam bonusu başladı: 30 dk gelir ×2!")
 					_rebuild_popup()))
 			c.add_child(boost_b)
+		c.add_child(_spacer_y(8))
+		_add_auto_renew_shop(c)
 		return
 	c.add_child(_label("Süre seç — saatlik maliyet hepsinde aynıdır:", 14, PALETTE.muted))
 	for hours: int in [1, 4, 8, 24]:
 		var cost := Game.shift_cost(hours)
 		var est: float = Game.hourly_income() * hours
-		var b := _button("%d saat — maliyet %s · tahmini gelir ~%s" % [hours, _fmt(cost), _fmt(int(est))], 15, PALETTE.wood, PALETTE.cream_text)
+		var b := _button("%d saat\nmaliyet %s · tahmini gelir ~%s" % [hours, _fmt(cost), _fmt(int(est))], 15, PALETTE.wood, PALETTE.cream_text)
 		b.disabled = Game.coins < cost
 		b.pressed.connect(func():
 			if Game.start_shift(hours):
@@ -2647,11 +2687,29 @@ func _build_shift_popup(c: VBoxContainer) -> void:
 				_show_toast("%d saatlik vardiya başladı!" % hours)
 				_close_popup())
 		c.add_child(b)
-	if Game.auto_renew_hours_left > 0.0:
-		c.add_child(_label("Otomatik yenileme hakkı: %s saat — vardiya bitince coin yeterse kendiliğinden devam eder." % _fmt_hms(Game.auto_renew_hours_left), 12, PALETTE.green_deep))
-	else:
-		c.add_child(_label("Otomatik yenileme hakkın yok — vardiya bitince elle yeniden başlatman gerekir (Ayarlar'dan satın alabilirsin).", 12, PALETTE.muted))
-	c.add_child(_label("Not: temizlenmeyen odalar gelir üretmez. Uzun vardiyada Temizlik Odası şart!", 13, PALETTE.banner_red))
+	c.add_child(_label_wrap("Not: temizlenmeyen odalar gelir üretmez. Uzun vardiyada Temizlik Odası şart!", 13, PALETTE.banner_red))
+	c.add_child(_spacer_y(8))
+	_add_auto_renew_shop(c)
+
+
+## Vardiya popup'ının iki kolundan da (aktif/pasif) çağrılır — bu satın alma
+## önceden Ayarlar'daydı, kullanıcı isteğiyle Vardiya'ya taşındı.
+func _add_auto_renew_shop(c: VBoxContainer) -> void:
+	c.add_child(_label("Otomatik yenileme hakkı: %s saat" % _fmt_hms(Game.auto_renew_hours_left),
+		14, PALETTE.wood_dark if Game.auto_renew_hours_left > 0.0 else PALETTE.muted))
+	c.add_child(_label_wrap("Hakkın varken bir vardiya bitince, coin yeterse aynı süreyle otomatik yenilenir ve yenilenen saat kadar haktan düşer — otel sen yokken de üretime devam eder.", 12, PALETTE.muted))
+	for hours: int in [1, 4, 8, 24]:
+		var ar_cost := Game.auto_renew_buy_cost(hours)
+		var ar_b := _button("%d saat yenileme hakkı satın al\n%s coin" % [hours, _fmt(ar_cost)], 14,
+			PALETTE.wood, PALETTE.cream_text)
+		ar_b.disabled = Game.coins < ar_cost
+		ar_b.pressed.connect(func():
+			if Game.buy_auto_renew(hours):
+				Game.save_game()
+				_play("buy")
+				_show_toast("%d saatlik otomatik yenileme hakkı satın alındı!" % hours)
+				_rebuild_popup())
+		c.add_child(ar_b)
 
 
 func _build_staff_popup(c: VBoxContainer) -> void:
@@ -2831,7 +2889,7 @@ func _add_manage_buttons(c: VBoxContainer) -> void:
 	sl.pressed.connect(func():
 		if not sl.get_meta("armed", false):
 			sl.set_meta("armed", true)
-			sl.text = "Emin misin? Satmak için tekrar dokun"
+			sl.text = "Emin misin?\nSatmak için tekrar dokun"
 			return
 		if Game.sell_room(ridx):
 			_play("buy")
@@ -2842,7 +2900,10 @@ func _add_manage_buttons(c: VBoxContainer) -> void:
 	row.add_child(sl)
 
 
-func _build_stats_popup(c: VBoxContainer) -> void:
+## Profil ile (bkz. _build_profile_popup) ve tests/shot.gd'nin "stats" test
+## anahtarıyla paylaşılan asıl istatistik içeriği — alt bardaki ayrı
+## İstatistik ikonu kaldırıldı, artık yalnızca Profil üzerinden erişilir.
+func _add_stats_rows(c: VBoxContainer) -> void:
 	var rows := [
 		["Toplam toplanan gelir", "%s coin" % _fmt(Game.stat_collected_total)],
 		["Toplama sayısı", str(Game.stat_collects)],
@@ -2876,40 +2937,49 @@ func _build_stats_popup(c: VBoxContainer) -> void:
 			dt.day, dt.month, dt.hour, dt.minute, int(h.hours), _fmt(int(h.cost))], 13, PALETTE.text))
 
 
-func _build_settings_popup(c: VBoxContainer) -> void:
-	var s_b := _button("Ses efektleri: %s" % ("Açık" if Game.sound_on else "Kapalı"), 15,
-		PALETTE.wood if Game.sound_on else PALETTE.wood_dark, PALETTE.cream_text)
-	s_b.pressed.connect(func():
-		Game.sound_on = not Game.sound_on
-		Game.save_game()
-		_play("tap")
-		_rebuild_popup())
-	c.add_child(s_b)
+func _build_stats_popup(c: VBoxContainer) -> void:
+	_add_stats_rows(c)
 
-	var m_b := _button("Lobi müziği: %s" % ("Açık" if Game.music_on else "Kapalı"), 15,
-		PALETTE.wood if Game.music_on else PALETTE.wood_dark, PALETTE.cream_text)
-	m_b.pressed.connect(func():
-		Game.music_on = not Game.music_on
-		music_player.playing = Game.music_on
-		Game.save_game()
-		_rebuild_popup())
-	c.add_child(m_b)
 
-	c.add_child(_label("Otomatik yenileme hakkı: %s saat" % _fmt_hms(Game.auto_renew_hours_left),
-		15, PALETTE.wood_dark if Game.auto_renew_hours_left > 0.0 else PALETTE.muted))
-	c.add_child(_label("Hakkın varken bir vardiya bitince, coin yeterse aynı süreyle otomatik yenilenir ve yenilenen saat kadar haktan düşer — otel sen yokken de üretime devam eder.", 12, PALETTE.muted))
-	for hours: int in [1, 4, 8, 24]:
-		var ar_cost := Game.auto_renew_buy_cost(hours)
-		var ar_b := _button("%d saat yenileme hakkı satın al — %s coin" % [hours, _fmt(ar_cost)], 14,
-			PALETTE.wood, PALETTE.cream_text)
-		ar_b.disabled = Game.coins < ar_cost
-		ar_b.pressed.connect(func():
-			if Game.buy_auto_renew(hours):
-				Game.save_game()
-				_play("buy")
-				_show_toast("%d saatlik otomatik yenileme hakkı satın alındı!" % hours)
-				_rebuild_popup())
-		c.add_child(ar_b)
+## Üst bardaki seviye/para alanına dokununca açılır (bkz. _rebuild_hotel'deki
+## top.gui_input). Hesap bağlama (ileride) + Premium + Prestij + İstatistik
+## tek ekranda toplandı — kullanıcı isteği: bunlar Ayarlar'dan sadeleştirildi.
+func _build_profile_popup(c: VBoxContainer) -> void:
+	c.add_child(_label("Hesap", 16, PALETTE.wood_dark))
+	c.add_child(_label_wrap("Hesap bağlama (Google Play Games / Game Center) yakında — şimdilik kaydını aşağıdaki kodla taşıyabilirsin.", 12, PALETTE.muted))
+	var link_b := _button("Google ile bağlan — yakında", 14, PALETTE.wood_dark, PALETTE.cream_text)
+	link_b.disabled = true
+	c.add_child(link_b)
+
+	c.add_child(_spacer_y(6))
+	c.add_child(_label("Kaydı taşı — bulut yerine paylaşılabilir kod:", 14, PALETTE.text))
+	var export_code := Game.export_save_code()
+	var export_field := LineEdit.new()
+	export_field.text = export_code
+	export_field.editable = false
+	c.add_child(export_field)
+	var copy_b := _button("Kodu panoya kopyala", 14, PALETTE.wood, PALETTE.cream_text)
+	copy_b.pressed.connect(func():
+		DisplayServer.clipboard_set(export_code)
+		_show_toast("Kayıt kodu panoya kopyalandı"))
+	c.add_child(copy_b)
+	c.add_child(_spacer_y(4))
+	var import_field := LineEdit.new()
+	import_field.placeholder_text = "Başka bir kaydın kodunu buraya yapıştır…"
+	c.add_child(import_field)
+	var import_b := _button("İçe aktar\nmevcut kaydın üzerine yazar", 14, PALETTE.banner_red, PALETTE.cream_text)
+	import_b.pressed.connect(func():
+		if not import_b.get_meta("armed", false):
+			import_b.set_meta("armed", true)
+			import_b.text = "Emin misin?\nÜzerine yazmak için tekrar dokun"
+			return
+		if Game.import_save_code(import_field.text):
+			Game.save_game()
+			_close_popup()
+			_show_toast("Kayıt içe aktarıldı!")
+		else:
+			_show_toast("Kod geçersiz — kontrol edip tekrar dene"))
+	c.add_child(import_b)
 
 	c.add_child(_spacer_y(10))
 	c.add_child(_label("Premium", 15, PALETTE.wood_dark))
@@ -2954,45 +3024,62 @@ func _build_settings_popup(c: VBoxContainer) -> void:
 				_show_toast("Devrettin! Yeni gelir çarpanı: ×%.2f" % Game.prestige_mult())
 			else:
 				p_b.set_meta("armed", true)
-				p_b.text = "Emin misin? İlerleme sıfırlanacak, tekrar dokun")
+				p_b.text = "Emin misin?\nİlerleme sıfırlanacak, tekrar dokun")
 		c.add_child(p_b)
-		c.add_child(_label("Devretmek coin, oda, görev ve başarım ilerlemeni sıfırlar; çarpan kalıcıdır.", 12, PALETTE.muted))
+		c.add_child(_label_wrap("Devretmek coin, oda, görev ve başarım ilerlemeni sıfırlar; çarpan kalıcıdır.", 12, PALETTE.muted))
 	else:
 		c.add_child(_label("Devretmek için Seviye %d gerekir (şu an %d)." % [int(Game.eco.prestige.min_level), Game.level()], 13, PALETTE.muted))
 
 	c.add_child(_spacer_y(10))
-	c.add_child(_label("Kaydı taşı — bulut yerine paylaşılabilir kod:", 15, PALETTE.wood_dark))
-	var export_code := Game.export_save_code()
-	var export_field := LineEdit.new()
-	export_field.text = export_code
-	export_field.editable = false
-	c.add_child(export_field)
-	var copy_b := _button("Kodu panoya kopyala", 14, PALETTE.wood, PALETTE.cream_text)
-	copy_b.pressed.connect(func():
-		DisplayServer.clipboard_set(export_code)
-		_show_toast("Kayıt kodu panoya kopyalandı"))
-	c.add_child(copy_b)
+	c.add_child(_label("İstatistikler", 15, PALETTE.wood_dark))
+	_add_stats_rows(c)
 
-	c.add_child(_spacer_y(6))
-	c.add_child(_label("Başka bir kaydı içe aktar:", 14, PALETTE.text))
-	var import_field := LineEdit.new()
-	import_field.placeholder_text = "Kayıt kodunu buraya yapıştır…"
-	c.add_child(import_field)
-	var import_b := _button("İçe aktar — mevcut kaydın üzerine yazar", 14, PALETTE.banner_red, PALETTE.cream_text)
-	import_b.pressed.connect(func():
-		if not import_b.get_meta("armed", false):
-			import_b.set_meta("armed", true)
-			import_b.text = "Emin misin? Üzerine yazmak için tekrar dokun"
-			return
-		if Game.import_save_code(import_field.text):
-			Game.save_game()
-			_close_popup()
-			_show_toast("Kayıt içe aktarıldı!")
-		else:
-			_show_toast("Kod geçersiz — kontrol edip tekrar dene"))
-	c.add_child(import_b)
+
+func _build_gems_popup(c: VBoxContainer) -> void:
+	c.add_child(_label("Elmas satın al", 16, PALETTE.wood_dark))
+	c.add_child(_label_wrap("Fiyatlar mağazada (Play Console) ayarlanır — aşağıdakiler öneridir.", 12, PALETTE.muted))
+	for pack in GEM_PACKS:
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 10)
+		c.add_child(row)
+		row.add_child(_icon("res://assets/ui/gem.svg", 32))
+		var product: String = pack.product
+		var amount: int = pack.gems
+		var b := _button("%d elmas — %s" % [amount, pack.price], 15, PALETTE.green_deep, PALETTE.cream_text)
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		b.pressed.connect(func():
+			IAP.purchase(product, func(ok: bool):
+				if ok:
+					Game.gems += amount
+					Game.save_game()
+					_play("buy")
+					_show_toast("%d elmas eklendi!" % amount)
+					_rebuild_popup()))
+		row.add_child(b)
+
+
+func _build_settings_popup(c: VBoxContainer) -> void:
+	var s_b := _button("Ses efektleri: %s" % ("Açık" if Game.sound_on else "Kapalı"), 15,
+		PALETTE.wood if Game.sound_on else PALETTE.wood_dark, PALETTE.cream_text)
+	s_b.pressed.connect(func():
+		Game.sound_on = not Game.sound_on
+		Game.save_game()
+		_play("tap")
+		_rebuild_popup())
+	c.add_child(s_b)
+
+	var m_b := _button("Lobi müziği: %s" % ("Açık" if Game.music_on else "Kapalı"), 15,
+		PALETTE.wood if Game.music_on else PALETTE.wood_dark, PALETTE.cream_text)
+	m_b.pressed.connect(func():
+		Game.music_on = not Game.music_on
+		music_player.playing = Game.music_on
+		Game.save_game()
+		_rebuild_popup())
+	c.add_child(m_b)
 
 	c.add_child(_spacer_y(8))
+	c.add_child(_label_wrap("Otomatik yenileme hakkı Vardiya'ya, Premium/Prestij ve kayıt aktarımı Profil'e taşındı.", 12, PALETTE.muted))
+	c.add_child(_spacer_y(4))
 	c.add_child(_label("Tehlikeli bölge:", 13, PALETTE.banner_red))
 	var r_b := _button("Kaydı sıfırla", 15, PALETTE.banner_red, PALETTE.cream_text)
 	r_b.pressed.connect(func():
@@ -3002,7 +3089,7 @@ func _build_settings_popup(c: VBoxContainer) -> void:
 			_show_toast("Kayıt sıfırlandı — yeni oyun başladı!")
 		else:
 			r_b.set_meta("armed", true)
-			r_b.text = "Emin misin? Silmek için tekrar dokun")
+			r_b.text = "Emin misin?\nSilmek için tekrar dokun")
 	c.add_child(r_b)
 	c.add_child(_label("Sıfırlama tüm ilerlemeyi kalıcı olarak siler.", 12, PALETTE.muted))
 
