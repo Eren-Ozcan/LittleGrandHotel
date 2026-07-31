@@ -390,6 +390,53 @@ ekranlarını tercih ediyor — ayrı bir görsel stil icat etmek yerine mevcut
       üzerine açılan Günlük Ödül popup'ı doğru, çakışmasız yerleşiyor.
       `tests/sim_check.gd` (ekonomi/kayıt) değişmeden geçmeye devam ediyor.
 
+### Ana menü → yükleme ekranına dönüştürüldü (Temmuz 2026)
+Kullanıcı netleştirdi: bu ekran aslında etkileşimli bir "ana menü" değil,
+oyunun ilk açılışında gösterilen bir **yükleme ekranı** olmalı — CTA/OYNA
+butonu yok, sade (yalnızca görsel + oyun adı), sabit bir süre sonra
+kendiliğinden oyuna geçiyor.
+- [x] `_build_start_screen()`: "OYNA/DEVAM ET" butonu, nabız (pulse) tween'i,
+      kişiselleştirilmiş alt yazı ve sağ üstteki ses aç/kapa düğmesi tamamen
+      kaldırıldı (ses zaten Ayarlar ekranında var). Geriye yalnızca logo +
+      otel adı + büyüme animasyonu + sürüm etiketi kaldı.
+- [x] `_on_play_pressed` → `_finish_loading_screen` olarak yeniden adlandırıldı;
+      artık bir butona değil `get_tree().create_timer(4.2).timeout`'a bağlı —
+      büyüme animasyonu en az bir kez "büyük otel" aşamasına ulaştıktan hemen
+      sonra ekran otomatik solup kapanıyor, tutorial/günlük ödül zinciri
+      öncekiyle aynı şekilde bu kapanıştan SONRA tetikleniyor.
+      Headless doğrulama: t≈4.6s'de `start_screen`'in null olduğu ve
+      ardından "Hoş Geldin" tutorial popup'ının doğru açıldığı teyit edildi.
+
+### Ana menü görsel paketi (Temmuz 2026, Google Flow ile üretildi)
+İlk sürümdeki ana menü tamamen prosedüreldi (düz gradyan + 3 basit vektör
+bulut); kullanıcı bunun oyunun geri kalanına (chibi/pastel PNG illüstrasyonlar)
+göre "yoksul" kaldığını belirtti. Google Flow (labs.google/flow, Nano Banana 2)
+ile ilk denemede painterly/yumuşak-gölgeli bir stil üretildi ama kullanıcı
+"oyunun gerçek haliyle alakasız" dedi — headless ekran görüntüsüyle
+(`tests/shot.gd`) oyunun gerçek stilinin (kalın koyu-kahve çizgiler, düz
+cel-shade renkler, gölgesiz) referans alınmasıyla ikinci denemede doğru stil
+yakalandı.
+- [x] 3 aşamalı büyüme sprite'ı üretildi (`assets/ui/menu_hotel_stage1|2|3.png`,
+      şeffaf arka plan — Pillow ile beyaz zeminden alfa anahtarlama +
+      içerik kutusuna kırpma): küçük kulübe han → orta ölçek butik otel →
+      büyük/gösterişli otel.
+- [x] `main.gd:_build_start_screen()`: CTA butonunun altındaki boş alanda
+      (buton ile sürüm etiketi arasında, merkez sütunun akışı DIŞINDA sabit
+      çapalı) sonsuz döngülü küçük→orta→büyük büyüme animasyonu — Tween ile
+      kademeli ölçek + doku değişimi, taban (pivot) sabit büyüme yukarı doğru.
+      En büyük aşamada (ölçek 1.15) bile CTA butonuyla veya sürüm etiketiyle
+      çakışmayacak şekilde kutu boyutu/konumu ekran görüntüsüyle ölçülerek
+      ayarlandı (`growth_wrap` `anchor_top=0.735`, yükseklik 195px).
+      `TextureRect.expand_mode = EXPAND_IGNORE_SIZE` şart — yoksa kontrol
+      dokunun gerçek piksel boyutuna büyüyüp ekrana taşıyor (ilk denemede
+      bulunan hata).
+- [x] Google hesabı notu: Flow'da kullanıcının kişisel hesabı
+      (`ralakuss0@gmail.com`) kullanıldı, stüdyo hesabından (`yilkgamesstudio`)
+      ayrı — bkz. kullanıcı belleği.
+- Değerlendirilip ertelenen: küçük→büyük geçişin gerçek bir Flow videosu
+      (Veo) olması fikri — kullanıcı oyun-içi Tween animasyonunu (yukarıdaki)
+      tercih etti, video/codec altyapısı gerekmiyor.
+
 ### Açılış tutorial'ı + popup yenileme (Temmuz 2026)
 - [x] İlk açılışta (yepyeni kayıtta) 6 adımlık basit popup dizisi eklendi
       (`Game.tutorial_seen`, kayıt v11→v12 göçü); Ayarlar → Kaydı Sıfırla ile
