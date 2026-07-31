@@ -243,14 +243,15 @@ var _room_visual_cache: Dictionary = {}
 var _sfx_players: Dictionary = {}
 var music_player: AudioStreamPlayer
 
-## Açılış ana menüsü: her başlatmada oyunun ÜSTÜNDE (en son eklenen child,
-## dolayısıyla en üstte) tam ekran kaplar, "OYNA" ile kapanıp kaybolur.
+## Açılış yükleme ekranı: her başlatmada oyunun ÜSTÜNDE (en son eklenen
+## child, dolayısıyla en üstte) tam ekran kaplar, sabit bir süre sonra
+## kendiliğinden kapanıp kaybolur (bkz. _finish_loading_screen — CTA yok).
 ## Tutorial/günlük ödül/çevrimdışı popup zinciri (bkz. _maybe_show_tutorial)
 ## artık _ready()'de değil, bu ekran kapandıktan SONRA tetiklenir — aksi
-## halde ilk açılışta tutorial popup'ı ana menünün ARKASINDA sessizce
+## halde ilk açılışta tutorial popup'ı yükleme ekranının ARKASINDA sessizce
 ## açılıp kullanıcı hiç göremezdi.
 var start_screen: Control
-var _start_pulse_tween: Tween
+var _start_growth_tween: Tween
 
 
 func _notification(what: int) -> void:
@@ -284,8 +285,8 @@ func _ready() -> void:
 		_play("level")
 		_show_toast("Seviye atladın! Seviye %d (+%d elmas)" % [lv, int(Game.eco.levelup_gems)]))
 	_refresh()
-	# Tutorial/günlük ödül/çevrimdışı zinciri artık ana menü kapanınca
-	# başlar (bkz. _on_play_pressed) — ana menünün arkasında görünmez
+	# Tutorial/günlük ödül/çevrimdışı zinciri artık yükleme ekranı kendiliğinden
+	# kapanınca başlar (bkz. _finish_loading_screen) — arkasında görünmez
 	# şekilde açılmasını önler.
 
 
@@ -895,13 +896,11 @@ func _build_ui() -> void:
 	_build_start_screen()
 
 
-## Ana menü: sky gradyanı + logo rozeti + otel adı + (yeni/dönen oyuncuya göre
-## değişen) alt yazı + tek büyük "OYNA" CTA + sağ üstte bağımsız (merkez
-## sütunla asla çakışmayan, kendi köşe-çapasına sabit) ses aç/kapa düğmesi.
-## 2026 mobil UI araştırması (bkz. PR açıklaması): oyuncular sade, tek net
-## eylemli, bol boşluklu başlangıç ekranlarını tercih ediyor — mevcut oyun
-## içi kart/buton dilini (aynı PALETTE, aynı _button/_label yardımcıları)
-## kullanarak ayrı bir görsel stil icat etmek yerine tutarlılık korunuyor.
+## Açılış yükleme ekranı: sky gradyanı + logo rozeti + otel adı + küçük→
+## büyük otel büyüme animasyonu. Etkileşim/CTA YOK — sabit bir süre
+## gösterilip otomatik olarak oyuna geçer (kullanıcı isteği: "oyna butonu
+## olmayacak, ilk başta gösterilen yükleme ekranı"; sade, yalnızca görsel +
+## oyun adı, ekstra öğe (ilerleme çubuğu/ipucu metni vb.) istenmedi).
 func _build_start_screen() -> void:
 	start_screen = Control.new()
 	start_screen.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -937,29 +936,6 @@ func _build_start_screen() -> void:
 		cloud.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		start_screen.add_child(cloud)
 
-	# Sağ üst: ses aç/kapa. Kendi köşe-çapasına sabit (merkez sütunun
-	# akışına dahil DEĞİL) — hangi ekran boyutunda olursa olsun logo/başlık
-	# sütunuyla asla üst üste binmez.
-	var sound_b := _button("🔊" if (Game.sound_on or Game.music_on) else "🔇", 20, PALETTE.wood, PALETTE.cream_text)
-	sound_b.custom_minimum_size = Vector2(60, 60)
-	sound_b.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	sound_b.grow_horizontal = Control.GROW_DIRECTION_BEGIN
-	sound_b.offset_left = -76
-	sound_b.offset_top = 24
-	sound_b.offset_right = -16
-	sound_b.offset_bottom = 84
-	sound_b.pressed.connect(func():
-		var on: bool = not (Game.sound_on or Game.music_on)
-		Game.sound_on = on
-		Game.music_on = on
-		Game.save_game()
-		sound_b.text = "🔊" if on else "🔇"
-		if on and music_player and not music_player.playing:
-			music_player.play()
-		elif not on and music_player:
-			music_player.stop())
-	start_screen.add_child(sound_b)
-
 	var center := CenterContainer.new()
 	center.set_anchors_preset(Control.PRESET_FULL_RECT)
 	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -988,43 +964,6 @@ func _build_start_screen() -> void:
 	title.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	col.add_child(title)
 
-	# Dönen oyuncuya kişiselleştirilmiş, yeni oyuncuya davetkâr alt yazı.
-	var subtitle_text := "Küçük bir otelden büyük bir imparatorluğa"
-	var play_text := "▶  OYNA"
-	if Game.tutorial_seen:
-		subtitle_text = "Seviye %d  ·  %d ⭐  ·  otelin seni bekliyor" % [Game.level(), Game.star_rating()]
-		play_text = "▶  DEVAM ET"
-	var subtitle := _label(subtitle_text, 15, PALETTE.muted)
-	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	subtitle.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	col.add_child(subtitle)
-
-	col.add_child(_spacer_y(26))
-
-	var play_b := _button(play_text, 24, PALETTE.gold, PALETTE.text)
-	play_b.custom_minimum_size = Vector2(300, 88)
-	play_b.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	for state in ["normal", "hover", "pressed"]:
-		var sb: StyleBoxFlat = play_b.get_theme_stylebox(state)
-		sb.border_width_bottom = 6
-		sb.border_color = PALETTE.gold.darkened(0.4)
-		sb.shadow_color = Color(0.1, 0.06, 0.02, 0.28)
-		sb.shadow_size = 8
-		sb.shadow_offset = Vector2(0, 4)
-	play_b.pressed.connect(_on_play_pressed)
-	col.add_child(play_b)
-
-	# Tek CTA'ya dikkat çekmek için hafif nabız (topla butonuyla aynı dil,
-	# bkz. _start_collect_pulse) — 2026 araştırması: "animasyonlu/duyarlı
-	# CTA" trendi.
-	play_b.pivot_offset = play_b.custom_minimum_size / 2.0
-	_start_pulse_tween = play_b.create_tween()
-	_start_pulse_tween.set_loops()
-	_start_pulse_tween.tween_property(play_b, "scale", Vector2(1.04, 1.04), 0.6) \
-		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	_start_pulse_tween.tween_property(play_b, "scale", Vector2(1.0, 1.0), 0.6) \
-		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-
 	# Alt: sürüm etiketi — köşede, sade, merkez sütundan ayrı çapa.
 	var version_label := _label("v1.0", 11, PALETTE.muted)
 	version_label.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
@@ -1034,11 +973,71 @@ func _build_start_screen() -> void:
 	version_label.modulate.a = 0.7
 	start_screen.add_child(version_label)
 
+	# CTA'nın altındaki boş alanda: "küçük otelden büyük bir imparatorluğa"
+	# vaadini özetleyen, sonsuz döngülü küçük→orta→büyük otel büyüme
+	# animasyonu (Google Flow'da üretilip oyunun kendi düz-vektör/kalın
+	# çizgili stiline uydurulmuş 3 aşama). Kendi sabit çapasında — merkez
+	# sütunun akışı DIŞINDA, buton/sürüm etiketiyle asla çakışmıyor.
+	var growth_wrap := Control.new()
+	growth_wrap.anchor_left = 0.5
+	growth_wrap.anchor_right = 0.5
+	growth_wrap.anchor_top = 0.735
+	growth_wrap.anchor_bottom = 0.735
+	growth_wrap.offset_left = -100
+	growth_wrap.offset_right = 100
+	growth_wrap.offset_top = 0
+	growth_wrap.offset_bottom = 195
+	growth_wrap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	start_screen.add_child(growth_wrap)
 
-func _on_play_pressed() -> void:
-	_play("tap")
-	if _start_pulse_tween and is_instance_valid(_start_pulse_tween):
-		_start_pulse_tween.kill()
+	var growth_tex := TextureRect.new()
+	growth_tex.set_anchors_preset(Control.PRESET_FULL_RECT)
+	growth_tex.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	growth_tex.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	growth_tex.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# En büyük (grand hotel, scale 1.15) aşamada bile üst kenar CTA
+	# butonuyla çakışmasın diye taban (pivot) sabit, büyüme yukarı doğru.
+	growth_tex.pivot_offset = Vector2(100, 195)
+	growth_wrap.add_child(growth_tex)
+
+	var growth_stages := [
+		_tex("res://assets/ui/menu_hotel_stage1.png"),
+		_tex("res://assets/ui/menu_hotel_stage2.png"),
+		_tex("res://assets/ui/menu_hotel_stage3.png"),
+	]
+	growth_tex.texture = growth_stages[0]
+	growth_tex.scale = Vector2(0.8, 0.8)
+	growth_tex.modulate.a = 0.0
+
+	_start_growth_tween = growth_tex.create_tween()
+	_start_growth_tween.set_loops()
+	_start_growth_tween.tween_property(growth_tex, "modulate:a", 1.0, 0.5)
+	_start_growth_tween.tween_interval(1.3)
+	_start_growth_tween.tween_callback(func(): growth_tex.texture = growth_stages[1])
+	_start_growth_tween.tween_property(growth_tex, "scale", Vector2(0.95, 0.95), 0.4) \
+		.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	_start_growth_tween.tween_interval(1.3)
+	_start_growth_tween.tween_callback(func(): growth_tex.texture = growth_stages[2])
+	_start_growth_tween.tween_property(growth_tex, "scale", Vector2(1.15, 1.15), 0.45) \
+		.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	_start_growth_tween.tween_interval(1.8)
+	_start_growth_tween.tween_property(growth_tex, "modulate:a", 0.0, 0.5)
+	_start_growth_tween.tween_callback(func():
+		growth_tex.texture = growth_stages[0]
+		growth_tex.scale = Vector2(0.8, 0.8))
+	_start_growth_tween.tween_interval(0.3)
+
+	# CTA yok: yükleme ekranı büyüme animasyonu en az bir kez "büyük otel"
+	# aşamasına ulaşacak kadar (bkz. yukarıdaki zamanlama, ~4s) gösterilip
+	# kendiliğinden oyuna geçer.
+	get_tree().create_timer(4.2).timeout.connect(_finish_loading_screen)
+
+
+func _finish_loading_screen() -> void:
+	if not start_screen:
+		return
+	if _start_growth_tween and is_instance_valid(_start_growth_tween):
+		_start_growth_tween.kill()
 	start_screen.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var t := create_tween()
 	t.tween_property(start_screen, "modulate:a", 0.0, 0.28).set_trans(Tween.TRANS_SINE)
