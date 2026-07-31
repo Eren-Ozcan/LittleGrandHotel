@@ -27,6 +27,23 @@ oluştur. ID'ler kodda (`src/autoload/iap.gd`) sabit, eşleşmezse satın alma
 | Önerilen fiyat | ₺99,99 (öneri — dilediğin gibi ayarla) |
 | Durum | Etkin |
 
+## 3. Elmas Paketleri (tüketilebilir)
+
+Bunlar **Yönetilen ürün** olarak değil, satın alındıkça tekrar tekrar
+alınabilmesi gerektiği için kod tarafında `consumePurchase` çağrılıyor —
+Play Console tarafında yine "Yönetilen ürün" olarak oluşturulur (Play
+Billing'de ayrı bir "tüketilebilir" ürün türü yok, tüketim uygulama
+tarafından `consumePurchase` ile yapılır — kod zaten bunu yapıyor).
+
+| Ürün ID (**değiştirme**) | Ad | Elmas | Önerilen fiyat |
+|---|---|---|---|
+| `gems_small`  | Küçük Elmas Paketi  | 100  | ₺19,99  |
+| `gems_medium` | Orta Elmas Paketi   | 350  | ₺49,99  |
+| `gems_large`  | Büyük Elmas Paketi  | 1200 | ₺149,99 |
+
+Hepsi "Durum: Etkin" olmalı. Miktar/fiyat değişirse `src/main.gd` içindeki
+`GEM_PACKS` sabitini de güncelle.
+
 ## Notlar
 
 - İkisi de kalıcı/tek seferlik satın alma — "abonelik" değil, "Yönetilen

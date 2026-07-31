@@ -20,6 +20,18 @@ signal purchase_result(product_id: String, success: bool)
 
 const PRODUCT_REMOVE_ADS := "remove_ads"
 const PRODUCT_INCOME_2X := "income_2x"
+const PRODUCT_GEMS_SMALL := "gems_small"
+const PRODUCT_GEMS_MEDIUM := "gems_medium"
+const PRODUCT_GEMS_LARGE := "gems_large"
+
+## Elmas paketleri tekrar tekrar satın alınabilir (consumable) — kalıcı
+## ürünlerin aksine acknowledge değil consume edilmeleri gerekir, yoksa
+## Play Billing aynı satın almayı "zaten sahipsin" diyip reddeder.
+const _CONSUMABLE_PRODUCTS := {
+	PRODUCT_GEMS_SMALL: true,
+	PRODUCT_GEMS_MEDIUM: true,
+	PRODUCT_GEMS_LARGE: true,
+}
 
 const _BILLING_SINGLETON := "GodotGooglePlayBilling"
 
@@ -95,9 +107,13 @@ func _apply_purchase(p: Dictionary) -> void:
 	if p.get("purchase_state", 0) != BillingClient.PurchaseState.PURCHASED:
 		return
 	var token: String = p.get("purchase_token", "")
-	if not p.get("is_acknowledged", false):
+	var products: Array = p.get("products", [])
+	var consumable := products.any(func(pid): return _CONSUMABLE_PRODUCTS.has(pid))
+	if consumable:
+		_billing.consume_purchase(token)
+	elif not p.get("is_acknowledged", false):
 		_billing.acknowledge_purchase(token)
-	for product_id in p.get("products", []):
+	for product_id in products:
 		purchase_result.emit(product_id, true)
 		_flush_pending(product_id, true)
 
