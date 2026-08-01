@@ -1,77 +1,79 @@
 # Little Grand Hotel
 
-Mobil otel yönetimi ve dekorasyon oyunu (Godot 4.7, GDScript).
-Tasarım dokümanı: GDD v1.1 — https://claude.ai/code/artifact/e65d0b6a-c8bd-4f01-ac1e-ea46c4a945cb
-Yapılanlar ve yol haritası: [TODO.md](TODO.md)
+Mobile hotel management and decoration game (Godot 4.7, GDScript).
+Design document: GDD v1.1 — https://claude.ai/code/artifact/e65d0b6a-c8bd-4f01-ac1e-ea46c4a945cb
+What's done and the roadmap: [TODO.md](TODO.md)
 
-## Durum: Tam sürüm — çekirdek + geç oyun + uzun vade içerikleri
+## Status: Full release — core + late game + long-term content
 
-Çekirdek döngü: oda → dekorasyon (Stil Puanı → kademe) → vardiya → gelir topla → yatırım.
-Hotel City esintili kesit "dollhouse" görünüm: gökyüzü + silüet, duvar kağıtlı odalar,
-SVG mobilya/misafir görselleri, görev zinciri (20 görev) ve çevrimdışı kazanç.
+Core loop: room → decoration (Style Score → tier) → shift → collect income → reinvest.
+Hotel City-inspired cutaway "dollhouse" look: sky + skyline, wallpapered rooms,
+SVG furniture/guest art, quest chain (20 quests) and offline earnings.
 
-Cila sürümüyle gelenler: ikonlu koyu alt bar, temizlik parıltısı + süpürge animasyonu,
-uçan coin animasyonu, misafir kapı yürüyüşü ve kıpırdanma animasyonları, prosedürel ses
-efektleri + lobi müziği, elmas harcama (vardiya hızlandırma, premium eşya), oda taşıma/
-satma, istatistik ekranı, ayarlar (ses/müzik, kayıt sıfırlama) ve geç oyun içerikleri
-(Restoran, Çatı Bahçesi, seviye 28 denge testi).
+Shipped with the polish release: dark bottom bar with icons, cleaning sparkle + broom
+animation, flying coin animation, guest door walk-in and idle fidget animations,
+procedural sound effects + lobby music, gem spending (shift skip, premium items), room
+moving/selling, statistics screen, settings (sound/music, save reset) and late-game
+content (Restaurant, Rooftop Garden, level 28 balance test).
 
-Uzun vade eklentileri: 13 kalıcı başarım, prestij sistemi (seviye 20'de oteli devredip
-kalıcı gelir çarpanı kazanma), sunucusuz haftalık dekorasyon teması, bulut kaydı yerine
-paylaşılabilir kayıt kodu (dışa/içe aktarma) ve Android dışa aktarma (export preset +
-imzalı debug APK). Kayıt formatı v2'den itibaren adım adım göçle uyumlu.
+Long-term additions: 13 permanent achievements, prestige system (hand over the hotel at
+level 20 to earn a permanent income multiplier), serverless weekly decoration theme, a
+shareable save code (export/import) instead of cloud saves, and Android export (export
+preset + signed debug APK). The save format is compatible with step-by-step migration
+from v2 onward.
 
-Hotel City incelemesi sürümüyle gelenler (orijinal oyunun rehber + görselleri
-incelenerek): istila mekaniği (uzun süre kirli kalan oda paralı temizlenir),
-uyuyan misafiri dürtüp gizli müfettiş bonusu, sokakta kaçan misafiri yakalama,
-hazır dekor paketleri, tesislerde kapasite görünümü; chibi karakterler, komi ve
-hizmetçi, sütunlu-asansörlü lobi sahnesi, zengin tesis sahneleri ve oda kademe
-metresi (kırmızı→yeşil).
+Shipped with the Hotel City review release (after studying the original game's guide +
+art): infestation mechanic (a room left dirty for too long costs coins to clean),
+poking a sleeping guest for a secret inspector bonus, catching a runaway guest on the
+street, ready-made decor bundles, capacity view in facilities; chibi characters, bellboy
+and maid, a lobby scene with columns and an elevator, rich facility scenes and the room
+tier meter (red→green).
 
-## Çalıştırma
+## Running
 
-Godot 4.7 ikilisi `tools/` altında beklenir (repo'da yok):
+The Godot 4.7 binary is expected under `tools/` (not in the repo):
 
 ```
 tools\Godot_v4.7-stable_win64.exe --path .
 ```
 
-## Testler (headless ekonomi doğrulaması)
+## Tests (headless economy verification)
 
 ```
 tools\Godot_v4.7-stable_win64_console.exe --headless --path . --script res://tests/sim_check.gd
 ```
 
-## Android dışa aktarma
+## Android export
 
-`export_presets.cfg` repoya dahildir (non-Gradle build, arm64-v8a, dikey 720×1280).
-Yalnızca yerel makinede bir kereliğine kurulması gerekenler (repoya dahil değil):
+`export_presets.cfg` is included in the repo (non-Gradle build, arm64-v8a, portrait
+720×1280). The following need to be set up once on the local machine only (not included
+in the repo):
 
-1. Godot 4.7 export şablonları → `%APPDATA%\Godot\export_templates\4.7.stable\`
-   (bkz. [Godot export şablonları indirme sayfası](https://godotengine.org/download))
-2. Android SDK (platform-tools + build-tools 34.0.0 + platform 34), `ANDROID_HOME` ile
-   veya Godot Editör Ayarları → Export → Android'den yolu göstererek
-3. Debug keystore: `android/debug.keystore` (gitignore'da; `keytool` ile üretilir):
+1. Godot 4.7 export templates → `%APPDATA%\Godot\export_templates\4.7.stable\`
+   (see the [Godot export templates download page](https://godotengine.org/download))
+2. Android SDK (platform-tools + build-tools 34.0.0 + platform 34), via `ANDROID_HOME`
+   or by pointing to the path from Godot Editor Settings → Export → Android
+3. Debug keystore: `android/debug.keystore` (gitignored; generated with `keytool`):
    ```
    keytool -genkeypair -v -keystore android/debug.keystore -storepass android ^
      -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 ^
      -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
    ```
 
-Kurulum tamamlandıktan sonra APK üretimi:
+Once setup is complete, APK generation:
 
 ```
 tools\Godot_v4.7-stable_win64_console.exe --headless --path . --export-debug "Android" build/android/little-grand-hotel.apk
 ```
 
-## Yapı
+## Structure
 
-- `data/economy.json` — tüm denge değerleri (GDD §5); kodda sabit sayı yok
-- `data/quests.json` — görev zinciri (20 görev)
-- `data/achievements.json` — 13 kalıcı başarım
-- `src/autoload/game.gd` — simülasyon + kayıt (UI'dan bağımsız, headless test edilebilir)
-- `src/main.gd` — Hotel City esintili dollhouse arayüz
-- `src/sfx.gd` — prosedürel ses sentezi (dış ses dosyası gerekmez)
-- `assets/` — SVG görseller (odalar, eşyalar, misafirler, UI ikonları)
-- `tests/sim_check.gd` — ekonomi/kayıt birim testleri
-- `export_presets.cfg` — Android dışa aktarma preset'i (bkz. yukarısı)
+- `data/economy.json` — all balance values (GDD §5); no hardcoded numbers in code
+- `data/quests.json` — quest chain (20 quests)
+- `data/achievements.json` — 13 permanent achievements
+- `src/autoload/game.gd` — simulation + save (independent of the UI, headless testable)
+- `src/main.gd` — Hotel City-inspired dollhouse interface
+- `src/sfx.gd` — procedural sound synthesis (no external audio files required)
+- `assets/` — SVG art (rooms, items, guests, UI icons)
+- `tests/sim_check.gd` — economy/save unit tests
+- `export_presets.cfg` — Android export preset (see above)
