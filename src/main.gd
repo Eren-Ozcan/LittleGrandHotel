@@ -120,7 +120,7 @@ const WEEKLY_THEMES := [
 
 ## Elmas paketleri (gems "+" butonu → _build_gems_popup). Ürün ID'leri
 ## Play Console'da yönetilen ürün olarak (bu kez tüketilebilir/consumable
-## türünde) oluşturulmalı — bkz. docs/store/uygulama-ici-urunler.md.
+## türünde) oluşturulmalı — bkz. docs/store/in-app-products.md.
 const GEM_PACKS := [
 	{ "product": "gems_small", "gems": 100, "price": "₺19,99" },
 	{ "product": "gems_medium", "gems": 350, "price": "₺49,99" },
