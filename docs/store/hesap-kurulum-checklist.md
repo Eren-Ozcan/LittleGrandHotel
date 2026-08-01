@@ -1,74 +1,73 @@
-# Hesap Kurulumu — Yalnızca Senin Yapabileceğin Adımlar
+# Account Setup — Steps Only You Can Do
 
-Bunlar kimlik doğrulama/ödeme gerektirdiği için benim tarafımdan yapılamıyor.
-Her adımın sonunda "kod tarafında ne yapılacak" belirtildi — o kısımları
-gerçek ID'leri getirdiğinde ben tamamlarım.
+These require authentication/payment, so they cannot be done on my side.
+At the end of each step, "what needs to be done in the code" is noted — I will
+complete those parts once you bring me the real IDs.
 
-## 1. Google Play Console hesabı — ✅ Tamamlandı
+## 1. Google Play Console account — ✅ Done
 
-`yilkgamesstudio@gmail.com` hesabıyla Play Console'a kayıt olundu (stüdyo
-adı: **Yilk Games**). Kalanlar:
+Registered on Play Console with the `yilkgamesstudio@gmail.com` account (studio
+name: **Yilk Games**). What remains:
 
-1. Play Console'da "Uygulama oluştur" ile `com.littlegrandhotel.app` paket
-   adıyla yeni bir uygulama aç (paket adı `export_presets.cfg` içinde zaten
-   bu şekilde ayarlı, değiştirme). Geliştirici adı olarak "Yilk Games"
-   görünecek.
-2. **Play App Signing**: ilk AAB'yi yüklerken Play Console otomatik olarak
-   Play App Signing'e kaydolmanı ister (checkbox) — ayrı bir kurulum
-   gerekmiyor, ilk yükleme akışında "Devam et" demen yeterli.
+1. In Play Console, use "Create app" to create a new app with the package name
+   `com.littlegrandhotel.app` (the package name is already set this way in
+   `export_presets.cfg`, don't change it). "Yilk Games" will be shown as the
+   developer name.
+2. **Play App Signing**: when you upload the first AAB, Play Console automatically
+   asks you to enroll in Play App Signing (a checkbox) — no separate setup is
+   needed, it is enough to click "Continue" in the first upload flow.
 
-Kod tarafında yapılacak bir şey yok — imzalı AAB zaten hazır
-(`android/upload-keystore.jks` ile üretildi, bkz. proje geçmişi).
+Nothing to do on the code side — the signed AAB is already ready
+(generated with `android/upload-keystore.jks`, see the project history).
 
-## 2. AdMob hesabı + gerçek reklam ID'leri — ✅ Tamamlandı
+## 2. AdMob account + real ad IDs — ✅ Done
 
-Ödeme profili (AdSense Türkiye) bağlandı, uygulama eklendi, iki reklam birimi
-oluşturuldu ve kod tarafına işlendi:
+The payment profile (AdSense Turkey) was linked, the app was added, two ad units
+were created and wired into the code:
 
-- **Hesap**: `yilkgamesstudio@gmail.com` (Play Console ile aynı hesap — ilk
-  turda yanlışlıkla farklı bir kişisel hesapta (`crazything5341@gmail.com`)
-  da bir AdMob hesabı açılmıştı; o hesap uygulamasız/boş durumda ama
-  silinmedi, ödeme bilgisi hâlâ orada kayıtlı — kafa karıştırmasın diye
-  kapatılması düşünülebilir).
-- ⚠️ **AdMob vergi bilgileri eksik**: `admob.google.com` → Ödemeler → Ödeme
-  bilgileri altında "Türkiye", "ABD" ve "Tayvan" vergi bilgisi alanları boş.
-  ABD kaynaklı reklam gelirinde vergi formu doldurulmadan yüksek stopaj
-  kesilir — doldurulması gerekiyor.
+- **Account**: `yilkgamesstudio@gmail.com` (same account as Play Console — in the
+  first round an AdMob account was accidentally also created on a different
+  personal account (`crazything5341@gmail.com`); that account has no app and is
+  empty but was not deleted, the payment information is still registered there —
+  closing it could be considered so it doesn't cause confusion).
+- ⚠️ **AdMob tax information missing**: under `admob.google.com` → Payments →
+  Payment information, the "Turkey", "United States" and "Taiwan" tax information
+  fields are empty. Without a completed tax form, a high withholding tax is
+  deducted from US-sourced ad revenue — this needs to be filled in.
 - **App ID**: `ca-app-pub-9709993577664180~6521383725`
   (`project.godot` → `[admob] general/android/app_id`)
-- **Rewarded reklam birimi**: `ca-app-pub-9709993577664180/1269057042`
+- **Rewarded ad unit**: `ca-app-pub-9709993577664180/1269057042`
   (`src/autoload/ads.gd` → `_REWARDED_AD_UNIT_ID`)
-- **Interstitial reklam birimi**: `ca-app-pub-9709993577664180/5208302053`
-  (`src/autoload/ads.gd` → `_INTERSTITIAL_AD_UNIT_ID`) — ID hazır ama
-  `show_interstitial()` hâlâ boş bir stub (`main.gd`'de hiçbir yerden
-  çağrılmıyor); gösterim mantığı ayrı bir iş olarak eklenmeli.
+- **Interstitial ad unit**: `ca-app-pub-9709993577664180/5208302053`
+  (`src/autoload/ads.gd` → `_INTERSTITIAL_AD_UNIT_ID`) — the ID is ready but
+  `show_interstitial()` is still an empty stub (it is not called from anywhere in
+  `main.gd`); the display logic should be added as a separate piece of work.
 
-Not: Yeni reklam birimlerinin gerçek reklam göstermeye başlaması AdMob
-tarafında ~1 saat sürebilir.
+Note: it can take ~1 hour on the AdMob side for new ad units to start serving real
+ads.
 
-## 3. Play Console'da uygulama içi ürünler
+## 3. In-app products in Play Console
 
-Ayrıntılı ID/isim/açıklama önerileri: [`uygulama-ici-urunler.md`](./uygulama-ici-urunler.md).
-Kod tarafında ekstra değişiklik gerekmiyor, ürün ID'leri zaten kodla eşleşecek
-şekilde yazıldı (`remove_ads`, `income_2x`).
+Detailed ID/name/description suggestions: [`uygulama-ici-urunler.md`](./uygulama-ici-urunler.md).
+No extra changes are needed on the code side, the product IDs were already written
+so they match the code (`remove_ads`, `income_2x`).
 
-## 4. Gizlilik politikası ve mağaza listeleme
+## 4. Privacy policy and store listing
 
-- Metinler hazır: [`privacy-policy.html`](./privacy-policy.html) (biçimli,
-  bilgi için), [`privacy-policy-plaintext.md`](./privacy-policy-plaintext.md)
-  (Google Sites'a kopyala-yapıştır için düz metin),
+- The texts are ready: [`privacy-policy.html`](./privacy-policy.html) (formatted, for
+  reference), [`privacy-policy-plaintext.md`](./privacy-policy-plaintext.md)
+  (plain text for copy-pasting into Google Sites),
   [`magaza-listeleme.md`](./magaza-listeleme.md).
-- **Google Sites ile yayınlama** (git/repo'ya hiç dokunmadan):
-  1. https://sites.google.com adresine `yilkgamesstudio@gmail.com` ile
-     git, "Boş" yeni site oluştur.
-  2. Site adını "Little Grand Hotel — Gizlilik Politikası (Yilk Games)" yap.
-  3. `privacy-policy-plaintext.md` içeriğini kopyala, metin kutusuna
-     yapıştır; `##` ile başlayan satırları Sites editöründe "Heading"
-     stiliyle biçimlendir (elle, birkaç tıklama).
-  4. Sağ üstten "Yayınla" (Publish) → sana bir web adresi verir (örn.
+- **Publishing with Google Sites** (without touching git/the repo at all):
+  1. Go to https://sites.google.com with `yilkgamesstudio@gmail.com` and create a
+     new "Blank" site.
+  2. Set the site name to "Little Grand Hotel — Privacy Policy (Yilk Games)".
+  3. Copy the contents of `privacy-policy-plaintext.md` and paste it into the text
+     box; format the lines starting with `##` with the "Heading" style in the Sites
+     editor (manually, a few clicks).
+  4. Click "Publish" at the top right → it gives you a web address (e.g.
      `sites.google.com/view/little-grand-hotel-privacy`).
-  5. O adresi Play Console → "Politikalar" → "Gizlilik politikası" alanına
-     yapıştır.
-- Grafik varlıkları: tamam — hi-res simge (`icon_512.png`), öne çıkan görsel
-  (`feature_graphic_1024x500.png`) ve iki ekran görüntüsü
-  (`screenshot_1_overview.png`, `screenshot_2_lobby.png`) repo'da mevcut.
+  5. Paste that address into Play Console → "Policy" → "Privacy policy" field.
+- Graphic assets: done — hi-res icon (`icon_512.png`), feature graphic
+  (`feature_graphic_1024x500.png`) and two screenshots
+  (`screenshot_1_overview.png`, `screenshot_2_lobby.png`) are present in the repo.

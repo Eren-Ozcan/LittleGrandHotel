@@ -1,92 +1,94 @@
-# Play Store Mağaza Listeleme İçeriği
+# Play Store Store Listing Content
 
-Play Console → "Mağaza varlığı" → "Ana mağaza listesi" bölümüne aşağıdakileri
-olduğu gibi kopyala-yapıştır yapabilirsin. Karakter sınırları Google'ın kendi
-sınırlarıdır; hepsi sınır altında.
+You can copy-paste the following as-is into Play Console → "Store presence" →
+"Main store listing". The character limits are Google's own limits; all of the
+below are under the limit.
 
-## Uygulama adı (max 30 karakter)
+## App name (max 30 characters)
 
 ```
 Little Grand Hotel
 ```
 
-## Kısa açıklama (max 80 karakter)
+## Short description (max 80 characters)
 
-Aşağıdakilerden birini seç (ikisi de sınır altında):
-
-```
-Küçük bir oteli dekore et, misafir ağırla, yıldızını yükselt!
-```
-(62 karakter)
+Pick one of the following (both are under the limit):
 
 ```
-Otelini inşa et, dekore et, misafirleri ağırla — idle otel yönetimi!
+Decorate a little hotel, welcome guests, raise your star rating!
 ```
-(70 karakter)
-
-## Tam açıklama (max 4000 karakter)
+(64 characters)
 
 ```
-Little Grand Hotel, kendi küçük otelini sıfırdan büyütüp yıldızlı bir
-zincire dönüştürdüğün rahat bir idle yönetim oyunu.
+Build your hotel, decorate it, welcome guests — idle hotel management!
+```
+(70 characters)
 
-🏨 OTELİNİ İNŞA ET
-Boş bloklardan başla, yeni odalar satın al, misafir odalarından restorana,
-havuzdan spa'ya kadar tesisler ekle. Odaları istediğin gibi yerleştir,
-taşı, gerekirse sat.
+## Full description (max 4000 characters)
 
-🛋️ DEKORE ET, YILDIZINI YÜKSELT
-Her odayı mobilya ve dekorla donat, Stil Puanı topla, oteli Basit'ten
-İkonik'e taşı. Ne kadar şık dekore edersen otelinin yıldız derecesi o kadar
-yükselir.
+```
+Little Grand Hotel is a relaxing idle management game where you grow your own
+little hotel from scratch into a starred chain.
 
-⏱️ VARDİYA YÖNET
-1 saatlik hızlı turdan 24 saatlik uzun vardiyaya kadar seç, personel
-maliyetini ve kâr marjını dengele. Otomatik vardiya yenilemesi sayesinde
-oyunu kapatsan bile otelin üretime devam eder.
+🏨 BUILD YOUR HOTEL
+Start with empty blocks, buy new rooms, and add facilities from guest rooms to a
+restaurant, from a pool to a spa. Place your rooms however you like, move them,
+and sell them if you need to.
 
-🧹 TEMİZLİK VE İSTİLA
-Kirlenen odaları zamanında temizle, yoksa istilaya dönüşür! Temizlik Odası
-kurarak bu işi otomatikleştirebilirsin.
+🛋️ DECORATE, RAISE YOUR STARS
+Furnish every room with furniture and decor, collect Style Score, and take your
+hotel from Basic to Iconic. The more stylishly you decorate, the higher your
+hotel's star rating climbs.
 
-🚶 CANLI BİR OTEL
-Kapının önünde kuyruğa giren, resepsiyonda dolaşan, asansörle yukarı çıkan
-misafirlerle otelin gerçekten yaşıyormuş gibi hissettir. Kaçan bir misafiri
-yakala, uyuyan bir misafiri dürtüp bonus kazan.
+⏱️ MANAGE SHIFTS
+Choose anything from a quick 1-hour round to a long 24-hour shift, and balance
+staff cost against profit margin. Thanks to automatic shift renewal, your hotel
+keeps producing even when you close the game.
 
-🏆 GÖREVLER, BAŞARIMLAR, PRESTİJ
-20 görevlik bir zincir, 13 kalıcı başarım ve seviye 20'de oteli devredip
-kalıcı gelir çarpanı kazandığın bir prestij sistemi seni oyunda tutar.
+🧹 CLEANING AND INFESTATIONS
+Clean dirty rooms in time, or they turn into infestations! You can automate this
+job by building a Cleaning Room.
 
-🎁 GÜNLÜK ÖDÜLLER VE ÇEVRİMDIŞI KAZANÇ
-Her gün giriş yap, artan ödülleri topla. Oyunu kapatıp döndüğünde
-çevrimdışı geçen süre için de kazanç seni bekler.
+🚶 A LIVING HOTEL
+Make your hotel feel truly alive with guests queuing outside the door, wandering
+around reception and riding the elevator up. Catch a runaway guest, poke a
+sleeping guest and earn a bonus.
 
-📴 İNTERNETSİZ OYNANABİLİR
-Oyun tamamen cihazında çalışır, ilerlemen yerel olarak kaydedilir. İstersen
-Ayarlar'dan bir kayıt kodu çıkarıp başka bir cihaza taşıyabilirsin.
+🏆 QUESTS, ACHIEVEMENTS, PRESTIGE
+A chain of 20 quests, 13 permanent achievements and a prestige system where you
+hand over your hotel at level 20 to earn a permanent income multiplier keep you
+in the game.
 
-Little Grand Hotel'i indir, kendi küçük otel imparatorluğunu kur!
+🎁 DAILY REWARDS AND OFFLINE EARNINGS
+Log in every day and collect increasing rewards. When you close the game and come
+back, earnings for the time you spent offline are waiting for you too.
+
+📴 PLAYABLE OFFLINE
+The game runs entirely on your device and your progress is saved locally. If you
+want, you can generate a save code from Settings and carry it to another device.
+
+Download Little Grand Hotel and build your own little hotel empire!
 ```
 
-## Grafik varlıkları
+## Graphic assets
 
-Play Console şunları zorunlu tutar:
+Play Console requires the following:
 
-- [x] **Uygulama simgesi**: 512×512 px, 32-bit PNG. `icon.svg`'den
-      `tools/gen_store_icon.gd` ile üretildi → `docs/store/icon_512.png`.
-- [x] **Öne çıkan görsel (feature graphic)**: 1024×500 px →
+- [x] **App icon**: 512×512 px, 32-bit PNG. Generated from `icon.svg` with
+      `tools/gen_store_icon.gd` → `docs/store/icon_512.png`.
+- [x] **Feature graphic**: 1024×500 px →
       `docs/store/feature_graphic_1024x500.png`.
-- [x] **Telefon ekran görüntüleri**: `docs/store/screenshot_1_overview.png`,
+- [x] **Phone screenshots**: `docs/store/screenshot_1_overview.png`,
       `docs/store/screenshot_2_lobby.png`.
-- [ ] **Kategori**: Oyun → Simülasyon (öneri).
-- [ ] **İçerik derecelendirmesi anketi**: Play Console'da doldurulmalı
-      (reklam + uygulama içi satın alma var, şiddet/kumar yok → muhtemelen
-      "Herkes" / PEGI 3 çıkar, anket otomatik belirler).
-- [ ] **Veri güvenliği (Data safety) formu**: AdMob ve Play Billing
-      kullanıldığı için "reklam kimliği" ve "satın alma bilgisi" toplandığı
-      beyan edilmeli — bkz. `docs/store/privacy-policy.html` içeriği bu
-      beyanla tutarlı yazıldı.
-- [x] **Gizlilik politikası URL'si**: `https://yilkgames.com/privacy-policy/`
-      adresinde yayında ve Play Console → Uygulama içeriği → Gizlilik
-      politikası beyanına girilmiş durumda (26 Tem 2026).
+- [ ] **Category**: Games → Simulation (suggestion).
+- [ ] **Content rating questionnaire**: must be filled in on Play Console
+      (there are ads + in-app purchases, no violence/gambling → it will probably
+      come out as "Everyone" / PEGI 3, the questionnaire determines it
+      automatically).
+- [ ] **Data safety form**: because AdMob and Play Billing are used, it must be
+      declared that the "advertising ID" and "purchase information" are collected —
+      see `docs/store/privacy-policy.html`, its content was written to be
+      consistent with this declaration.
+- [x] **Privacy policy URL**: live at `https://yilkgames.com/privacy-policy/`
+      and entered into the Play Console → App content → Privacy policy
+      declaration (26 Jul 2026).

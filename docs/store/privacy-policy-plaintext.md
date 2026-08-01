@@ -1,57 +1,53 @@
-# Little Grand Hotel — Gizlilik Politikası (Google Sites'a yapıştırmak için düz metin)
+# Little Grand Hotel — Privacy Policy (plain text for pasting into Google Sites)
 
-Aşağıdaki metni olduğu gibi kopyalayıp Google Sites'taki metin kutusuna
-yapıştır, başlıkları (## ile işaretli satırlar) Sites editöründe "Heading"
-stiliyle biçimlendir.
+Copy the text below as-is and paste it into the text box on Google Sites, then
+format the headings (lines marked with ##) with the "Heading" style in the Sites
+editor.
 
 ---
 
-Son güncelleme: 24 Temmuz 2026
+Last updated: 24 July 2026
 
-Little Grand Hotel ("uygulama"), Yilk Games tarafından geliştirilen ücretsiz
-bir otel işletme/idle oyunudur. Bu belge, uygulamanın hangi verileri
-işlediğini açıklar.
+Little Grand Hotel ("the app") is a free hotel management/idle game developed by
+Yilk Games. This document explains what data the app processes.
 
-## 1. Kendi topladığımız veriler
+## 1. Data we collect ourselves
 
-Little Grand Hotel'in kendi sunucusu yoktur. Oyun ilerlemeniz (coin, elmas,
-oda/dekorasyon durumu, istatistikler) yalnızca cihazınızda yerel olarak
-saklanır. Uygulamayı kaldırdığınızda bu veriler cihazınızdan silinir.
-Ayarlar menüsünden isteğe bağlı olarak ilerlemenizi bir metin koduna (kayıt
-kodu) dönüştürüp kendiniz saklayabilir/paylaşabilirsiniz; bu kod tarafımızca
-toplanmaz veya herhangi bir sunucuya gönderilmez.
+Little Grand Hotel has no server of its own. Your game progress (coins, gems,
+room/decoration state, statistics) is stored only locally on your device. When you
+uninstall the app, this data is deleted from your device. From the Settings menu you
+can optionally turn your progress into a text code (save code) and store/share it
+yourself; this code is not collected by us and is not sent to any server.
 
-## 2. Üçüncü taraf hizmetler
+## 2. Third-party services
 
-Uygulama iki Google hizmetini kullanır:
+The app uses two Google services:
 
-- Google AdMob — ödüllü reklamları göstermek için kullanılır. Reklam
-  kişiselleştirme ve ölçüm amacıyla reklam kimliği (advertising ID), cihaz
-  bilgisi ve yaklaşık konum (IP tabanlı) gibi verileri işleyebilir. Avrupa
-  Ekonomik Alanı/Birleşik Krallık ve benzeri bölgelerdeki kullanıcılara,
-  reklam gösterilmeden önce Google'ın Kullanıcı Mesajlaşma Platformu (UMP)
-  aracılığıyla bir onam (consent) formu gösterilir.
-- Google Play Billing — uygulama içi satın almaları (reklamları kaldırma,
-  kazanç çarpanı) işlemek için kullanılır. Ödeme ve satın alma bilgileri
-  doğrudan Google Play tarafından işlenir; kart/ödeme bilgisi tarafımıza hiç
-  ulaşmaz.
+- Google AdMob — used to show rewarded ads. It may process data such as the
+  advertising ID, device information and approximate location (IP-based) for ad
+  personalization and measurement purposes. Users in the European Economic
+  Area/United Kingdom and similar regions are shown a consent form through Google's
+  User Messaging Platform (UMP) before any ads are displayed.
+- Google Play Billing — used to process in-app purchases (removing ads, income
+  multiplier). Payment and purchase information is processed directly by Google
+  Play; card/payment information never reaches us.
 
-Bu hizmetlerin veri işleme uygulamaları için Google'ın kendi gizlilik
-politikasına bakınız: https://policies.google.com/privacy
+For the data processing practices of these services, please see Google's own privacy
+policy: https://policies.google.com/privacy
 
-## 3. Çocukların gizliliği
+## 3. Children's privacy
 
-Little Grand Hotel özel olarak çocuklara yönelik pazarlanmamaktadır ve genel
-kitleye hitap eder. Reklamlar, hedef kitle ayarlarına göre standart (çocuğa
-yönelik olmayan) modda sunulur.
+Little Grand Hotel is not specifically marketed to children and is aimed at a
+general audience. Ads are served in the standard (non-child-directed) mode according
+to the target audience settings.
 
-## 4. Verilerin silinmesi
+## 4. Data deletion
 
-Cihazınızda tuttuğumuz tüm veriler yerel olduğundan, uygulamayı cihazınızdan
-kaldırmanız verilerinizi tamamen siler. Google hizmetleri üzerinden işlenen
-verilerin (reklam kimliği, satın alma geçmişi) silinmesi için Google Hesabı
-ayarlarınızı kullanabilirsiniz.
+Since all data we keep on your device is local, uninstalling the app from your
+device deletes your data completely. To delete data processed through Google
+services (advertising ID, purchase history), you can use your Google Account
+settings.
 
-## 5. İletişim
+## 5. Contact
 
-Sorularınız için: yilkgamesstudio@gmail.com
+For questions: yilkgamesstudio@gmail.com
