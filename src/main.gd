@@ -214,6 +214,7 @@ var _pan_start_canvas_pos := Vector2.ZERO
 var overlay: Control
 var popup_title: Label
 var popup_content: VBoxContainer
+var popup_scroll: ScrollContainer
 var popup_builder: Callable = Callable()
 
 var selected_room := -1
@@ -883,13 +884,13 @@ func _build_ui() -> void:
 	var close_b := _button("Kapat", 15, PALETTE.wood, PALETTE.cream_text)
 	close_b.pressed.connect(_close_popup)
 	head.add_child(close_b)
-	var pscroll := ScrollContainer.new()
-	pscroll.custom_minimum_size = Vector2(0, 640)
-	pv.add_child(pscroll)
+	popup_scroll = ScrollContainer.new()
+	popup_scroll.custom_minimum_size = Vector2(0, 640)
+	pv.add_child(popup_scroll)
 	popup_content = VBoxContainer.new()
 	popup_content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	popup_content.add_theme_constant_override("separation", 8)
-	pscroll.add_child(popup_content)
+	popup_scroll.add_child(popup_content)
 
 	# --- Toast: alt barın üstünde yüzer, yerleşimi itmez; popup'ların da üstünde
 	toast_panel = _panel(PALETTE.green_deep, PALETTE.gold)
@@ -2621,6 +2622,14 @@ func _open_popup(title: String, builder: Callable) -> void:
 	popup_builder = builder
 	overlay.visible = true
 	_rebuild_popup()
+	# ScrollContainer TÜM popup'lar arasında paylaşılıyor (bkz. popup_scroll) —
+	# önceki popup'ta en alta kaydırılmışsa, sıfırlamadan yeni popup da
+	# scroll pozisyonunu koruyup en alttan açılmış gibi görünüyordu
+	# ("bir sekmede en alta kaydırınca başka sekmeye girince en alttan
+	# geliyor" şikâyeti). _rebuild_popup içeriği her state_changed'de de
+	# yeniler ama AYNI popup içinde scroll'u KORUMALIYIZ — sıfırlama bu
+	# yüzden yalnızca burada, yeni popup AÇILIRKEN yapılır.
+	popup_scroll.scroll_vertical = 0
 
 
 func _close_popup() -> void:
