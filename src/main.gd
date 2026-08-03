@@ -182,6 +182,25 @@ var _boarding := 0
 ## asansörle çıktıkça beliriyor (kullanıcı isteği: "oyun direkt odada
 ## insanlar ile başlıyor" şikâyeti).
 var _arrived_guests := 0
+## _waiting_guest_icons ile aynı sırada tutulan misafir SVG tipleri (ör.
+## "1", "3") — kapıdan giren misafirin görsel kimliği, asansöre binene kadar
+## bu sayede korunur (bkz. _spawn_lobby_walker, eskiden burada YENİDEN
+## rastgele seçiliyordu, dışarıdaki ve lobideki misafir farklı görünüyordu).
+var _queued_guest_types: Array = []
+## Kapı açılınca _queued_guest_types'tan aktarılan tipler (_boarding'e denk).
+var _boarding_types: Array = []
+## Game.rooms sırasındaki misafir-odası sırasına (guest_order) göre teslim
+## edilmiş misafirlerin tipi — oda görselinin, o odaya GERÇEKTEN çıkan
+## misafirle aynı tipte gösterilmesini sağlar (kullanıcı şikâyeti: "aşağıdan
+## giren müşteri tipi ile odaya çıkan müşteri tipi aynı değil").
+var _delivered_guest_types: Array = []
+## Bir önceki karede görülen Game.stat_shifts değeri — bu değiştiğinde yeni
+## bir vardiya başlamış demektir (elle veya otomatik yenilenerek). Otomatik
+## yenilenmede shift_active() hiç false olmadığından, aşağıdaki "vardiya
+## kapalı" sıfırlaması hiç tetiklenmiyor ve önceki vardiyadan kalan
+## _arrived_guests vb. sayaçlar yeni vardiyaya taşınıp odalar kimse
+## gelmeden dolu görünüyordu ("3 misafir geldi ama 6 oda doldu" şikâyeti).
+var _last_stat_shifts := -1
 ## Yürüyen yayaların yaşadığı, _rebuild_hotel'in SİLMEDİĞİ kalıcı katman —
 ## building_canvas'ın çocuğu olduğu için zoom/pan'i dünyayla birlikte alır
 ## (eskiden yayalar ekran-uzayında root'a ekleniyordu; kullanıcı pan/zoom
@@ -286,7 +305,10 @@ func _ready() -> void:
 	# yeniden dolmaya başlamasın. Taze vardiyada 0'dan başlar (asansör
 	# teslim ettikçe artar, bkz. _deliver_guests / _make_room_button).
 	if Game.shift_active():
-		_arrived_guests = 999
+		_arrived_guests = _guest_room_count()
+		for i in _arrived_guests:
+			_delivered_guest_types.append(GUEST_TYPES[i % GUEST_TYPES.size()])
+	_last_stat_shifts = Game.stat_shifts
 	Game.state_changed.connect(_refresh)
 	Game.quest_completed.connect(_on_quest_completed)
 	Game.achievement_unlocked.connect(_on_achievement_unlocked)
@@ -384,12 +406,33 @@ func _process(delta: float) -> void:
 func _update_elevator(delta: float) -> void:
 	if elevator_tex == null or not is_instance_valid(elevator_tex):
 		return
+	if Game.stat_shifts != _last_stat_shifts:
+		_last_stat_shifts = Game.stat_shifts
+		# Yeni bir vardiya başladı — otomatik yenilenmede shift_active() hiç
+		# false olmadığı için aşağıdaki "vardiya kapalı" dalı hiç çalışmaz;
+		# sıfırlamayı burada, vardiya sayacındaki değişime bakarak yapıyoruz.
+		_queue_count = 0
+		_boarding = 0
+		_inbound = 0
+		_arrived_guests = 0
+		_queued_guest_types.clear()
+		_boarding_types.clear()
+		_delivered_guest_types.clear()
+		for gicon in _waiting_guest_icons:
+			if is_instance_valid(gicon):
+				gicon.queue_free()
+		_waiting_guest_icons.clear()
+		_arrival_timer = 0.0
+		_rebuild_hotel()
 	if not Game.shift_active():
 		if _queue_count != 0 or _elevator_state != "closed" or _arrived_guests != 0:
 			_queue_count = 0
 			_boarding = 0
 			_inbound = 0
 			_arrived_guests = 0
+			_queued_guest_types.clear()
+			_boarding_types.clear()
+			_delivered_guest_types.clear()
 			_elevator_state = "closed"
 			_elevator_timer = 0.0
 			_arrival_timer = 0.0
@@ -431,6 +474,8 @@ func _update_elevator(delta: float) -> void:
 				# varsa sırayla beklemek yerine hepsi tek seferde.
 				_boarding = _queue_count
 				_queue_count = 0
+				_boarding_types = _queued_guest_types.duplicate()
+				_queued_guest_types.clear()
 				elevator_tex.texture = _tex(_elevator_texture_path())
 				_board_waiting_guests()
 		"open":
@@ -444,9 +489,11 @@ func _update_elevator(delta: float) -> void:
 				_elevator_timer = 0.0
 				elevator_tex.texture = _tex(_elevator_texture_path())
 				var delivered := _boarding
+				var delivered_types := _boarding_types
 				_boarding = 0
+				_boarding_types = []
 				if delivered > 0:
-					_deliver_guests(delivered)
+					_deliver_guests(delivered, delivered_types)
 
 
 func _elevator_texture_path() -> String:
@@ -477,9 +524,11 @@ func _board_waiting_guests() -> void:
 ## Kapı kapanışından ~1sn sonra binen misafirler "odalarına varır":
 ## _arrived_guests artar (oda kartları ancak bu sayaca göre misafir gösterir,
 ## bkz. _make_room_button) ve asansör üstünde parıltı belirir.
-func _deliver_guests(count: int) -> void:
+func _deliver_guests(count: int, types: Array = []) -> void:
 	get_tree().create_timer(1.0).timeout.connect(func():
 		_arrived_guests += count
+		for t in types:
+			_delivered_guest_types.append(t)
 		if is_instance_valid(elevator_tex):
 			_spawn_sparkles(elevator_tex.global_position + elevator_tex.size / 2.0)
 		_rebuild_hotel())
@@ -1268,6 +1317,15 @@ func _current_theme() -> Dictionary:
 
 
 func _rebuild_hotel() -> void:
+	# Bir misafir odası satılıp kaldırıldığında Game.rooms küçülür ama
+	# _arrived_guests (kümülatif "kaç misafir teslim edildi" sayacı) bundan
+	# haberdar olmaz — fazlalık kalıyordu ve sonradan sıfırdan açılan yeni
+	# odaya "sıra" hesaplamasında anında yapışıp, oda henüz kimse gelmeden
+	# dolu görünüyordu ("yeni oda açınca anında müşteri" şikâyeti). Oda
+	# listesi her değiştiğinde sayacı mevcut misafir odası sayısına sabitle.
+	_arrived_guests = mini(_arrived_guests, _guest_room_count())
+	if _delivered_guest_types.size() > _arrived_guests:
+		_delivered_guest_types.resize(_arrived_guests)
 	# Hangi odaların düğümleri (Button + duvar TextureRect'i) bir önceki
 	# rebuild'den bu yana görsel olarak DEĞİŞMEDİ — bunlar teardown'dan
 	# muaf tutulup aynen korunacak (bkz. _room_visual_signature, üstteki
@@ -1899,9 +1957,14 @@ func _make_room_button(idx: int) -> Button:
 			if String(Game.room_def(Game.rooms[j].type).get("category", "")) == "guest":
 				guest_order += 1
 		if Game.shift_active() and not is_dirty and guest_order < _arrived_guests:
-			var g_idx := idx % GUEST_TYPES.size()
+			# Oda görselindeki misafir tipi, o sıraya GERÇEKTEN çıkan misafirle
+			# eşleşsin diye teslim sırasına göre kaydedilen tipten okunur
+			# (bkz. _delivered_guest_types) — eskiden idx'e göre bağımsız
+			# seçiliyordu ve lobiden gelen misafirle hiç alakası olmuyordu.
+			var gtype: String = _delivered_guest_types[guest_order] if guest_order < _delivered_guest_types.size() \
+				else GUEST_TYPES[idx % GUEST_TYPES.size()]
 			var guest := TextureButton.new()
-			guest.texture_normal = _tex("res://assets/guests/guest_%s.svg" % GUEST_TYPES[g_idx])
+			guest.texture_normal = _tex("res://assets/guests/guest_%s.svg" % gtype)
 			guest.ignore_texture_size = true
 			guest.stretch_mode = TextureButton.STRETCH_KEEP_ASPECT_CENTERED
 			guest.custom_minimum_size = Vector2(44, 44)
