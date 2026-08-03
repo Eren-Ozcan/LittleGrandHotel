@@ -2435,7 +2435,8 @@ func _spawn_passerby() -> void:
 ## "lobide yürümeleri gözükmüyor".
 func _spawn_arriving_pedestrian() -> void:
 	var walk_y := _sidewalk_local_y(36.0)
-	var gicon := _icon("res://assets/guests/guest_%s.svg" % GUEST_TYPES[randi() % GUEST_TYPES.size()], 36)
+	var gtype: String = GUEST_TYPES[randi() % GUEST_TYPES.size()]
+	var gicon := _icon("res://assets/guests/guest_%s.svg" % gtype, 36)
 	gicon.pivot_offset = Vector2(18, 36)
 	gicon.position = Vector2(-40.0, walk_y)
 	_walker_layer.add_child(gicon)
@@ -2446,7 +2447,7 @@ func _spawn_arriving_pedestrian() -> void:
 		.set_trans(Tween.TRANS_LINEAR)
 	tw.tween_callback(func():
 		gicon.queue_free()
-		_spawn_lobby_walker())
+		_spawn_lobby_walker(gtype))
 
 
 ## Kapıdan giren misafirin lobi içindeki yürüyüşü: giriş boşluğundan
@@ -2456,13 +2457,19 @@ func _spawn_arriving_pedestrian() -> void:
 ## — sabit bir varış/bekleme süresi yerine gerçek konuma dayalı bir tetik.
 ## Misafir bu noktada solmaz; kapı gerçekten açılıp bindiğinde
 ## _board_waiting_guests() onu kaybettirir.
-func _spawn_lobby_walker() -> void:
+func _spawn_lobby_walker(guest_type: String = "") -> void:
 	if _walker_layer == null or not is_instance_valid(_walker_layer):
 		_inbound = maxi(0, _inbound - 1)
 		return
 	var canvas_w: float = int(Game.eco.building.grid_cols) * CELL_W
 	var lobby_y := float(Game.floors) * CELL_H
-	var gicon := _icon("res://assets/guests/guest_%s.svg" % GUEST_TYPES[randi() % GUEST_TYPES.size()], 36)
+	# Dışarıdaki yayanın tipi aynen devam etsin diye çağıran fonksiyon
+	# tipi veriyor (bkz. _spawn_arriving_pedestrian/_guest_walk_in) — eskiden
+	# burada YENİDEN rastgele seçiliyordu, dışarıdaki ve lobideki misafir
+	# farklı görünüyordu ("giren müşteri tipi ile odaya çıkan aynı değil").
+	if guest_type == "":
+		guest_type = GUEST_TYPES[randi() % GUEST_TYPES.size()]
+	var gicon := _icon("res://assets/guests/guest_%s.svg" % guest_type, 36)
 	gicon.pivot_offset = Vector2(18, 36)
 	# Lobi zemininde: ikon tabanı lobinin taban şeridine otursun.
 	var start_x := canvas_w - DOOR_W - 10.0
@@ -2473,18 +2480,28 @@ func _spawn_lobby_walker() -> void:
 	# genişliği canvas_w - DOOR_W - CELL_GAP; asansör lobinin ~%49'unda
 	# (bkz. elevator_tex anchor'ları).
 	var elev_x := CELL_GAP * 0.5 + (canvas_w - DOOR_W - CELL_GAP) * 0.49 - 18.0
-	var triggered := false
+	# "triggered" tek elemanlı bir Array'e sarılıyor: GDScript'te bir lambda
+	# içinde yakalanan yerel bool/int değişkenler DEĞER olarak kopyalanıyor —
+	# Tween her karede AYNI closure'ı çağırsa da mutasyon bir sonraki çağrıya
+	# taşınmıyordu. Sonuç: misafir ELEVATOR_PROXIMITY_RADIUS içinde kaldığı
+	# HER karede (onlarca kez) _queue_count += 1 çalışıyordu — tek bir
+	# misafirin varışı düzinelerce "gelmiş" sayılıp odalar gerçek misafir
+	# sayısından çok daha hızlı doluyordu ("3 müşteri geldi ama 6 oda doldu"
+	# şikâyetinin asıl kaynağı). Array referans tipi olduğu için içeriği
+	# çağrılar arasında gerçekten paylaşılıyor — doğru tek-seferlik kilit bu.
+	var triggered := [false]
 	var tw := gicon.create_tween()
 	tw.tween_method(func(x: float):
 		if not is_instance_valid(gicon):
 			return
 		gicon.position.x = x
-		if not triggered and absf(x - elev_x) <= ELEVATOR_PROXIMITY_RADIUS:
-			triggered = true
+		if not triggered[0] and absf(x - elev_x) <= ELEVATOR_PROXIMITY_RADIUS:
+			triggered[0] = true
 			_inbound = maxi(0, _inbound - 1)
 			if Game.shift_active():
 				_queue_count += 1
 				_waiting_guest_icons.append(gicon)
+				_queued_guest_types.append(guest_type)
 			else:
 				gicon.queue_free()
 		, start_x, elev_x, 2.8).set_trans(Tween.TRANS_LINEAR)
@@ -2501,7 +2518,8 @@ func _guest_walk_in() -> void:
 	var door_x := _door_local_x(36.0)
 	var count := clampi(_guest_room_count(), 1, 3)
 	for i in count:
-		var gicon := _icon("res://assets/guests/guest_%s.svg" % GUEST_TYPES[i % GUEST_TYPES.size()], 36)
+		var gtype: String = GUEST_TYPES[i % GUEST_TYPES.size()]
+		var gicon := _icon("res://assets/guests/guest_%s.svg" % gtype, 36)
 		gicon.position = Vector2(-40.0 - i * 44.0, walk_y)
 		gicon.pivot_offset = Vector2(18, 36)
 		_walker_layer.add_child(gicon)
@@ -2512,7 +2530,7 @@ func _guest_walk_in() -> void:
 			.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 		tw.tween_callback(func():
 			gicon.queue_free()
-			_spawn_lobby_walker())
+			_spawn_lobby_walker(gtype))
 
 
 ## Temizlik geri bildirimi: önce süpürge sağa sola süpürür, ardından parıltılar.
