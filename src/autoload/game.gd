@@ -19,6 +19,10 @@ const ECO_PATH := "res://data/economy.json"
 const QUESTS_PATH := "res://data/quests.json"
 const ACHIEVEMENTS_PATH := "res://data/achievements.json"
 const AUTOSAVE_INTERVAL := 30.0
+## coins/gems/xp gibi ekonomi alanları için üst sınır — bunun üzerindeki
+## değerler (ör. int64'ü taşıran bir kayıt kodu) meşru oyun ilerlemesiyle asla
+## oluşmaz; kabul edilirse int() dönüşümü taşıp negatife sarabilir.
+const MAX_SAFE_ECONOMY_VALUE := 1_000_000_000_000_000.0
 ## simulate_to() bu eşiği aşan bir sıçrama (gap) gördüğünde bunu "arka planda
 ## geçen süre" sayar (tam verim); ön plan kare-kare ilerlemesi hep bunun
 ## altında kalır. Mevcut testlerin en büyük ön-plan-eşdeğeri sıçraması 20.5s,
@@ -1439,6 +1443,8 @@ func _validate_save_dict(data: Dictionary) -> bool:
 	var rooms = data.get("rooms", [])
 	if typeof(rooms) != TYPE_ARRAY:
 		return false
+	var seen_room_ids := {}
+	var seen_room_cells := {}
 	for r in rooms:
 		if typeof(r) != TYPE_DICTIONARY:
 			return false
@@ -1450,6 +1456,19 @@ func _validate_save_dict(data: Dictionary) -> bool:
 			var val = r.get(num_field)
 			if val != null and typeof(val) != TYPE_FLOAT and typeof(val) != TYPE_INT:
 				return false
+		# İki odanın aynı id'yi veya aynı ızgara hücresini paylaşması geçerli
+		# bir oyun durumunda asla oluşmaz — kabul edilirse render/satış/taşıma
+		# mantığı hangi odanın "gerçek" olduğu konusunda tutarsız davranır.
+		var rid := String(r.get("id", ""))
+		if not rid.is_empty():
+			if seen_room_ids.has(rid):
+				return false
+			seen_room_ids[rid] = true
+		if r.get("floor") != null and r.get("col") != null:
+			var cell := "%s:%s" % [str(r.get("floor")), str(r.get("col"))]
+			if seen_room_cells.has(cell):
+				return false
+			seen_room_cells[cell] = true
 	var floor_blocks = data.get("floor_blocks", [])
 	if typeof(floor_blocks) != TYPE_ARRAY:
 		return false
@@ -1462,6 +1481,38 @@ func _validate_save_dict(data: Dictionary) -> bool:
 	for h in shift_history:
 		if typeof(h) != TYPE_DICTIONARY:
 			return false
+	# _load_from_dict bu alanları doğrudan float()/int() ile kendi state'ine
+	# atar (bkz. aşağısı); tip yanlışsa (ör. Dictionary/Array) o dönüşüm
+	# runtime hatası verip fonksiyonu yarım bırakabilir — o noktaya kadar
+	# atanmış alanlar (coins, gems, ...) geri alınmaz. Bu yüzden hepsini
+	# herhangi bir alanı mutasyona uğratmadan ÖNCE, burada tip olarak
+	# doğruluyoruz (atomiklik: ya hepsi kabul edilir ya hiçbiri).
+	var numeric_fields := ["coins", "gems", "xp", "floors", "shift_end_unix",
+		"pending_income", "last_sim_unix", "quest_index", "stat_shifts",
+		"stat_collects", "stat_collected_total", "stat_cleans", "prestige_level",
+		"next_room_id", "last_shift_hours", "daily_streak", "last_daily_claim_day",
+		"poke_day", "poke_count", "staff_tier", "boost_end_unix", "boost_mult",
+		"permanent_income_mult"]
+	for field in numeric_fields:
+		var val = data.get(field)
+		if val == null:
+			continue
+		if typeof(val) != TYPE_FLOAT and typeof(val) != TYPE_INT:
+			return false
+		if is_nan(val) or is_inf(val):
+			return false
+	# coins/gems/xp: negatif bir ekonomi durumu meşru oynanışta asla oluşmaz;
+	# int64'ü taşıracak kadar büyük bir değer de int() dönüşümünde negatife
+	# sarabilir (bkz. MAX_SAFE_ECONOMY_VALUE).
+	for field in ["coins", "gems", "xp"]:
+		var val = data.get(field)
+		if val != null and (float(val) < 0.0 or float(val) > MAX_SAFE_ECONOMY_VALUE):
+			return false
+	# staff_tier geçerli aralığın (0..max_tier) dışına çıkarsa
+	# staff_income_mult()/staff_cost_mult() içindeki pow() Inf üretebilir.
+	var st = data.get("staff_tier")
+	if st != null and (float(st) < 0.0 or float(st) > float(eco.staff_upgrade.max_tier)):
+		return false
 	return true
 
 
