@@ -48,7 +48,7 @@ ads.
 
 ## 3. In-app products in Play Console
 
-Detailed ID/name/description suggestions: [`uygulama-ici-urunler.md`](./uygulama-ici-urunler.md).
+Detailed ID/name/description suggestions: [`in-app-products.md`](./in-app-products.md).
 No extra changes are needed on the code side, the product IDs were already written
 so they match the code (`remove_ads`, `income_2x`).
 
@@ -57,7 +57,7 @@ so they match the code (`remove_ads`, `income_2x`).
 - The texts are ready: [`privacy-policy.html`](./privacy-policy.html) (formatted, for
   reference), [`privacy-policy-plaintext.md`](./privacy-policy-plaintext.md)
   (plain text for copy-pasting into Google Sites),
-  [`magaza-listeleme.md`](./magaza-listeleme.md).
+  [`store-listing.md`](./store-listing.md).
 - **Publishing with Google Sites** (without touching git/the repo at all):
   1. Go to https://sites.google.com with `yilkgamesstudio@gmail.com` and create a
      new "Blank" site.
