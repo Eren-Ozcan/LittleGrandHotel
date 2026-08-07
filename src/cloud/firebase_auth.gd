@@ -147,7 +147,7 @@ func _refresh_id_token() -> bool:
 ## ilerlemesi kalıcı olarak erişilemez kalır.
 func link_with_google(google_id_token: String) -> Dictionary:
 	if not FirebaseConfig.is_google_configured():
-		return {"ok": false, "switched": false, "msg": "Google girişi yapılandırılmamış."}
+		return {"ok": false, "switched": false, "msg": "Google sign-in is not configured."}
 	var current: String = await ensure_token()
 	var post_body := "id_token=%s&providerId=google.com" % google_id_token
 	var payload := {
@@ -164,13 +164,13 @@ func link_with_google(google_id_token: String) -> Dictionary:
 		if res.ok:
 			var switched_uid := _adopt_idp_session(res.body)
 			return {"ok": true, "switched": true, "uid": switched_uid,
-				"msg": "Bu hesabın kayıtlı bir ilerlemesi var, ona geçildi."}
+				"msg": "This account already had progress saved — switched to it."}
 	if not res.ok:
-		return {"ok": false, "switched": false, "msg": "Google girişi başarısız oldu, sonra tekrar dene."}
+		return {"ok": false, "switched": false, "msg": "Google sign-in failed, please try again later."}
 	var previous := _uid
 	var new_uid := _adopt_idp_session(res.body)
 	return {"ok": true, "switched": new_uid != previous, "uid": new_uid,
-		"msg": "Hesabın bağlandı — ilerlemen artık diğer cihazlarında da açılabilir."}
+		"msg": "Your account is linked — your progress can now be opened on your other devices."}
 
 
 func _adopt_idp_session(body: Dictionary) -> String:

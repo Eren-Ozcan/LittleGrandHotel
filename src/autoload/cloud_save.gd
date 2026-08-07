@@ -166,10 +166,10 @@ func set_google_id_token_provider(provider: Callable) -> void:
 ## Google hesabına bağlar ve gerekiyorsa yeni hesabın kaydını indirir.
 func link_google() -> Dictionary:
 	if not is_account_linking_available():
-		return {"ok": false, "msg": "Google ile bağlanma bu sürümde kullanılamıyor."}
+		return {"ok": false, "msg": "Linking with Google is not available in this build."}
 	var google_token = await _google_id_token_provider.call()
 	if typeof(google_token) != TYPE_STRING or String(google_token).is_empty():
-		return {"ok": false, "msg": "Google girişi tamamlanmadı."}
+		return {"ok": false, "msg": "Google sign-in was not completed."}
 	var res: Dictionary = await _auth.link_with_google(String(google_token))
 	if res.get("ok", false) and res.get("switched", false):
 		# Hesap değişti: rev sayacı ESKİ hesaba aitti (bkz. _adopt_uid).
