@@ -13,7 +13,7 @@ purchases won't work.
 | Name (title) | Remove Ads |
 | Description | Permanently removes all rewarded ads. |
 | Type | Managed product (non-consumable / permanent) |
-| Suggested price | ₺49.99 (suggestion — set it however you like) |
+| Suggested price | $4.99 (suggestion — set it however you like) |
 | Status | Active |
 
 ## 2. Double Your Income
@@ -24,7 +24,7 @@ purchases won't work.
 | Name (title) | Double Your Income |
 | Description | Permanently doubles all income from your hotel. |
 | Type | Managed product (non-consumable / permanent) |
-| Suggested price | ₺99.99 (suggestion — set it however you like) |
+| Suggested price | $9.99 (suggestion — set it however you like) |
 | Status | Active |
 
 ## 3. Gem Packs (consumable)
@@ -37,12 +37,23 @@ no separate "consumable" product type, consumption is done by the app via
 
 | Product ID (**do not change**) | Name | Gems | Suggested price |
 |---|---|---|---|
-| `gems_small`  | Small Gem Pack  | 100  | ₺19.99  |
-| `gems_medium` | Medium Gem Pack | 350  | ₺49.99  |
-| `gems_large`  | Large Gem Pack  | 1200 | ₺149.99 |
+| `gems_small`  | Small Gem Pack  | 100  | $1.99  |
+| `gems_medium` | Medium Gem Pack | 350  | $4.99  |
+| `gems_large`  | Large Gem Pack  | 1200 | $14.99 |
 
-All of them must be "Status: Active". If the amounts/prices change, also update the
-`GEM_PACKS` constant in `src/main.gd`.
+All of them must be "Status: Active".
+
+## Prices shown in the game
+
+The game does **not** display the prices from this document. On connecting, it asks
+Play Billing for the product details and shows the `formatted_price` it gets back —
+already converted and formatted for the player's own country and currency, so a
+player in Türkiye sees `₺`, one in Germany sees `€`.
+
+The `price` values in `GEM_PACKS` (`src/main.gd`) are only a **fallback**, shown when
+the store cannot be reached at all: desktop and headless builds, offline devices, or
+products not yet published. Keeping them roughly in step with the real prices is nice
+but not load-bearing — no player on a working store install ever sees them.
 
 ## Notes
 

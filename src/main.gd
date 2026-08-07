@@ -126,10 +126,13 @@ const WEEKLY_THEMES := [
 ## Elmas paketleri (gems "+" butonu → _build_gems_popup). Ürün ID'leri
 ## Play Console'da yönetilen ürün olarak (bu kez tüketilebilir/consumable
 ## türünde) oluşturulmalı — bkz. docs/store/in-app-products.md.
+## price alanı YEDEK etikettir — gerçek fiyat IAP.price_for() ile mağazadan
+## gelir ve oyuncunun ülkesine/para birimine göre değişir. Yedek yalnızca
+## mağazaya ulaşılamadığında görünür.
 const GEM_PACKS := [
-	{ "product": "gems_small", "gems": 100, "price": "₺19,99" },
-	{ "product": "gems_medium", "gems": 350, "price": "₺49,99" },
-	{ "product": "gems_large", "gems": 1200, "price": "₺149,99" },
+	{ "product": "gems_small", "gems": 100, "price": "$1.99" },
+	{ "product": "gems_medium", "gems": 350, "price": "$4.99" },
+	{ "product": "gems_large", "gems": 1200, "price": "$14.99" },
 ]
 
 var coins_label: Label
@@ -365,6 +368,9 @@ func _ready() -> void:
 	Game.quest_completed.connect(_on_quest_completed)
 	Game.achievement_unlocked.connect(_on_achievement_unlocked)
 	IAP.purchase_result.connect(_on_purchase_restored)
+	# Mağaza fiyatları bağlantı kurulduktan sonra asenkron geliyor; Elmas popup'ı
+	# o sırada açıksa yedek etiketlerle çizilmiş olur, gelince tazelenir.
+	IAP.prices_updated.connect(_rebuild_popup)
 	# Bulut senkronu ağa bağlı olduğu için ne zaman biteceği belli değil:
 	# açılış zinciri onu BEKLEMEZ (kötü ağda oyun kilitlenirdi), çakışma
 	# geç gelirse sinyalle yakalanır — bkz. _on_cloud_conflict.
@@ -3391,7 +3397,8 @@ func _build_gems_popup(c: VBoxContainer) -> void:
 		row.add_child(_icon("res://assets/ui/gem.svg", 32))
 		var product: String = pack.product
 		var amount: int = pack.gems
-		var b := _button("%s — %s" % [_count(amount, "gem"), pack.price], 15, PALETTE.green_deep, PALETTE.cream_text)
+		var price_label: String = IAP.price_for(pack.product, pack.price)
+		var b := _button("%s — %s" % [_count(amount, "gem"), price_label], 15, PALETTE.green_deep, PALETTE.cream_text)
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		b.pressed.connect(func():
 			IAP.purchase(product, func(ok: bool):

@@ -18,6 +18,9 @@ extends Node
 
 signal purchase_result(product_id: String, success: bool)
 
+## Mağaza fiyatları geldi — fiyat gösteren ekranlar kendini tazelemeli.
+signal prices_updated
+
 const PRODUCT_REMOVE_ADS := "remove_ads"
 const PRODUCT_INCOME_2X := "income_2x"
 const PRODUCT_GEMS_SMALL := "gems_small"
@@ -38,6 +41,8 @@ const _BILLING_SINGLETON := "GodotGooglePlayBilling"
 var _billing: BillingClient
 var _connected := false
 var _pending: Dictionary = {}  # product_id -> Array[Callable]
+## product_id -> mağazanın verdiği yerelleştirilmiş fiyat metni ("₺19,99", "$1.99", "€1,99"…)
+var _prices: Dictionary = {}
 
 
 func _ready() -> void:
@@ -47,6 +52,7 @@ func _ready() -> void:
 		_billing.connected.connect(_on_connected)
 		_billing.on_purchase_updated.connect(_on_purchase_updated)
 		_billing.query_purchases_response.connect(_on_query_purchases_response)
+		_billing.query_product_details_response.connect(_on_query_product_details_response)
 		_billing.start_connection()
 
 
@@ -57,6 +63,50 @@ func _real_billing_available() -> bool:
 func _on_connected() -> void:
 	_connected = true
 	_billing.query_purchases(BillingClient.ProductType.INAPP)
+	_billing.query_product_details(PackedStringArray([
+		PRODUCT_REMOVE_ADS, PRODUCT_INCOME_2X,
+		PRODUCT_GEMS_SMALL, PRODUCT_GEMS_MEDIUM, PRODUCT_GEMS_LARGE,
+	]), BillingClient.ProductType.INAPP)
+
+
+## Bir ürünün gösterilecek fiyatı: mağazadan geldiyse o, yoksa verilen yedek.
+##
+## Mağaza fiyatı oyuncunun ülkesine ve para birimine göre gelir — sabit bir
+## etiket kimin için doğruysa diğer herkes için yanlıştır. Yedek yalnızca
+## mağazaya hiç ulaşılamadığında (masaüstü/test, çevrimdışı, ürün henüz
+## yayınlanmamış) görünür; böylece fiyat alanı asla boş kalmaz.
+func price_for(product_id: String, fallback: String) -> String:
+	return _prices.get(product_id, fallback)
+
+
+## Play Billing'in ProductDetails yanıtından yerelleştirilmiş fiyatı çıkarır.
+##
+## Anahtar adları eklentinin Java tarafından geliyor ve sürümüne göre snake_case
+## ya da camelCase olabiliyor; ikisi de denenip bulunamazsa yedek etikette
+## kalınır. Gerçek yanıt yalnızca Play imzalı bir kurulumda döndüğü için bu yol
+## masaüstünde/emülatörde doğrulanamıyor — gelen ham yapıyı bir kez logluyoruz
+## ki cihazda bakan kişi anahtarları görebilsin.
+func _on_query_product_details_response(response: Dictionary) -> void:
+	if response.get("response_code", -1) != BillingClient.BillingResponseCode.OK:
+		return
+	var list: Array = response.get("product_details_list", response.get("productDetailsList", []))
+	if list.is_empty():
+		print("[IAP] ürün detayı yanıtı boş/tanınmadı: ", response.keys())
+		return
+	var found := 0
+	for item: Dictionary in list:
+		var pid: String = item.get("product_id", item.get("productId", ""))
+		var offer: Dictionary = item.get(
+			"one_time_purchase_offer_details", item.get("oneTimePurchaseOfferDetails", {})
+		)
+		var price: String = offer.get("formatted_price", offer.get("formattedPrice", ""))
+		if pid != "" and price != "":
+			_prices[pid] = price
+			found += 1
+	if found == 0:
+		print("[IAP] fiyat alanı bulunamadı, örnek kayıt: ", list[0])
+		return
+	prices_updated.emit()
 
 
 func purchase(product_id: String, on_result: Callable = Callable()) -> void:
