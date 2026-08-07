@@ -25,6 +25,7 @@ run/quit_on_go_back=false
 Game="*res://src/autoload/game.gd"
 Ads="*res://src/autoload/ads.gd"
 IAP="*res://src/autoload/iap.gd"
+CloudSave="*res://src/autoload/cloud_save.gd"
 
 [display]
 
