@@ -1,0 +1,49 @@
+rules_version = '2';
+
+// Little Grand Hotel — bulut kaydı güvenlik kuralları.
+// Yayınlama: Firebase Console → Firestore Database → Kurallar (ya da
+// `firebase deploy --only firestore:rules`). Kurulum: docs/cloud-save-setup.md
+//
+// Tek koleksiyon: saves/{uid} — doküman kimliği oyuncunun Firebase UID'sidir.
+//   { payload: string, rev: int, schemaVersion: int, platform: string,
+//     summary: map<string,int>, updatedAt: Timestamp (sunucu damgası) }
+//
+// Doküman kimliği bilerek PLATFORMA ÖZGÜ bir kimlik (Play Games player_id /
+// Game Center) DEĞİL: aynı hesap Android ve iOS'ta aynı kayda ulaşsın diye.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /saves/{uid} {
+      // Oyuncu yalnızca KENDİ kaydını görür/yazar. list kapalı: tüm kayıtların
+      // taranmasını/enumerate edilmesini engeller.
+      allow get: if request.auth != null && request.auth.uid == uid;
+      allow list: if false;
+
+      allow create: if request.auth != null
+                    && request.auth.uid == uid
+                    && request.resource.data.payload is string
+                    && request.resource.data.payload.size() <= 400000
+                    && request.resource.data.rev is int
+                    && request.resource.data.rev > 0
+                    && request.resource.data.schemaVersion is int;
+
+      // `rev` monotonik bir sayaçtır ve geriye gitmesi KURAL DÜZEYİNDE
+      // yasaklanır: uzun süre çevrimdışı kalmış (bayat) bir istemci, başka bir
+      // cihazın yazdığı daha yeni kaydı EZEMEZ. Bu garanti istemci mantığına
+      // bırakılmaz — istemci kodu her zaman eski ya da değiştirilmiş olabilir.
+      // Cihaz saati hiçbir yerde karşılaştırmaya girmez (saati ileri alınmış
+      // bir cihaz aksi halde sonsuza dek "daha yeni" sayılırdı).
+      allow update: if request.auth != null
+                    && request.auth.uid == uid
+                    && request.resource.data.payload is string
+                    && request.resource.data.payload.size() <= 400000
+                    && request.resource.data.rev is int
+                    && request.resource.data.schemaVersion is int
+                    && request.resource.data.rev > resource.data.rev;
+
+      // Silme kapalı: kazara/kötü niyetli tek bir istekle ilerleme yok
+      // edilemesin. Kayıt sıfırlama oyun içinde yereldir; bulut sürümü
+      // bir sonraki yazmayla (rev artarak) üzerine yazılır.
+      allow delete: if false;
+    }
+  }
+}
