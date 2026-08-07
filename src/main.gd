@@ -300,6 +300,11 @@ var music_player: AudioStreamPlayer
 var start_screen: Control
 var _start_growth_tween: Tween
 
+## Bulut çakışması seçici açık mı — modal iki yoldan tetiklenebilir (yükleme
+## ekranı kapanışı ve geç gelen conflict_detected sinyali), üst üste iki kez
+## açılmasın.
+var _cloud_conflict_open := false
+
 
 func _notification(what: int) -> void:
 	# Android geri tuşu: proje ayarında quit_on_go_back kapatıldı, aksi halde
@@ -360,6 +365,14 @@ func _ready() -> void:
 	Game.quest_completed.connect(_on_quest_completed)
 	Game.achievement_unlocked.connect(_on_achievement_unlocked)
 	IAP.purchase_result.connect(_on_purchase_restored)
+	# Bulut senkronu ağa bağlı olduğu için ne zaman biteceği belli değil:
+	# açılış zinciri onu BEKLEMEZ (kötü ağda oyun kilitlenirdi), çakışma
+	# geç gelirse sinyalle yakalanır — bkz. _on_cloud_conflict.
+	CloudSave.conflict_detected.connect(_on_cloud_conflict)
+	CloudSave.sync_finished.connect(func(result: String):
+		if result == CloudPayload.RESULT_RESTORE:
+			_refresh()
+			_show_toast("Buluttaki kayıt geri yüklendi"))
 	Ads.rewarded_ad_result.connect(func(success: bool):
 		if not success:
 			_show_toast("Reklam şu an hazır değil, birazdan tekrar dene."))
@@ -370,6 +383,16 @@ func _ready() -> void:
 	# Tutorial/günlük ödül/çevrimdışı zinciri artık yükleme ekranı kendiliğinden
 	# kapanınca başlar (bkz. _finish_loading_screen) — arkasında görünmez
 	# şekilde açılmasını önler.
+
+
+## Bulut senkronu yükleme ekranı kapandıktan SONRA sonuçlanırsa (yavaş ağ):
+## açılış zinciri çakışmayı beklemeden ilerlemiştir, seçiciyi burada açarız.
+## Yükleme ekranı hâlâ duruyorsa hiçbir şey yapma — _finish_loading_screen
+## zaten aynı modalı zincirin başında gösterecek.
+func _on_cloud_conflict() -> void:
+	if start_screen != null:
+		return
+	_show_cloud_conflict_modal()
 
 
 ## Uygulama açılışında sırayla kontrol edilen popup zinciri: önce (yepyeni
@@ -1162,7 +1185,10 @@ func _finish_loading_screen() -> void:
 	t.tween_callback(func():
 		start_screen.queue_free()
 		start_screen = null
-		_maybe_show_tutorial())
+		# Bulut çakışması varsa seçim EKRANI ÖNCE gelir: tutorial/günlük ödül
+		# zinciri, hangi kaydın devam edeceği belli olmadan oynanmamalı.
+		# Çakışma yoksa modal hiç açılmaz ve zincir olduğu gibi sürer.
+		_show_cloud_conflict_modal(_maybe_show_tutorial))
 
 
 ## Yuvarlak köşeli + yumuşak gölgeli kart stilbox'u (referans mockup'taki
@@ -3094,11 +3120,7 @@ func _build_stats_popup(c: VBoxContainer) -> void:
 ## top.gui_input). Hesap bağlama (ileride) + Premium + Prestij + İstatistik
 ## tek ekranda toplandı — kullanıcı isteği: bunlar Ayarlar'dan sadeleştirildi.
 func _build_profile_popup(c: VBoxContainer) -> void:
-	c.add_child(_label("Hesap", 16, PALETTE.wood_dark))
-	c.add_child(_label_wrap("Hesap bağlama (Google Play Games / Game Center) yakında — şimdilik kaydını aşağıdaki kodla taşıyabilirsin.", 12, PALETTE.muted))
-	var link_b := _button("Google ile bağlan — yakında", 14, PALETTE.wood_dark, PALETTE.cream_text)
-	link_b.disabled = true
-	c.add_child(link_b)
+	_build_cloud_section(c)
 
 	c.add_child(_spacer_y(6))
 	c.add_child(_label("Kaydı taşı — bulut yerine paylaşılabilir kod:", 14, PALETTE.text))
@@ -3182,6 +3204,181 @@ func _build_profile_popup(c: VBoxContainer) -> void:
 	c.add_child(_spacer_y(10))
 	c.add_child(_label("İstatistikler", 15, PALETTE.wood_dark))
 	_add_stats_rows(c)
+
+
+## Profil popup'ının "Hesap / Bulut kaydı" bölümü.
+##
+## Firebase yapılandırılmamışken (placeholder'lar dururken, bkz.
+## src/cloud/firebase_config.gd) bölüm bugünkü davranışını korur: bulut yok,
+## kayıt yalnızca aşağıdaki paylaşılabilir kodla taşınır. Yapılandırma
+## geldiğinde aynı bölüm kendiliğinden durum + yedekleme + hesap bağlamaya
+## dönüşür — UI'da ayrıca bir bayrak açmak gerekmez.
+func _build_cloud_section(c: VBoxContainer) -> void:
+	c.add_child(_label("Hesap", 16, PALETTE.wood_dark))
+	if not CloudSave.is_enabled():
+		c.add_child(_label_wrap("Bulut kaydı bu sürümde henüz açık değil — şimdilik kaydını aşağıdaki kodla başka bir cihaza taşıyabilirsin.", 12, PALETTE.muted))
+		var soon_b := _button("Google ile bağlan — yakında", 14, PALETTE.wood_dark, PALETTE.cream_text)
+		soon_b.disabled = true
+		c.add_child(soon_b)
+		return
+
+	if CloudSave.has_conflict():
+		c.add_child(_label_wrap("Bulutta bu cihazdakinden farklı bir ilerleme var. Hangisini tutacağına sen karar ver.", 12, PALETTE.banner_red))
+		var pick_b := _button("Kaydı seç — Bulut / Bu cihaz", 15, PALETTE.banner_red, PALETTE.cream_text)
+		pick_b.pressed.connect(func(): _show_cloud_conflict_modal())
+		c.add_child(pick_b)
+		c.add_child(_spacer_y(6))
+
+	var who := "Bu cihaza bağlı (anonim)" if not CloudSave.is_linked() else "Google hesabına bağlı"
+	c.add_child(_label(who, 13, PALETTE.text))
+	c.add_child(_label("Son yedekleme: %s" % _cloud_sync_text(), 12, PALETTE.muted))
+
+	var backup_b := _button("Şimdi yedekle", 14, PALETTE.wood, PALETTE.cream_text)
+	backup_b.pressed.connect(func():
+		backup_b.disabled = true
+		var result: String = await CloudSave.sync_now()
+		_show_toast(_cloud_result_toast(result))
+		_rebuild_popup())
+	c.add_child(backup_b)
+
+	var link_b := _button("Google ile bağlan", 14, PALETTE.green_deep, PALETTE.cream_text)
+	if CloudSave.is_linked():
+		link_b.text = "Hesabın bağlı"
+		link_b.disabled = true
+	elif not CloudSave.is_account_linking_available():
+		# Google girişi bir platform eklentisi ister (bkz. cloud_save.gd
+		# set_google_id_token_provider) — eklenti yokken yedekleme yine çalışır,
+		# yalnızca cihaz değişiminde geri alınamaz.
+		link_b.text = "Google ile bağlan — yakında"
+		link_b.disabled = true
+		c.add_child(link_b)
+		c.add_child(_label_wrap("Bağlanmadan da yedeklenir, ama kaydını yeni bir cihazda açabilmek için hesap bağlaman gerekir.", 12, PALETTE.muted))
+		return
+	else:
+		link_b.pressed.connect(func():
+			link_b.disabled = true
+			var res: Dictionary = await CloudSave.link_google()
+			_show_toast(String(res.get("msg", "")))
+			_rebuild_popup())
+	c.add_child(link_b)
+
+
+## Son senkron durumunun tek satırlık özeti.
+func _cloud_sync_text() -> String:
+	var at: float = CloudSave.last_success_unix()
+	if at <= 0.0:
+		return "henüz yapılmadı"
+	return _fmt_relative(at)
+
+
+func _cloud_result_toast(result: String) -> String:
+	match result:
+		CloudPayload.RESULT_RESTORE:
+			return "Buluttaki kayıt geri yüklendi"
+		CloudPayload.RESULT_CONFLICT:
+			return "Bulutta farklı bir ilerleme var — hangisini tutacağını seç"
+		CloudPayload.RESULT_NEEDS_UPDATE:
+			return "Buluttaki kayıt daha yeni bir sürümden — önce oyunu güncelle"
+		CloudPayload.RESULT_DISABLED:
+			return "Buluta ulaşılamadı — bağlantını kontrol edip tekrar dene"
+	return "Kaydın buluta yedeklendi"
+
+
+## "3 dakika önce" gibi göreli zaman. Bulut tarafı için SUNUCU damgası kullanılır
+## (bkz. cloud_save.gd) — cihaz saatiyle hesaplanan bir "önce" yanıltıcı olurdu.
+func _fmt_relative(unix: float) -> String:
+	var diff := Time.get_unix_time_from_system() - unix
+	if diff < 60.0:
+		return "az önce"
+	if diff < 3600.0:
+		return "%d dakika önce" % int(diff / 60.0)
+	if diff < 86400.0:
+		return "%d saat önce" % int(diff / 3600.0)
+	return "%d gün önce" % int(diff / 86400.0)
+
+
+## Çakışma seçici: "Bulut / Bu cihaz". KOD KENDİ KARAR VERMEZ ve iki ilerlemeyi
+## BİRLEŞTİRMEZ (bkz. cloud_save.gd tasarım notu) — oyuncuya her iki tarafın
+## özeti gösterilir ve seçmediği taraf olduğu yerde durur.
+func _show_cloud_conflict_modal(on_closed: Callable = Callable()) -> void:
+	if not CloudSave.has_conflict() or _cloud_conflict_open:
+		if on_closed.is_valid():
+			on_closed.call()
+		return
+	_cloud_conflict_open = true
+	var cloud: Dictionary = CloudSave.conflict_summary()
+	var cloud_at: float = CloudSave.conflict_updated_at()
+
+	var dim := ColorRect.new()
+	dim.color = Color(0.2, 0.15, 0.05, 0.6)
+	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dim.z_index = 95
+	var center := CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	dim.add_child(center)
+	var panel := _panel(PALETTE.cream, PALETTE.facade_line)
+	panel.custom_minimum_size = Vector2(560, 0)
+	center.add_child(panel)
+	var pv := VBoxContainer.new()
+	pv.add_theme_constant_override("separation", 12)
+	panel.add_child(pv)
+	pv.add_child(_label("Hangi kayıt devam etsin?", 20, PALETTE.wood_dark))
+	pv.add_child(_label_wrap("Bulutta ve bu cihazda birbirinden farklı iki ilerleme var. Otomatik birleştirme yapılmaz — birini seç, diğeri olduğu gibi kalır.", 12, PALETTE.muted))
+
+	var cols := HBoxContainer.new()
+	cols.add_theme_constant_override("separation", 12)
+	pv.add_child(cols)
+	cols.add_child(_cloud_side_column("Bulut",
+		int(cloud.get("level", 0)), int(cloud.get("coins", 0)),
+		int(cloud.get("gems", 0)), int(cloud.get("rooms", 0)),
+		_fmt_relative(cloud_at) if cloud_at > 0.0 else "zamanı bilinmiyor"))
+	cols.add_child(_cloud_side_column("Bu cihaz",
+		Game.level(), Game.coins, Game.gems, Game.rooms.size(), "şu an"))
+
+	var closed := false
+	var do_close := func():
+		if closed:
+			return
+		closed = true
+		_cloud_conflict_open = false
+		dim.queue_free()
+		if on_closed.is_valid():
+			on_closed.call()
+
+	var cloud_b := _button("Buluttakini kullan", 15, PALETTE.green_deep, PALETTE.cream_text)
+	cloud_b.pressed.connect(func():
+		var ok: bool = CloudSave.resolve_keep_cloud()
+		do_close.call()
+		_show_toast("Buluttaki kayıt yüklendi" if ok else "Buluttaki kayıt okunamadı, bu cihazdaki korundu")
+		_refresh())
+	pv.add_child(cloud_b)
+
+	var local_b := _button("Bu cihazdakini kullan", 15, PALETTE.wood_dark, PALETTE.cream_text)
+	local_b.pressed.connect(func():
+		do_close.call()
+		_show_toast("Bu cihazdaki kayıt tutuldu ve buluta gönderiliyor")
+		await CloudSave.resolve_keep_local())
+	pv.add_child(local_b)
+
+	# Çakışma modalı dışına tıklayarak KAPATILAMAZ: kararı ertelemek, seçim
+	# yapılana dek buluta hiç yazılmaması demek — oyuncunun bunu fark etmeden
+	# oynamaya devam etmesi daha kötü bir durum.
+	add_child(dim)
+	_play("tap")
+
+
+func _cloud_side_column(title: String, lv: int, coins: int, gems: int,
+		rooms: int, when: String) -> Control:
+	var box := VBoxContainer.new()
+	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	box.add_child(_label(title, 16, PALETTE.wood_dark))
+	box.add_child(_label(when, 12, PALETTE.muted))
+	box.add_child(_label("Seviye %d" % lv, 14, PALETTE.text))
+	box.add_child(_label("%s coin" % _fmt(coins), 14, PALETTE.text))
+	box.add_child(_label("%d elmas" % gems, 14, PALETTE.text))
+	box.add_child(_label("%d oda" % rooms, 14, PALETTE.text))
+	return box
 
 
 func _build_gems_popup(c: VBoxContainer) -> void:
