@@ -24,7 +24,30 @@ var cases_run := 0
 var rng := RandomNumberGenerator.new()
 
 
+## Bu test canlı Game autoload'ına bozuk kayıt yükler ve oyunu gerçekten
+## oynatır — yol boyunca user://save.json EZİLİR. Oyuncunun/geliştiricinin
+## kaydı kaybolmasın diye teste girerken bir yana alınır, çıkarken geri konur.
+const SAVE_PATH := "user://save.json"
+const BACKUP_PATH := "user://save.json.fuzz.bak"
+
+
+func _stash_save() -> void:
+	if FileAccess.file_exists(SAVE_PATH):
+		DirAccess.copy_absolute(ProjectSettings.globalize_path(SAVE_PATH),
+			ProjectSettings.globalize_path(BACKUP_PATH))
+
+
+func _restore_save() -> void:
+	if not FileAccess.file_exists(BACKUP_PATH):
+		return
+	DirAccess.copy_absolute(ProjectSettings.globalize_path(BACKUP_PATH),
+		ProjectSettings.globalize_path(SAVE_PATH))
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(BACKUP_PATH))
+	print("(test öncesi kayıt geri yüklendi)")
+
+
 func _ready() -> void:
+	_stash_save()
 	rng.seed = SEED
 	GameScript = load("res://src/autoload/game.gd")
 	var tmp = GameScript.new()
@@ -59,6 +82,7 @@ func _ready() -> void:
 		for f in findings:
 			printerr("  BULGU: ", f)
 	print("FUZZ_DONE")
+	_restore_save()
 	get_tree().quit(1 if not findings.is_empty() else 0)
 
 
