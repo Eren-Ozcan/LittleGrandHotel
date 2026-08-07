@@ -18,9 +18,16 @@ content (Restaurant, Rooftop Garden, level 28 balance test).
 
 Long-term additions: 13 permanent achievements, prestige system (hand over the hotel at
 level 20 to earn a permanent income multiplier), serverless weekly decoration theme, a
-shareable save code (export/import) instead of cloud saves, and Android export (export
-preset + signed debug APK). The save format is compatible with step-by-step migration
-from v2 onward.
+shareable save code (export/import), and Android export (export preset + signed debug
+APK). The save format is compatible with step-by-step migration from v2 onward.
+
+Saves are also backed up to Firebase (anonymous sign-in + a single Firestore document,
+over REST — Godot has no Firebase SDK). The backup is restored on every launch of the
+same install, and conflicts are resolved by the player rather than merged automatically.
+Google account linking — what would make a save follow the player to a *new* device — is
+implemented but not yet usable: it needs an OAuth client that has not been created, so it
+has never been run against a real account. Setup and reasoning:
+[docs/cloud-save-setup.md](docs/cloud-save-setup.md).
 
 Shipped with the Hotel City review release (after studying the original game's guide +
 art): infestation mechanic (a room left dirty for too long costs coins to clean),
@@ -72,6 +79,7 @@ tools\Godot_v4.7-stable_win64_console.exe --headless --path . --export-debug "An
 - `data/quests.json` — quest chain (20 quests)
 - `data/achievements.json` — 13 permanent achievements
 - `src/autoload/game.gd` — simulation + save (independent of the UI, headless testable)
+- `src/autoload/cloud_save.gd` + `src/cloud/` — Firebase cloud save and Google sign-in (REST, no SDK)
 - `src/main.gd` — Hotel City-inspired dollhouse interface
 - `src/sfx.gd` — procedural sound synthesis (no external audio files required)
 - `assets/` — SVG art (rooms, items, guests, UI icons)

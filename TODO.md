@@ -46,7 +46,7 @@
 - [x] Achievements system: 13 permanent goals (`data/achievements.json`), listed in the Quests popup, save v4
 - [x] Prestige system: hand over the hotel at level 20 for a permanent +20% income multiplier, save v5
 - [x] Weekly decoration theme: serverless, deterministic via `Game.current_week_index()` (7 themes)
-- [x] Shareable save code instead of cloud saves (base64, export/import from Settings)
+- [x] Shareable save code (base64, export/import from Settings) — at this point it was the *alternative* to cloud saves; real cloud save came later, see "Cloud save + Google account linking" below. The code still exists and is still the only transfer path that has actually been proven to work.
 - [x] Android export: `export_presets.cfg` + ETC2 compression + locally signed debug APK verified
 
 ### Level design review + modern consumption habits (July 2026)
@@ -460,6 +460,47 @@ cel-shaded colors, no shadows) as the reference.
       the game, and a "it won't close" feeling on chained openings) to the game's own
       `_panel`/`_label`/`_button` language (`_show_simple_modal()`).
 
+### Cloud save + Google account linking (2026-08-07)
+Save backup to Firebase, and the sign-in flow that is supposed to make it survive a new
+device. Setup, reasoning and the remaining manual step: `docs/cloud-save-setup.md`.
+- [x] **Cloud save over REST** (Godot has no Firebase SDK): anonymous Authentication +
+      a single Firestore document at `saves/{uid}`, `src/cloud/` + `src/autoload/cloud_save.gd`.
+      Verified against the live project with `curl` — including the case that matters,
+      a stale client trying to write an older `rev` being rejected by `firestore.rules`
+      rather than by the client.
+- [x] **Device clock is never trusted**: a monotonic `rev` counter decides what is newer,
+      not a timestamp, so a device with its clock pushed forward cannot destroy progress.
+- [x] **No automatic merge on conflict** — blending two hotels breaks the economy and
+      invites abuse, so the player picks "Cloud" or "This device"; nothing is written to
+      the cloud until they do, which leaves the cloud copy intact as a backup meanwhile.
+- [x] **Entitlements (`remove_ads`, `permanent_income_mult`) are never carried by the
+      cloud payload** — the store is their only source of truth, otherwise a cloud save
+      would become a way to hand out paid goods.
+- [x] **Upload throttle raised 60 s → 300 s**: at 60 s an idle game re-dirties the save
+      immediately after every write, which would exhaust Firestore's free daily quota at
+      roughly 500 daily active players. Backgrounding still forces an immediate write.
+- [x] **Google sign-in without any native plugin** (`src/cloud/google_signin.gd`): system
+      browser + `127.0.0.1` loopback redirect + PKCE (RFC 8252 / RFC 7636), in pure
+      GDScript. One code path for Android, iOS and desktop — no Kotlin/Swift plugin to
+      maintain and **no extra work for the iOS port**. It fills the existing
+      `set_google_id_token_provider()` seam, so a native plugin can still replace it later
+      by changing one call.
+- [x] **The OAuth client id/secret stay out of this public repo**: loaded at runtime from
+      the gitignored `src/cloud/google_oauth_client.gd`, with
+      `google_oauth_client.example.gd` committed as the template. (A Desktop client secret
+      is not a real secret per Google's own docs — PKCE is the actual protection — but a
+      secret-shaped string in a public repo trips push protection and leak scanners.)
+- [x] The stale "add the Play app-signing SHA-1 or Google sign-in breaks" blocker was
+      removed from the docs: fingerprints identify *Android* OAuth clients, and this flow
+      presents a Desktop client through the browser, so nothing in the path depends on how
+      the APK was signed.
+- Not done, and deliberately not ticked: the OAuth Desktop app client does not exist yet,
+      so **no part of the sign-in flow has ever run against a real Google account** and
+      cross-device restore is still unproven on this game. Account linking stays a
+      disabled "coming soon" button until someone creates that client. Also open: whether
+      Google requires a verification review before the consent screen can be published for
+      all players.
+
 ## To do
 
 ### Medium term
@@ -467,5 +508,5 @@ cel-shaded colors, no shadows) as the reference.
 - [ ] A second building (a differently themed building after prestige) — currently limited to the single building + multiplier model, the economy/theme design needs to be settled first
 
 ### Long term
-- [ ] Real cloud saves / platform services (Play Games, Game Center) — cross-device transfer is currently done with a code
+- [ ] **Prove cross-device restore end to end** — cloud save and Google account linking are implemented (see Done, 2026-08-07), but nobody has ever signed in with a real Google account or moved a save between two devices, because the OAuth Desktop app client has not been created yet (`docs/cloud-save-setup.md` step 7). Until that is done the shareable save code remains the only transfer path known to work. Play Games / Game Center are *not* wanted here: they hand out a platform-specific identity and would break the "one player, one save on Android and iOS" model — that decision is argued out at the top of `src/autoload/cloud_save.gd` and should not be reopened casually.
 - [ ] Visual variation for the weekly theme (not just color, but decor/asset changes)

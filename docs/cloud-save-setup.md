@@ -1,8 +1,11 @@
 # Cloud save — Firebase setup
 
 **Status: the Firebase project exists and the values in `src/cloud/firebase_config.gd`
-are filled in (2026-08-07).** Anonymous cloud save is live. Account linking still waits
-on the Android plugin described under "Still needed for account linking on device".
+are filled in (2026-08-07).** Anonymous cloud save is live. Google account linking is
+implemented in the game (`src/cloud/google_signin.gd`) but has never been run against a
+real account, because the OAuth **Desktop app** client it needs does not exist yet —
+that is step 7 below and it is the one thing still waiting on a human. Nothing breaks
+while it is missing; linking simply stays unavailable.
 
 | | |
 |---|---|
@@ -37,14 +40,35 @@ Play Games Saved Games was deliberately ruled out: it is Android-only and this g
 targets Android **and** iOS. A Firebase UID works identically on both, so one player
 keeps one save across platforms.
 
+## Why the browser and not a native sign-in plugin
+
+Godot has no built-in Google sign-in either, so `src/cloud/google_signin.gd` does the
+whole thing in GDScript: open the **system browser**, catch the redirect on a
+`127.0.0.1` listener inside the game, exchange the code with PKCE (RFC 8252 + RFC 7636).
+The alternatives were a Kotlin Credential Manager plugin for Android *plus* a separate
+GoogleSignIn plugin for iOS — two native plugins to write, build and keep alive across
+Godot upgrades — or a Play Games Services plugin, which produces an Android-specific
+identity and would undo the "same player, same save on iOS" decision above.
+
+The browser flow is one code path that behaves the same on Android, iOS, Windows, macOS
+and Linux, with no AAR/Framework to maintain and **no extra work for the iOS port**. The
+price is paid by the player: the account chooser appears in the browser rather than
+in-app, and on mobile they have to switch back to the game themselves after signing in.
+For something done once in the life of a device, that is a fair trade.
+
+It is not a one-way door. The `set_google_id_token_provider()` seam is still there, so
+adding a native plugin later changes that one call and nothing else.
+
 ## Steps in the Firebase / Google Cloud console
 
 1. ✅ **Create a Firebase project** (console.firebase.google.com → Add project). Use the
    studio Google account — see `C:\Projects\pictures\STUDIO.md`.
 2. ✅ **Register the Android app** with package name `com.littlegrandhotel.app` (this is
-   what `export_presets.cfg` currently ships). Downloading `google-services.json` is *not*
-   required for this integration — the REST client only needs the API key and project
-   ID — but registering the app is still needed for Google sign-in.
+   what `export_presets.cfg` currently ships). Nothing in this integration actually
+   consumes it: the REST client needs only the API key and the project ID, there is no
+   `google-services.json` in the repo, and sign-in does not go through the Android app
+   identity either (see step 7). Registering it is still worth doing — it is where a
+   native SDK would look if one is ever added, and it costs nothing.
 3. ⬜ **Register the iOS app** with the matching bundle identifier when the iOS export
    preset exists.
 4. ✅ **Enable Authentication providers**: Build → Authentication → Sign-in method →
@@ -57,14 +81,54 @@ keeps one save across platforms.
    Publish, or `firebase deploy --only firestore:rules`). Do this **before** shipping —
    the default "test mode" rules leave every player's save world-readable, and the
    monotonic `rev` guarantee lives in these rules, not in the client.
-7. 🔶 **Add the SHA-1 fingerprints** (Project settings → Your apps → Android → Add
-   fingerprint) for the upload key, the Play app-signing key, and the debug key. Google
-   sign-in fails silently without all three. The upload/release key lives in
-   `android/*.jks`; Play app signing's SHA-1 is in Play Console → Setup → App integrity.
-   The upload key and the debug key are registered; **the Play app-signing SHA-1 is
-   still missing** because Play App Signing enrolment has not happened yet — add it the
-   moment the first bundle is uploaded, or Google sign-in will fail on Play-installed
-   builds while working fine on locally installed ones.
+7. ⬜ **Create the OAuth client for Google sign-in.** *This is the only step still
+   waiting on a human, and until it is done account linking cannot be tried at all.*
+   Google Cloud console → APIs & Services → Credentials → Create credentials → OAuth
+   client ID → Application type **Desktop app**.
+
+   Create it in the **same Google Cloud project** as the Firebase project
+   `little-grand-hotel`, **and** paste the new client id into Firebase console →
+   Authentication → Sign-in method → Google → *Whitelist client IDs from external
+   projects*. Do both; the second is a two-minute job and is the documented cure for the
+   failure mode below.
+
+   *Why both, honestly:* the `id_token` the game sends to `signInWithIdp` carries an
+   `aud` naming the **Desktop** client, not the Web client Firebase created for its own
+   Google provider. Whether Firebase accepts that on the strength of the shared project
+   alone could not be confirmed in Google's documentation, and nobody has run this flow
+   against a real account yet — so treat neither step as proven. What *is* documented is
+   the failure: `Invalid Idp Response: id_token audience mismatch`, whose published fix
+   is exactly that allowlist. If the first real sign-in dies at the last step — after the
+   player has already authenticated in the browser, which makes it a confusing thing to
+   debug — the allowlist entry is the first thing to check, and its absence is the likely
+   cause. Whichever of the two turns out to be the load-bearing step, come back and write
+   it down here; the next game will need the answer.
+
+   Then copy `src/cloud/google_oauth_client.example.gd` to
+   `src/cloud/google_oauth_client.gd` and fill in `CLIENT_ID` and `CLIENT_SECRET`. The
+   template is committed, the real file is gitignored (same pattern as `android/*.jks`).
+
+   **If you skip this, nothing breaks.** `FirebaseConfig.is_google_configured()` returns
+   `false`, `CloudSave.is_account_linking_available()` stays `false`, the cloud section
+   of the Profile popup keeps showing a disabled *"Link with Google — coming soon"*
+   button, and the anonymous cloud backup carries on exactly as it does today. There is
+   no crash path and no half-configured state: the file is either absent/placeholder, or
+   complete.
+
+   *Why "Desktop app" rather than "Android":* the flow opens the system browser and
+   listens for the redirect on `127.0.0.1`. Desktop clients are the client type that
+   accepts a loopback redirect, and they accept it on **any** port — so
+   `google_signin.gd` asks the OS for a free one (`LOOPBACK_PORT_ANY`) and never has to
+   register a redirect URI or handle a port collision. One client covers Android, iOS
+   and desktop.
+
+   *About the client secret:* a Desktop client comes with a `client_secret`, and per
+   Google's own documentation it is **not** treated as a true secret — it ships inside
+   every copy of the binary and can be extracted from any of them. PKCE is what actually
+   protects the code exchange. It is still kept out of this repo, because the repo is
+   public and a secret-shaped string in it trips GitHub push protection and Google's
+   leaked-credential scanners. That is noise avoidance, not a security boundary; do not
+   design anything on the assumption that this value is confidential.
 8. ✅ **Copy the config values** into `src/cloud/firebase_config.gd`:
    - `API_KEY` ← Project settings → General → Web API Key. If the console does not show
      that row (it only appears once a **Web** app is registered), take the value from
@@ -73,8 +137,64 @@ keeps one save across platforms.
      restricted to signed Android callers and the Godot `HTTPRequest` client is not one.
    - `PROJECT_ID` ← Project settings → General → Project ID
    - `GOOGLE_WEB_CLIENT_ID` ← the OAuth 2.0 **Web client** ID that Firebase creates for
-     the Google provider (Google Cloud console → APIs & Services → Credentials).
-     Only needed for account linking.
+     the Google provider (Google Cloud console → APIs & Services → Credentials). The
+     game never calls this — sign-in uses the Desktop client from step 7. It is recorded
+     here only to document which client the Firebase console's Google provider points
+     at, which matters when you are staring at a list of clients wondering what each
+     one is for.
+
+   The Desktop client from step 7 deliberately does **not** live in this file; it is
+   loaded at runtime from the gitignored `google_oauth_client.gd`.
+
+9. ⬜ **Configure the OAuth consent screen** (APIs & Services → OAuth consent screen).
+   This is the page the player sees after the browser opens: your app name and logo, the
+   account chooser (the flow passes `prompt=select_account` so a player with one Google
+   account still gets to choose — otherwise Google would silently continue with it and a
+   player who linked the wrong account would have no way back), and the permissions
+   being asked for.
+
+   The scopes requested are exactly `openid email profile` and nothing else
+   (`SCOPES` in `google_signin.gd`). The game reaches its cloud data through the
+   Firebase UID, not through these scopes, so there is no reason to ask for more — and
+   asking for more makes Google's review heavier.
+
+   Publishing status is worth understanding before you ship: while the consent screen is
+   in **Testing**, only the accounts explicitly listed as test users can complete
+   sign-in, so shipping in that state would give every other player a dead button.
+
+   **Open question, not established here:** whether moving to *In production* for these
+   three non-sensitive scopes needs a Google verification review, and whether an
+   "unverified app" interstitial is shown in the meantime. Nothing in this repo can
+   answer that and nobody has run the flow against a real account yet. Settle it in the
+   console when you create the client — and write down the answer, because the next game
+   will hit exactly the same question.
+
+### Why there is no SHA-1 fingerprint step any more
+
+Step 7 used to be a different, unresolved blocker: add the upload key, debug key and
+**Play app-signing** SHA-1 fingerprints to the Firebase Android app, or Google sign-in
+would fail on Play-installed builds. Play App Signing enrolment had not happened, so
+that fingerprint was missing and the step sat open.
+
+It does not apply to the browser flow, and the reason is worth carrying to the next
+game. A SHA-1 fingerprint is how Google recognises an **Android** OAuth client: that
+client type is bound to a package name plus a signing certificate, so a build signed
+with an unregistered key arrives as an unknown caller. This game never presents an
+Android client. Sign-in uses a Desktop client through the system browser, and the token
+exchange is authenticated by the client id plus PKCE — neither of which knows or cares
+how the APK was signed. The rest of the path is signing-agnostic for the same kind of
+reason: Identity Toolkit and Firestore are reached over REST with the Web API key, and
+there is no `google-services.json` in the repo (note the warning in step 8 about the
+*Android-restricted* API key — the Godot `HTTPRequest` client is not a signed Android
+caller, and this integration is built to never need to be one).
+
+The evidence, if you want to re-check it here or on another project: nothing under
+`src/`, `android/` or `export_presets.cfg` mentions a SHA-1 fingerprint, an Android
+OAuth client or `google-services.json`, and `android/build/build.gradle` pulls in no
+`play-services-auth` dependency.
+
+Play App Signing is of course still part of shipping on Play. It just does not gate
+cloud save or account linking.
 
 ## Verifying the live setup
 
@@ -97,19 +217,36 @@ This left one throwaway document (`saves/dTIKBWT9K5cm0Pv4OoCZfaj4tlh1`) and its
 anonymous user in the project. Rules deny `delete`, so it can only be removed from the
 Firebase console, which bypasses rules.
 
-## Still needed for account linking on device
+## Account linking — what exists, what is unproven
 
-`cloud_save.gd` exposes `set_google_id_token_provider(callable)` — a seam that must
-return a Google OIDC `id_token`. Godot has no built-in Google sign-in, so this needs a
-platform plugin (a Google Sign-In / Play Services Godot Android plugin, plus the iOS
-equivalent later). Until something fills that seam,
-`CloudSave.is_account_linking_available()` stays `false` and the UI keeps the
-"yakında" label.
+The seam `cloud_save.gd` exposes, `set_google_id_token_provider(callable)`, is filled by
+default with `GoogleSignIn.request_id_token()`. So
+`CloudSave.is_account_linking_available()` flips to `true` on its own the moment
+`google_oauth_client.gd` exists with real values, and the "Link with Google" button in
+the Profile popup goes live. **No code change is needed to switch it on** — only step 7.
 
-What works without it: the save is backed up to Firestore under an anonymous UID and
-restored across launches on the same install. What does not: moving to a new device or
-recovering after an uninstall, because the anonymous session's refresh token lives in
-`user://` and is wiped with the app.
+Nothing below this line has been run end to end, because that client does not exist yet.
+Do not treat any of it as verified:
+
+- **Signing in with a real Google account.** No leg of the browser flow has ever reached
+  Google's servers.
+- **Restoring on a second device, or after an uninstall** — which is the entire point of
+  linking, and the thing this game has never demonstrated.
+- **The mobile round trip.** `OS.shell_open` sends the player out to the browser and
+  they must return to the game by hand. The listener is written for exactly that:
+  `_await_redirect()` checks for a waiting connection *before* it checks the timeout,
+  because Godot's main loop is frozen while the app is backgrounded and the browser's
+  connection sits in the kernel backlog until the player comes back. Written for it is
+  not the same as seen working on a device.
+- **The `FEDERATED_USER_ID_ALREADY_LINKED` branch** in
+  `firebase_auth.link_with_google()`, which switches to the account that already holds
+  progress instead of failing. That is the path a returning player on a new device
+  actually takes, and it has never fired.
+
+What works today regardless: the save is backed up to Firestore under an anonymous UID
+and restored across launches on the same install. What does not: a new device or a
+reinstall, because the anonymous session's refresh token lives in `user://` and is wiped
+with the app.
 
 ## Privacy policy
 
