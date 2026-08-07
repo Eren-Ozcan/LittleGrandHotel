@@ -284,12 +284,13 @@ func _initialize() -> void:
 	g5.quests = g.quests
 	g5.achievements = g.achievements
 	g5.new_game()
-	g5.coins = 1500000
+	g5.coins = 5000000
 	g5.add_xp(g5.xp_for_level(28) - g5.xp)
 	check(g5.level() >= 28, "seviye 28'e yükseltildi")
 	while g5.floors < int(g5.eco.building.max_floors):
 		check(g5.buy_floor(), "kat alındı (%d. kat)" % g5.floors)
-	check(g5.max_slots() == 24, "6 katta 24 yuva")
+	var expect_slots: int = int(g5.eco.building.max_floors) * g5.DEFAULT_FLOOR_OPEN_WIDTH
+	check(g5.max_slots() == expect_slots, "%d katta %d yuva" % [g5.floors, expect_slots])
 	check(g5.buy_room("restaurant"), "Restoran alındı")
 	check(g5.buy_room("roof_garden"), "Çatı Bahçesi alındı")
 	for t in ["cafe", "gym", "pool", "housekeeping"]:

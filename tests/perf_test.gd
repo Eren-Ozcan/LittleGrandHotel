@@ -63,8 +63,8 @@ func _time_rebuild(n: int) -> Dictionary:
 func _bench_rebuild_scaling() -> void:
 	print("\n--- 1) _rebuild_hotel() maliyeti — oda sayısına göre ölçeklenme ---")
 	print("  (her ölçümden sonra bir kare beklenip queue_free() düğümleri gerçekten boşaltılıyor)")
-	# economy.json: building.max_floors=6, grid_cols=8 — yani gerçek oyunda
-	# ulaşılabilecek gerçek üst sınır 6 kat x 8 oda = 48 oda. 10/30/60 kat
+	# economy.json: building.max_floors=8, grid_cols=8 — yani gerçek oyunda
+	# ulaşılabilecek gerçek üst sınır 8 kat x 8 oda = 64 oda. 10/30/60 kat
 	# senaryoları saf ölçekleme eğilimini görmek için kasıtlı olarak
 	# oyundaki üst sınırın ötesine taşıyor (gerçekçi değil, sadece trend).
 	for cfg in [[2, 2], [6, 8], [10, 8], [30, 8]]:

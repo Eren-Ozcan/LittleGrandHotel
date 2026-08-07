@@ -4,7 +4,7 @@ extends Node
 ## ve çıkar.
 ## Çalıştırma (pencere açar, headless DEĞİL):
 ##   tools\Godot_v4.7-stable_win64_console.exe --path . res://tests/shot.tscn
-## Argümanlar (-- ile ayrılır): demo, zoomin, out=isim.png,
+## Argümanlar (-- ile ayrılır): demo, zoomin, zoomout, out=isim.png,
 ## popup=shift|settings|staff|quests|stats|profile|gems (ilgili popup'ı açık yakalar)
 
 
@@ -33,16 +33,23 @@ func _ready() -> void:
 	await get_tree().create_timer(0.6).timeout
 	if "zoomin" in OS.get_cmdline_user_args():
 		main._zoom_by(0.35, main.zoom_viewport.size / 2.0)
+	if "zoomout" in OS.get_cmdline_user_args():
+		# Alt sınıra kadar uzaklaş — tüm bina (bütün katlar) tek karede görünür.
+		main._zoom_by(-10.0, main.zoom_viewport.size / 2.0)
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("tut="):
+			# Zorunlu açılış tutorial'ının belirli bir adımını yakalamak için.
+			main._show_tutorial_step(int(arg.substr(4)))
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("popup="):
 			var builders := {
-				"shift": ["Vardiya", main._build_shift_popup],
-				"settings": ["Ayarlar", main._build_settings_popup],
-				"staff": ["Personel", main._build_staff_popup],
-				"quests": ["Görevler", main._build_quests_popup],
-				"stats": ["İstatistik", main._build_stats_popup],
-				"profile": ["Profil", main._build_profile_popup],
-				"gems": ["Elmas Satın Al", main._build_gems_popup],
+				"shift": ["Shift", main._build_shift_popup],
+				"settings": ["Settings", main._build_settings_popup],
+				"staff": ["Staff", main._build_staff_popup],
+				"quests": ["Quests", main._build_quests_popup],
+				"stats": ["Statistics", main._build_stats_popup],
+				"profile": ["Profile", main._build_profile_popup],
+				"gems": ["Buy Gems", main._build_gems_popup],
 			}
 			var key: String = arg.substr(6)
 			if builders.has(key):
