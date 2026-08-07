@@ -83,18 +83,30 @@ func _test_config_gate() -> void:
 	print("\n--- 1) Yapılandırma kapısı ---")
 	var configured: bool = not FirebaseConfig.API_KEY.begins_with("REPLACE_") \
 		and not FirebaseConfig.PROJECT_ID.begins_with("REPLACE_")
+	# Google kapısı ARTIK GOOGLE_WEB_CLIENT_ID'ye bakmıyor: giriş akışı ayrı,
+	# gitignore'lu bir Desktop istemci dosyası okuyor (bkz. firebase_config.gd
+	# OAUTH_CLIENT_PATH). Beklenti o dosyanın varlığından türetilir ki test hem
+	# dosyanın olduğu geliştirici makinesinde hem de olmadığı temiz klonda geçsin.
 	var google_configured: bool = configured \
-		and not FirebaseConfig.GOOGLE_WEB_CLIENT_ID.begins_with("REPLACE_")
+		and ResourceLoader.exists(FirebaseConfig.OAUTH_CLIENT_PATH)
 	print("    (yapılandırma dolu mu: %s)" % configured)
+	print("    (OAuth istemci dosyası var mı: %s)" % google_configured)
 	_check(FirebaseConfig.is_configured() == configured,
 		"is_configured() sabitlerle tutarlı")
 	_check(FirebaseConfig.is_google_configured() == google_configured,
-		"is_google_configured() sabitlerle tutarlı")
+		"is_google_configured() OAuth istemci dosyasıyla tutarlı")
 	var cs := get_node_or_null("/root/CloudSave")
 	_check(cs != null, "CloudSave autoload'ı kayıtlı")
 	if cs:
 		_check(cs.is_enabled() == configured, "CloudSave.is_enabled() kapıyla aynı")
 		_check(not cs.has_conflict(), "açılışta çakışma yok")
+		# Varsayılan Google sağlayıcısı _ready()'de bağlanır; bağlamanın açık
+		# olması YALNIZCA yapılandırmaya kalmalı, "sağlayıcı yok" durumuna değil.
+		_check(cs.get_node_or_null("GoogleSignIn") != null,
+			"varsayılan GoogleSignIn sağlayıcısı çocuk düğüm olarak eklenmiş")
+		_check(cs.is_account_linking_available() == google_configured,
+			"is_account_linking_available() tek kapı (sağlayıcı hazır)")
+		_check(not cs.is_linking(), "açılışta bekleyen bağlama akışı yok")
 
 
 # --- 2) Çakışma karar tablosu -------------------------------------------
