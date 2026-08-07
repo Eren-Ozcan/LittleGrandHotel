@@ -43,12 +43,12 @@ const GUEST_TYPES := ["a", "b", "c", "d_elder", "e_couple", "f_business", "g_kid
 ## Açılış tutorial'ı: yalnızca yepyeni bir kayıtta (Game.tutorial_seen == false)
 ## sırayla gösterilen basit popup dizisi (bkz. _maybe_show_tutorial).
 const TUTORIAL_STEPS := [
-	{"title": "Hoş Geldin!", "text": "Little Grand Hotel'e hoş geldin! Küçük bir oteli adım adım büyük bir imparatorluğa dönüştüreceksin. Hadi kısaca göz atalım.", "btn": "İleri"},
-	{"title": "1. Vardiyayı Başlat", "text": "Alt bardaki saat ikonuna dokunup bir vardiya başlat — otel yalnızca vardiya sırasında çalışır ve gelir üretir.", "btn": "İleri"},
-	{"title": "2. Misafirleri Karşıla", "text": "Vardiya başlayınca misafirler kapıdan girip asansörle odalarına çıkar. Odalar doldukça gelir birikmeye başlar.", "btn": "İleri"},
-	{"title": "3. Kasadan Topla", "text": "Biriken geliri almak için üstteki coin sayacına dokun. Toplamayı unutma — birikim vardiya bitene kadar kasada bekler.", "btn": "İleri"},
-	{"title": "4. Odaları Dekore Et", "text": "Bir odaya dokunup eşya satın al — Stil Puanı arttıkça oda kademe atlar, otelinin yıldızı yükselir.", "btn": "İleri"},
-	{"title": "5. Görevleri Takip Et", "text": "Alt bardaki görev ikonundan aktif görevini görebilirsin — her görev coin ve elmas ödülü verir. Şimdi kapıları aç!", "btn": "Başla!"},
+	{"title": "Welcome!", "text": "Welcome to Little Grand Hotel! You'll turn one small hotel into a grand empire, step by step. Let's take a quick look.", "btn": "Next"},
+	{"title": "1. Start a Shift", "text": "Tap the clock icon in the bottom bar to start a shift — the hotel only runs, and only earns, during a shift.", "btn": "Next"},
+	{"title": "2. Welcome Your Guests", "text": "Once a shift starts, guests come through the door and ride the elevator to their rooms. As rooms fill up, income starts building.", "btn": "Next"},
+	{"title": "3. Collect From the Till", "text": "Tap the coin counter at the top to collect what you have earned. Don't forget — earnings sit in the till until the shift ends.", "btn": "Next"},
+	{"title": "4. Decorate the Rooms", "text": "Tap a room and buy furnishings — as Style Points rise the room moves up a tier and your hotel gains stars.", "btn": "Next"},
+	{"title": "5. Follow the Quests", "text": "The quest icon in the bottom bar shows your active quest — each one pays out coins and gems. Now open your doors!", "btn": "Start!"},
 ]
 
 
@@ -114,13 +114,13 @@ const UPGRADE_AD_EVERY := 12
 ## Haftalık dekorasyon teması: sunucusuz, Game.current_week_index()'e göre
 ## deterministik seçilir — çatı tabelasını hafta boyunca tek renkte boyar.
 const WEEKLY_THEMES := [
-	{ "name": "Klasik Kırmızı", "accent": Color("a83e35") },
-	{ "name": "Yaz Esintisi", "accent": Color("1f8a8c") },
-	{ "name": "Altın Çağ", "accent": Color("b8860b") },
-	{ "name": "Lavanta Molası", "accent": Color("6a4c93") },
-	{ "name": "Orman Nefesi", "accent": Color("2f7a4f") },
-	{ "name": "Mercan Gün Batımı", "accent": Color("c9622a") },
-	{ "name": "Kış Masalı", "accent": Color("2f6fa8") },
+	{ "name": "Classic Red", "accent": Color("a83e35") },
+	{ "name": "Summer Breeze", "accent": Color("1f8a8c") },
+	{ "name": "Golden Age", "accent": Color("b8860b") },
+	{ "name": "Lavender Break", "accent": Color("6a4c93") },
+	{ "name": "Forest Breath", "accent": Color("2f7a4f") },
+	{ "name": "Coral Sunset", "accent": Color("c9622a") },
+	{ "name": "Winter Tale", "accent": Color("2f6fa8") },
 ]
 
 ## Elmas paketleri (gems "+" butonu → _build_gems_popup). Ürün ID'leri
@@ -255,8 +255,8 @@ var selected_room := -1
 ## Taşıma modunda seçili odanın kararlı kimliği ("" = taşıma modu kapalı).
 var move_from := ""
 
-## Odayı basılı tutup sürükleyerek taşıma (kullanıcı isteği: "Taşı" butonuyla
-## iki-dokunuşlu seçim yerine gerçek sürükle-bırak). "Taşı" butonu da (bkz.
+## Odayı basılı tutup sürükleyerek taşıma (kullanıcı isteği: "Move" butonuyla
+## iki-dokunuşlu seçim yerine gerçek sürükle-bırak). "Move" butonu da (bkz.
 ## move_from) hâlâ çalışır — bu, aynı hedefe ULAŞMANIN ikinci bir yolu.
 ## Yeni oda eklemek de aynı sürükleme sistemini paylaşır: mağaza rafındaki
 ## bir kartı sürüklemek _drag_new_type'ı doldurur (_drag_room_id yerine).
@@ -372,13 +372,13 @@ func _ready() -> void:
 	CloudSave.sync_finished.connect(func(result: String):
 		if result == CloudPayload.RESULT_RESTORE:
 			_refresh()
-			_show_toast("Buluttaki kayıt geri yüklendi"))
+			_show_toast("Cloud save restored"))
 	Ads.rewarded_ad_result.connect(func(success: bool):
 		if not success:
-			_show_toast("Reklam şu an hazır değil, birazdan tekrar dene."))
+			_show_toast("No ad is ready right now, try again shortly."))
 	Game.leveled_up.connect(func(lv):
 		_play("level")
-		_show_toast("Seviye atladın! Seviye %d (+%d elmas)" % [lv, int(Game.eco.levelup_gems)]))
+		_show_toast("Level up! Level %d (+%s)" % [lv, _count(int(Game.eco.levelup_gems), "gem")]))
 	_refresh()
 	# Tutorial/günlük ödül/çevrimdışı zinciri artık yükleme ekranı kendiliğinden
 	# kapanınca başlar (bkz. _finish_loading_screen) — arkasında görünmez
@@ -660,7 +660,7 @@ func _on_walker_caught(b: Control) -> void:
 	if bonus <= 0:
 		return
 	_play("collect")
-	_show_toast("Kaçan misafiri kapıya döndürdün! +%d coin" % bonus)
+	_show_toast("You turned the runaway guest back to the door! +%d coins" % bonus)
 	var old_tw: Tween = b.get_meta("walk_tween")
 	if old_tw:
 		old_tw.kill()
@@ -769,7 +769,7 @@ func _build_ui() -> void:
 	top.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	top.gui_input.connect(func(ev):
 		if ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT:
-			_open_popup("Profil", _build_profile_popup))
+			_open_popup("Profile", _build_profile_popup))
 	root.add_child(top)
 	var top_box := VBoxContainer.new()
 	top_box.add_theme_constant_override("separation", 6)
@@ -787,7 +787,7 @@ func _build_ui() -> void:
 	row1.add_child(gems_label)
 	var gem_add_b := _button("+", 16, PALETTE.green_deep, PALETTE.cream_text)
 	gem_add_b.custom_minimum_size = Vector2(32, 32)
-	gem_add_b.pressed.connect(func(): _open_popup("Elmas Satın Al", _build_gems_popup))
+	gem_add_b.pressed.connect(func(): _open_popup("Buy Gems", _build_gems_popup))
 	row1.add_child(gem_add_b)
 	var sp := Control.new()
 	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -863,12 +863,12 @@ func _build_ui() -> void:
 	var zoom_row := HBoxContainer.new()
 	zoom_row.add_theme_constant_override("separation", 6)
 	root.add_child(zoom_row)
-	build_mode_button = _button("🔨 İnşa Modu", 13, PALETTE.wood, PALETTE.cream_text)
+	build_mode_button = _button("🔨 Build Mode", 13, PALETTE.wood, PALETTE.cream_text)
 	build_mode_button.custom_minimum_size = Vector2(0, 48)
 	build_mode_button.toggle_mode = true
 	build_mode_button.toggled.connect(func(on: bool):
 		build_mode = on
-		build_mode_button.text = "🔨 İnşa Modu: Açık" if on else "🔨 İnşa Modu"
+		build_mode_button.text = "🔨 Build Mode: On" if on else "🔨 Build Mode"
 		_rebuild_hotel())
 	zoom_row.add_child(build_mode_button)
 	var zoom_row_spacer := Control.new()
@@ -898,7 +898,7 @@ func _build_ui() -> void:
 	build_shop_panel.visible = false
 	build_shop_panel.add_theme_constant_override("separation", 2)
 	root.add_child(build_shop_panel)
-	build_shop_panel.add_child(_label("Oda Mağazası — sürükleyip binaya bırak", 12, PALETTE.wood_dark))
+	build_shop_panel.add_child(_label("Room Shop — drag and drop onto the building", 12, PALETTE.wood_dark))
 	var build_shop_scroll := ScrollContainer.new()
 	build_shop_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	build_shop_scroll.custom_minimum_size = Vector2(0, 112)
@@ -937,7 +937,7 @@ func _build_ui() -> void:
 	new_floor_button.pressed.connect(func():
 		if Game.buy_floor():
 			_play("buy")
-			_show_toast("Yeni kat açıldı!")
+			_show_toast("New floor unlocked!")
 			_maybe_show_upgrade_ad())
 	view_col.add_child(new_floor_button)
 
@@ -953,25 +953,25 @@ func _build_ui() -> void:
 	bottom.add_theme_constant_override("separation", 6)
 	bar_panel.add_child(bottom)
 
-	var shift_b := _bar_button("res://assets/ui/icon_clock.svg", "Vardiya")
-	shift_b.pressed.connect(func(): _open_popup("Vardiya", _build_shift_popup))
+	var shift_b := _bar_button("res://assets/ui/icon_clock.svg", "Shift")
+	shift_b.pressed.connect(func(): _open_popup("Shift", _build_shift_popup))
 	bottom.add_child(shift_b)
 	shift_bar_label = shift_b.get_meta("label")
 
-	# "Mağaza" artık popup açmıyor — İnşa Modu'nu açıp mağaza rafını gösterir
+	# "Shop" artık popup açmıyor — İnşa Modu'nu açıp mağaza rafını gösterir
 	# (oda ekleme tek yol: rafından sürükleyip binaya bırakmak).
-	var shop_b := _bar_button("res://assets/ui/icon_shop.svg", "Mağaza")
+	var shop_b := _bar_button("res://assets/ui/icon_shop.svg", "Shop")
 	shop_b.pressed.connect(func():
 		build_mode_button.button_pressed = true
-		_show_toast("İnşa Modu açıldı — bir odayı rafdan sürükleyip binaya bırak"))
+		_show_toast("Build Mode is on — drag a room from the shelf onto the building"))
 	bottom.add_child(shop_b)
 
 	# İstatistik ikonu kaldırıldı — kullanıcı isteği: alt bardan Profil'e
 	# taşındı (bkz. _build_profile_popup, üst bar tıklamasıyla açılır).
 	for def in [
-		["res://assets/ui/icon_gear.svg", "Personel", _build_staff_popup],
-		["res://assets/ui/icon_quest.svg", "Görevler", _build_quests_popup],
-		["res://assets/ui/icon_gear.svg", "Ayarlar", _build_settings_popup],
+		["res://assets/ui/icon_gear.svg", "Staff", _build_staff_popup],
+		["res://assets/ui/icon_quest.svg", "Quests", _build_quests_popup],
+		["res://assets/ui/icon_gear.svg", "Settings", _build_settings_popup],
 	]:
 		var b := _bar_button(def[0], def[1])
 		var builder: Callable = def[2]
@@ -1006,7 +1006,7 @@ func _build_ui() -> void:
 	popup_title = _label("", 21, PALETTE.wood_dark)
 	popup_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(popup_title)
-	var close_b := _button("Kapat", 15, PALETTE.wood, PALETTE.cream_text)
+	var close_b := _button("Close", 15, PALETTE.wood, PALETTE.cream_text)
 	close_b.pressed.connect(_close_popup)
 	head.add_child(close_b)
 	popup_scroll = ScrollContainer.new()
@@ -1345,21 +1345,21 @@ func _update_live_labels() -> void:
 	for i in 5:
 		star_icons[i].texture = _tex("res://assets/ui/star_full.svg" if i < stars else "res://assets/ui/star_empty.svg")
 	var lv := Game.level()
-	level_label.text = "Seviye %d" % lv
+	level_label.text = "Level %d" % lv
 	var cur_xp := Game.xp - Game.xp_for_level(lv)
 	var need := Game.xp_for_level(lv + 1) - Game.xp_for_level(lv)
 	xp_bar.max_value = need
 	xp_bar.value = cur_xp
 	if Game.shift_active():
-		shift_label.text = "Vardiya bitimine %s · %.0f coin/saat" % [
+		shift_label.text = "%s left in the shift · %.0f coins/hour" % [
 			_fmt_hms(Game.shift_remaining_game_hours()), Game.hourly_income()]
 		shift_bar_label.text = _fmt_hms(Game.shift_remaining_game_hours())
 		shift_bar_label.add_theme_color_override("font_color", PALETTE.gold_soft)
 	else:
-		shift_label.text = "Vardiya kapalı — otel gelir üretmiyor."
-		shift_bar_label.text = "Vardiya"
+		shift_label.text = "No shift running — the hotel isn't earning."
+		shift_bar_label.text = "Shift"
 		shift_bar_label.add_theme_color_override("font_color", PALETTE.cream_text)
-	collect_button.text = "TOPLA — %s" % _fmt(int(Game.pending_income))
+	collect_button.text = "COLLECT — %s" % _fmt(int(Game.pending_income))
 	var has_income := int(Game.pending_income) > 0
 	collect_button.disabled = not has_income
 	if has_income and not _collect_pulse_on:
@@ -1434,7 +1434,7 @@ func _rebuild_hotel() -> void:
 	# dışında; zoom/pan yalnızca kat sıraları + lobi + sokak + çimi kapsar.
 	var theme: Dictionary = _current_theme()
 	(roof_panel.get_theme_stylebox("panel") as StyleBoxFlat).bg_color = theme.accent
-	roof_theme_label.text = "Haftanın teması: %s" % String(theme.name)
+	roof_theme_label.text = "Theme of the week: %s" % String(theme.name)
 
 	var grid_cols := int(Game.eco.building.grid_cols)
 	var canvas_w := grid_cols * CELL_W
@@ -1662,7 +1662,7 @@ func _rebuild_hotel() -> void:
 		# kullanıcı isteği: "kaldırımdan normal insanlar yürüyecek" — bkz.
 		# _spawn_arriving_pedestrian (gerçek yürüyen yayalar, tuvalin dışında
 		# root seviyesinde ayrı overlay node'lar olarak, bu kutunun dışında).
-		var street_l := _label("· · · sokak sakin — vardiya başlat · · ·", 13, PALETTE.cream)
+		var street_l := _label("· · · the street is quiet — start a shift · · ·", 13, PALETTE.cream)
 		street_l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		queue.add_child(street_l)
 
@@ -1699,7 +1699,7 @@ func _rebuild_hotel() -> void:
 	# tuvale eklenir)
 	new_floor_button.visible = Game.floors < int(Game.eco.building.max_floors)
 	if new_floor_button.visible:
-		new_floor_button.text = "Yeni kat aç — %s coin" % _fmt(Game.floor_price())
+		new_floor_button.text = "Unlock a new floor — %s coins" % _fmt(Game.floor_price())
 		new_floor_button.disabled = not Game.can_buy_floor()
 
 	_room_visual_cache = next_room_cache
@@ -1712,7 +1712,7 @@ func _rebuild_hotel() -> void:
 ## _make_shop_tray_card, _finish_drag; bırakma ham ekran koordinatından
 ## hücre bulur, herhangi bir Control'e ihtiyaç duymaz). İnşa Modu kapalıyken
 ## tamamen etkileşimsiz de olur; açıkken görünmez ama yine de dokunulabilir
-## kalır — yalnızca "Taşı" modundaki hedef tıklaması için (bkz.
+## kalır — yalnızca "Move" modundaki hedef tıklaması için (bkz.
 ## _on_empty_cell_move_tapped).
 func _make_add_cell_button(floor_i: int, col: int) -> Control:
 	if not build_mode:
@@ -1752,7 +1752,7 @@ func _make_block_cell_button(floor_i: int, col: int) -> Control:
 	curt.set_anchors_preset(Control.PRESET_FULL_RECT)
 	curt.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	b.add_child(curt)
-	var l := _label("Blok aç\n%s coin" % _fmt(Game.block_price(floor_i)), 11, Color("f0dfc4"))
+	var l := _label("Unlock block\n%s coins" % _fmt(Game.block_price(floor_i)), 11, Color("f0dfc4"))
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	l.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -1762,7 +1762,7 @@ func _make_block_cell_button(floor_i: int, col: int) -> Control:
 	b.pressed.connect(func():
 		if Game.buy_block(floor_i):
 			_play("buy")
-			_show_toast("Yeni blok açıldı!")
+			_show_toast("New block unlocked!")
 			_maybe_show_upgrade_ad())
 	return b
 
@@ -1993,7 +1993,7 @@ func _make_room_button(idx: int) -> Button:
 	if cat == "guest":
 		if room.items.size() == 0 and not is_dirty:
 			# Oda görseli zaten döşenmiş görünüyor; sadece küçük bir ipucu.
-			var hint := _label("boş oda", 12, PALETTE.muted)
+			var hint := _label("empty room", 12, PALETTE.muted)
 			hint.anchor_left = 0.0
 			hint.anchor_right = 1.0
 			hint.anchor_top = 1.0
@@ -2132,9 +2132,9 @@ func _make_room_button(idx: int) -> Button:
 	plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var plate_text: String = d.name
 	if is_infested:
-		plate_text = "İSTİLA! %d c" % int(Game.eco.infest.clean_cost)
+		plate_text = "INFESTED! %d c" % int(Game.eco.infest.clean_cost)
 	elif is_dirty:
-		plate_text = "KİRLİ!"
+		plate_text = "DIRTY!"
 	elif cat == "guest":
 		plate_text = "%s · SP %d" % [Game.tier_name(Game.room_tier(room)), Game.room_score(room)]
 	var pl := _label(plate_text, 11, PALETTE.cream_text)
@@ -2188,7 +2188,7 @@ func _make_decorate_badge() -> Control:
 	badge.offset_right = -4
 	badge.offset_top = 4
 	badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var l := _label("✦ Dekore et!", 11, PALETTE.text)
+	var l := _label("✦ Decorate!", 11, PALETTE.text)
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	badge.add_child(l)
@@ -2206,10 +2206,10 @@ func _on_room_tapped(idx: int, btn: Control) -> void:
 	if move_from != "":
 		if move_from == String(room.id):
 			move_from = ""
-			_show_toast("Taşıma iptal edildi")
+			_show_toast("Move cancelled")
 		else:
 			move_from = ""
-			_show_toast("Hedef dolu — taşımak için boş bir hücreye dokun")
+			_show_toast("That spot is taken — tap an empty cell to move there")
 		return
 	if room.dirty:
 		# Buton yeniden kurulumda yok olacağı için merkezi temizlemeden önce al
@@ -2219,34 +2219,34 @@ func _on_room_tapped(idx: int, btn: Control) -> void:
 			_play("clean")
 			_spawn_clean_anim(center)
 			if cost > 0:
-				_show_toast("İstila temizlendi! (−%d coin, +2 XP)" % cost)
+				_show_toast("Infestation cleared! (−%d coins, +2 XP)" % cost)
 			else:
-				_show_toast("Oda temizlendi (+2 XP)")
+				_show_toast("Room cleaned (+2 XP)")
 		elif cost > 0:
-			_show_toast("İstila temizliği için %d coin gerek!" % cost)
+			_show_toast("Clearing the infestation costs %d coins!" % cost)
 		return
 	selected_room = idx
 	if Game.room_def(room.type).category == "guest":
-		_open_popup("Oda Dekorasyonu", _build_room_popup)
+		_open_popup("Room Decoration", _build_room_popup)
 	else:
-		_open_popup("Tesis", _build_facility_popup)
+		_open_popup("Facility", _build_facility_popup)
 
 
-## Açık-ama-boş bir hücreye dokunma: yalnızca "Taşı" modundaysa (bkz.
+## Açık-ama-boş bir hücreye dokunma: yalnızca "Move" modundaysa (bkz.
 ## move_from, _add_manage_buttons) anlamlı — seçili odayı buraya taşır.
 ## Yeni oda eklemek artık tıklamayla değil, mağaza rafından sürükleyip
 ## bırakmakla olur (bkz. _make_shop_tray_card, _finish_drag).
 func _on_empty_cell_move_tapped(floor_i: int, col: int) -> void:
 	if move_from == "":
-		_show_toast("Oda eklemek için mağaza rafından bir kartı sürükle")
+		_show_toast("Drag a card from the shop shelf to add a room")
 		return
 	var mid := move_from
 	move_from = ""
 	if Game.move_room_to(mid, floor_i, col):
 		_play("buy")
-		_show_toast("Oda taşındı")
+		_show_toast("Room moved")
 	else:
-		_show_toast("Oda buraya sığmıyor")
+		_show_toast("The room doesn't fit here")
 
 
 ## Mağaza rafındaki tek bir oda tipi kartı: ikon + isim + fiyat. Kilitliyse
@@ -2282,7 +2282,7 @@ func _make_shop_tray_card(type: String) -> Control:
 	name_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	name_l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	col.add_child(name_l)
-	var price_text := ("Sv.%d'de açılır" % int(d.unlock_level)) if locked else "%s coin" % _fmt(int(d.price))
+	var price_text := ("Unlocks at Lv.%d" % int(d.unlock_level)) if locked else "%s coins" % _fmt(int(d.price))
 	var price_l := _label(price_text, 10, PALETTE.muted if locked else PALETTE.gold_soft)
 	price_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	price_l.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -2304,7 +2304,7 @@ func _make_shop_tray_card(type: String) -> Control:
 ## değil, yalnızca aday. Gerçek eşik main.gd:_update_room_drag'de.
 func _on_room_press_start(room_id: String, _btn: Control) -> void:
 	if not build_mode or move_from != "" or overlay.visible:
-		return  # İnşa Modu kapalıyken, popup açıkken veya "Taşı" iki-dokunuşlu moddaysa karıştırma
+		return  # İnşa Modu kapalıyken, popup açıkken veya "Move" iki-dokunuşlu moddaysa karıştırma
 	_drag_room_id = room_id
 	_drag_new_type = ""
 	_drag_active = false
@@ -2379,21 +2379,21 @@ func _finish_drag() -> void:
 	_drag_ghost = null
 	var cell := _canvas_cell_at_screen_pos(get_global_mouse_position())
 	if cell.x < 1:
-		_show_toast("Buraya bırakılamaz")
+		_show_toast("Can't drop that here")
 		return
 	if room_id != "":
 		if Game.move_room_to(room_id, cell.x, cell.y):
 			_play("buy")
-			_show_toast("Oda taşındı")
+			_show_toast("Room moved")
 		else:
-			_show_toast("Oda buraya sığmıyor")
+			_show_toast("The room doesn't fit here")
 	else:
 		if Game.place_room(new_type, cell.x, cell.y):
 			_play("buy")
-			_show_toast("%s yerleştirildi!" % Game.room_def(new_type).name)
+			_show_toast("%s placed!" % Game.room_def(new_type).name)
 			_maybe_show_upgrade_ad()
 		else:
-			_show_toast("Buraya sığmıyor, seviye yetmiyor ya da bedeli karşılanamıyor")
+			_show_toast("It doesn't fit here, your level is too low, or you can't afford it")
 
 
 ## Ekran koordinatını (global mouse) tuval yerel kat/sütununa çevirir.
@@ -2415,17 +2415,17 @@ func _canvas_cell_at_screen_pos(screen_pos: Vector2) -> Vector2i:
 func _on_guest_poked(btn: Control) -> void:
 	if Game.pokes_left() <= 0:
 		_play("tap")
-		_show_toast("Bugünlük dürtme hakkın bitti — yarın yine dene!")
+		_show_toast("You are out of nudges for today — try again tomorrow!")
 		return
 	var center := btn.global_position + btn.size / 2.0
 	var bonus := Game.poke_guest()
 	if bonus > 0:
 		_play("collect")
 		_spawn_sparkles(center)
-		_show_toast("Gizli müfettiş çıktı! +%d coin (kalan hak: %d)" % [bonus, Game.pokes_left()])
+		_show_toast("A secret inspector! +%d coins (%s left)" % [bonus, _count(Game.pokes_left(), "nudge")])
 	else:
 		_play("tap")
-		_show_toast("Misafir esnedi, uyumaya devam etti… (kalan hak: %d)" % Game.pokes_left())
+		_show_toast("The guest yawned and went back to sleep… (%s left)" % _count(Game.pokes_left(), "nudge"))
 
 
 func _on_collect() -> void:
@@ -2434,7 +2434,7 @@ func _on_collect() -> void:
 	if got > 0:
 		_play("collect")
 		_fly_coins(from, got)
-		_show_toast("+%s coin toplandı" % _fmt(got))
+		_show_toast("+%s coins collected" % _fmt(got))
 
 
 ## Misafir canlandırması: kuyruktakiler paytak yürür, odadakiler kıpırdanır.
@@ -2737,12 +2737,12 @@ func _show_rename_hotel_modal() -> void:
 	var pv := VBoxContainer.new()
 	pv.add_theme_constant_override("separation", 14)
 	panel.add_child(pv)
-	pv.add_child(_label("Otelin adını değiştir", 20, PALETTE.wood_dark))
-	pv.add_child(_label("Lobideki tabelaya sığması için en fazla %d karakter." % HOTEL_NAME_MAX_LEN, 12, PALETTE.muted))
+	pv.add_child(_label("Rename your hotel", 20, PALETTE.wood_dark))
+	pv.add_child(_label("Up to %d characters, so it fits the sign in the lobby." % HOTEL_NAME_MAX_LEN, 12, PALETTE.muted))
 	var field := LineEdit.new()
 	field.text = Game.hotel_name
 	field.max_length = HOTEL_NAME_MAX_LEN
-	field.placeholder_text = "Otel adı…"
+	field.placeholder_text = "Hotel name…"
 	pv.add_child(field)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
@@ -2753,11 +2753,11 @@ func _show_rename_hotel_modal() -> void:
 			return
 		closed = true
 		dim.queue_free()
-	var cancel_b := _button("Vazgeç", 15, PALETTE.wood_dark, PALETTE.cream_text)
+	var cancel_b := _button("Cancel", 15, PALETTE.wood_dark, PALETTE.cream_text)
 	cancel_b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	cancel_b.pressed.connect(do_close)
 	row.add_child(cancel_b)
-	var save_b := _button("Kaydet", 15, PALETTE.green_deep, PALETTE.cream_text)
+	var save_b := _button("Save", 15, PALETTE.green_deep, PALETTE.cream_text)
 	save_b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var do_save := func():
 		var new_name := field.text.strip_edges()
@@ -2809,56 +2809,56 @@ func _rebuild_popup() -> void:
 
 func _build_shift_popup(c: VBoxContainer) -> void:
 	if Game.shift_active():
-		c.add_child(_label("Vardiya sürüyor — bitimine %s." % _fmt_hms(Game.shift_remaining_game_hours()), 16, PALETTE.text))
-		c.add_child(_label("Birikimi istediğin an toplayabilirsin.", 14, PALETTE.muted))
+		c.add_child(_label("Shift in progress — %s left." % _fmt_hms(Game.shift_remaining_game_hours()), 16, PALETTE.text))
+		c.add_child(_label("You can collect your earnings whenever you like.", 14, PALETTE.muted))
 		var gem_cost := Game.skip_shift_gem_cost()
-		var skip_b := _button("Elmasla şimdi bitir — %d elmas" % gem_cost, 15, PALETTE.green_deep, PALETTE.cream_text)
+		var skip_b := _button("Finish now — %s" % _count(gem_cost, "gem"), 15, PALETTE.green_deep, PALETTE.cream_text)
 		skip_b.disabled = Game.gems < gem_cost
 		var hk_active := Game.housekeeping_active()
 		skip_b.pressed.connect(func():
 			if not hk_active and not skip_b.get_meta("armed", false):
 				skip_b.set_meta("armed", true)
-				skip_b.text = "Temizlik Odası yok — bazı odalar tam ücret vermeyebilir.\nYine de bitirmek için tekrar dokun"
+				skip_b.text = "No Housekeeping room — some rooms may not pay full rate.\nTap again to finish anyway"
 				return
 			if Game.skip_shift():
 				_play("buy")
-				_show_toast("Vardiya elmasla tamamlandı — birikim kasada!")
+				_show_toast("Shift finished with gems — the earnings are in the till!")
 				_close_popup())
 		c.add_child(skip_b)
 		if hk_active:
-			c.add_child(_label_wrap("Temizlik Odası var — vardiya sonuna kadar misafirler kesintisiz gelmiş gibi tam ücret alırsın.", 12, PALETTE.green_deep))
+			c.add_child(_label_wrap("You have a Housekeeping room — you'll earn full rate to the end of the shift, as if guests never stopped coming.", 12, PALETTE.green_deep))
 		else:
-			c.add_child(_label_wrap("Temizlik Odası yok — kirli kalan odalar bu süre için gelir üretmez.", 12, PALETTE.muted))
+			c.add_child(_label_wrap("No Housekeeping room — rooms left dirty earn nothing for this stretch.", 12, PALETTE.muted))
 		if Game.now() < Game.boost_end_unix:
 			var left_min := int((Game.boost_end_unix - Game.now()) / 60.0)
-			c.add_child(_label("Reklam bonusu aktif: gelir ×%.1f (%d dk kaldı)" % [Game.boost_mult, maxi(0, left_min)], 13, PALETTE.green_deep))
+			c.add_child(_label("Ad bonus active: income ×%.1f (%d min left)" % [Game.boost_mult, maxi(0, left_min)], 13, PALETTE.green_deep))
 		else:
-			var boost_b := _button("Reklam izle — 30 dk gelir ×2", 15, PALETTE.wood_dark, PALETTE.cream_text)
+			var boost_b := _button("Watch an ad — ×2 income for 30 min", 15, PALETTE.wood_dark, PALETTE.cream_text)
 			_button_icon(boost_b, "res://assets/ui/ad_video.png")
 			boost_b.pressed.connect(func():
 				Ads.show_rewarded(func():
 					Game.start_income_boost(30.0, 2.0)
 					_play("buy")
-					_show_toast("Reklam bonusu başladı: 30 dk gelir ×2!")
+					_show_toast("Ad bonus started: ×2 income for 30 min!")
 					_rebuild_popup()))
 			c.add_child(boost_b)
 		c.add_child(_spacer_y(8))
 		_add_auto_renew_shop(c)
 		return
-	c.add_child(_label("Süre seç — saatlik maliyet hepsinde aynıdır:", 14, PALETTE.muted))
+	c.add_child(_label("Pick a length — the hourly cost is the same for all:", 14, PALETTE.muted))
 	for hours: int in [1, 4, 8, 24]:
 		var cost := Game.shift_cost(hours)
 		var est: float = Game.hourly_income() * hours
-		var b := _button("%d saat\nmaliyet %s · tahmini gelir ~%s" % [hours, _fmt(cost), _fmt(int(est))], 15, PALETTE.wood, PALETTE.cream_text)
+		var b := _button("%s\ncost %s · est. income ~%s" % [_count(hours, "hour"), _fmt(cost), _fmt(int(est))], 15, PALETTE.wood, PALETTE.cream_text)
 		b.disabled = Game.coins < cost
 		b.pressed.connect(func():
 			if Game.start_shift(hours):
 				_play("shift")
 				_guest_walk_in()
-				_show_toast("%d saatlik vardiya başladı!" % hours)
+				_show_toast("A %d-hour shift has started!" % hours)
 				_close_popup())
 		c.add_child(b)
-	c.add_child(_label_wrap("Not: temizlenmeyen odalar gelir üretmez. Uzun vardiyada Temizlik Odası şart!", 13, PALETTE.banner_red))
+	c.add_child(_label_wrap("Note: rooms left dirty earn nothing. On a long shift a Housekeeping room is a must!", 13, PALETTE.banner_red))
 	c.add_child(_spacer_y(8))
 	_add_auto_renew_shop(c)
 
@@ -2866,19 +2866,19 @@ func _build_shift_popup(c: VBoxContainer) -> void:
 ## Vardiya popup'ının iki kolundan da (aktif/pasif) çağrılır — bu satın alma
 ## önceden Ayarlar'daydı, kullanıcı isteğiyle Vardiya'ya taşındı.
 func _add_auto_renew_shop(c: VBoxContainer) -> void:
-	c.add_child(_label("Otomatik yenileme hakkı: %s saat" % _fmt_hms(Game.auto_renew_hours_left),
+	c.add_child(_label("Auto-renew balance: %s" % _fmt_hms(Game.auto_renew_hours_left),
 		14, PALETTE.wood_dark if Game.auto_renew_hours_left > 0.0 else PALETTE.muted))
-	c.add_child(_label_wrap("Hakkın varken bir vardiya bitince, coin yeterse aynı süreyle otomatik yenilenir ve yenilenen saat kadar haktan düşer — otel sen yokken de üretime devam eder.", 12, PALETTE.muted))
+	c.add_child(_label_wrap("While you have hours banked, a finished shift renews itself for the same length if you can afford it, spending that many hours from your balance — so the hotel keeps earning while you are away.", 12, PALETTE.muted))
 	for hours: int in [1, 4, 8, 24]:
 		var ar_cost := Game.auto_renew_buy_cost(hours)
-		var ar_b := _button("%d saat yenileme hakkı satın al\n%s coin" % [hours, _fmt(ar_cost)], 14,
+		var ar_b := _button("Buy %s of auto-renew\n%s coins" % [_count(hours, "hour"), _fmt(ar_cost)], 14,
 			PALETTE.wood, PALETTE.cream_text)
 		ar_b.disabled = Game.coins < ar_cost
 		ar_b.pressed.connect(func():
 			if Game.buy_auto_renew(hours):
 				Game.save_game()
 				_play("buy")
-				_show_toast("%d saatlik otomatik yenileme hakkı satın alındı!" % hours)
+				_show_toast("Bought %s of auto-renew!" % _count(hours, "hour"))
 				_rebuild_popup())
 		c.add_child(ar_b)
 
@@ -2886,26 +2886,26 @@ func _add_auto_renew_shop(c: VBoxContainer) -> void:
 func _build_staff_popup(c: VBoxContainer) -> void:
 	var tier: int = Game.staff_tier
 	var max_tier: int = int(Game.eco.staff_upgrade.max_tier)
-	c.add_child(_label("Personel kademesi: %d / %d" % [tier, max_tier], 16, PALETTE.text))
+	c.add_child(_label("Staff tier: %d / %d" % [tier, max_tier], 16, PALETTE.text))
 	c.add_child(_label(
-		"Vardiya maliyeti: %%%.0f indirimli  ·  Saatlik gelir: +%%%.0f" % [
+		"Shift cost: %%%.0f cheaper  ·  Income per hour: +%%%.0f" % [
 			(1.0 - Game.staff_cost_mult()) * 100.0, (Game.staff_income_mult() - 1.0) * 100.0],
 		14, PALETTE.muted))
 	if tier >= max_tier:
-		c.add_child(_label("Personel en üst kademede — daha fazla yükseltme yok.", 14, PALETTE.green_deep))
+		c.add_child(_label("Your staff is at the top tier — no upgrades left.", 14, PALETTE.green_deep))
 		return
 	var cost := Game.staff_upgrade_cost()
 	var next_cost_mult := 1.0 - pow(1.0 - float(Game.eco.staff_upgrade.cost_reduction_pct), tier + 1)
 	var next_income_mult := pow(1.0 + float(Game.eco.staff_upgrade.income_boost_pct), tier + 1) - 1.0
 	var b := _button(
-		"Kademeyi yükselt — %s coin\nSonraki: -%%%.0f maliyet, +%%%.0f gelir" % [
+		"Upgrade tier — %s coins\nNext: -%%%.0f cost, +%%%.0f income" % [
 			_fmt(cost), next_cost_mult * 100.0, next_income_mult * 100.0],
 		15, PALETTE.wood, PALETTE.cream_text)
 	b.disabled = not Game.can_buy_staff_upgrade()
 	b.pressed.connect(func():
 		if Game.buy_staff_upgrade():
 			_play("buy")
-			_show_toast("Personel kalitesi yükseltildi! (Kademe %d)" % Game.staff_tier)
+			_show_toast("Staff quality upgraded! (Tier %d)" % Game.staff_tier)
 			_maybe_show_upgrade_ad())
 	c.add_child(b)
 
@@ -2924,27 +2924,27 @@ func _build_room_popup(c: VBoxContainer) -> void:
 		return
 	var room: Dictionary = Game.rooms[selected_room]
 	var tier := Game.room_tier(room)
-	c.add_child(_label("%s — %s · SP %d · %d eşya" % [
+	c.add_child(_label("%s — %s · SP %d · %d items" % [
 		Game.room_def(room.type).name, Game.tier_name(tier),
 		Game.room_score(room), room.items.size()], 16, PALETTE.text))
 	if tier < Game.eco.tier_names.size() - 1:
 		var next_th := int(Game.eco.tier_thresholds[tier + 1])
-		c.add_child(_label("Sonraki kademe (%s): SP %d gerekir" % [Game.tier_name(tier + 1), next_th], 13, PALETTE.wood_dark))
+		c.add_child(_label("Next tier (%s): needs SP %d" % [Game.tier_name(tier + 1), next_th], 13, PALETTE.wood_dark))
 
 	# Hazır dekor paketleri: tek dokunuşla, tek tek almaktan ucuz
 	var bundles: Array = Game.eco.get("bundles", [])
 	if not bundles.is_empty():
-		c.add_child(_label("Hazır paketler — tek dokunuşla dekor:", 14, PALETTE.muted))
+		c.add_child(_label("Ready-made bundles — decorate in one tap:", 14, PALETTE.muted))
 		for bd in bundles:
 			var sp_total := 0
 			for iid in bd.items:
 				sp_total += int(Game.item_def(iid).sp)
-			var pb := _button("%s — SP +%d — %s coin (%%%d indirimli)" % [
+			var pb := _button("%s — SP +%d — %s coins (%%%d off)" % [
 				bd.name, sp_total, _fmt(Game.bundle_price(bd)), int(float(bd.discount) * 100.0)],
 				14, PALETTE.green_deep, PALETTE.cream_text)
 			var need_lv := Game.bundle_unlock_level(bd)
 			if Game.level() < need_lv:
-				pb.text = "%s — Seviye %d'de açılır" % [bd.name, need_lv]
+				pb.text = "%s — unlocks at level %d" % [bd.name, need_lv]
 				pb.disabled = true
 			else:
 				pb.disabled = not Game.can_buy_bundle(bd)
@@ -2952,7 +2952,7 @@ func _build_room_popup(c: VBoxContainer) -> void:
 				pb.pressed.connect(func():
 					if Game.buy_bundle(selected_room, bid):
 						_play("buy")
-						_show_toast("%s yerleştirildi!" % Game.bundle_def(bid).name)
+						_show_toast("%s placed!" % Game.bundle_def(bid).name)
 						_maybe_show_upgrade_ad())
 			c.add_child(pb)
 
@@ -2962,7 +2962,7 @@ func _build_room_popup(c: VBoxContainer) -> void:
 	# sorununu çözer: yatak zaten var, burada sadece daha iyisine geçiliyor.
 	var lv := Game.level()
 	var base: Dictionary = room.get("base", {})
-	var slot_names := {"wallpaper": "Duvar Kağıdı", "floor": "Zemin", "bed": "Yatak"}
+	var slot_names := {"wallpaper": "Wallpaper", "floor": "Floor", "bed": "Bed"}
 	for slot_key in ["bed", "wallpaper", "floor"]:
 		if not base.has(slot_key):
 			continue  # ör. tesis odalarında yatak yok
@@ -2973,13 +2973,13 @@ func _build_room_popup(c: VBoxContainer) -> void:
 		c.add_child(_label(String(slot_names.get(slot_key, slot_key)) + ":", 14, PALETTE.muted))
 		for it in alts:
 			var owned: bool = current == String(it.id)
-			var b2 := _button("%s%s" % [it.name, "  ✓ mevcut" if owned else " — %s coin" % _fmt(int(it.price))],
+			var b2 := _button("%s%s" % [it.name, "  ✓ owned" if owned else " — %s coins" % _fmt(int(it.price))],
 				13, PALETTE.wood, PALETTE.cream_text)
 			b2.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			if owned:
 				b2.disabled = true
 			elif lv < int(it.get("unlock_level", 1)):
-				b2.text = "%s — Seviye %d'de açılır" % [it.name, int(it.unlock_level)]
+				b2.text = "%s — unlocks at level %d" % [it.name, int(it.unlock_level)]
 				b2.disabled = true
 			else:
 				b2.disabled = not Game.can_afford_item(it)
@@ -2987,11 +2987,11 @@ func _build_room_popup(c: VBoxContainer) -> void:
 				b2.pressed.connect(func():
 					if Game.upgrade_base(selected_room, iid2):
 						_play("buy")
-						_show_toast("%s güncellendi!" % Game.item_def(iid2).name)
+						_show_toast("%s upgraded!" % Game.item_def(iid2).name)
 						_maybe_show_upgrade_ad())
 			c.add_child(b2)
 
-	c.add_child(_label("Dekor eşyası ekle:", 14, PALETTE.muted))
+	c.add_child(_label("Add a decoration:", 14, PALETTE.muted))
 	for it in Game.eco.items:
 		if not it.has("anchor"):
 			continue
@@ -2999,15 +2999,15 @@ func _build_room_popup(c: VBoxContainer) -> void:
 		row.add_theme_constant_override("separation", 8)
 		c.add_child(row)
 		row.add_child(_icon("res://assets/items/%s.svg" % it.id, 40))
-		var price_text: String = "%d elmas ◆" % int(it.get("gem_price", 0)) if Game.item_is_premium(it) else "%s coin" % _fmt(int(it.price))
+		var price_text: String = "%d gems ◆" % int(it.get("gem_price", 0)) if Game.item_is_premium(it) else "%s coins" % _fmt(int(it.price))
 		var b := _button("%s — SP +%d — %s" % [it.name, int(it.sp), price_text], 14,
 			PALETTE.green_deep if Game.item_is_premium(it) else PALETTE.wood, PALETTE.cream_text)
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		if lv < int(it.get("unlock_level", 1)):
-			b.text = "%s — Seviye %d'de açılır" % [it.name, int(it.unlock_level)]
+			b.text = "%s — unlocks at level %d" % [it.name, int(it.unlock_level)]
 			b.disabled = true
 		elif Game.room_has_item(selected_room, it.id):
-			b.text = "%s — sahipsin ✓" % it.name
+			b.text = "%s — owned ✓" % it.name
 			b.disabled = true
 		else:
 			b.disabled = not Game.can_afford_item(it)
@@ -3015,7 +3015,7 @@ func _build_room_popup(c: VBoxContainer) -> void:
 			b.pressed.connect(func():
 				if Game.buy_item(selected_room, iid):
 					_play("buy")
-					_show_toast("%s yerleştirildi (+%d SP)" % [Game.item_def(iid).name, int(Game.item_def(iid).sp)])
+					_show_toast("%s placed (+%d SP)" % [Game.item_def(iid).name, int(Game.item_def(iid).sp)])
 					_maybe_show_upgrade_ad())
 		row.add_child(b)
 	_add_manage_buttons(c)
@@ -3032,9 +3032,9 @@ func _build_facility_popup(c: VBoxContainer) -> void:
 	row.add_child(_icon("res://assets/rooms/%s.svg" % room.type, 48))
 	row.add_child(_label(String(d.name), 17, PALETTE.text))
 	if d.category == "facility":
-		c.add_child(_label("Saatlik +%d coin taban gelir · yıldız çeşitliliğine katkı" % int(d.base_income), 13, PALETTE.muted))
+		c.add_child(_label("+%d coins/hour base income · adds to star variety" % int(d.base_income), 13, PALETTE.muted))
 	else:
-		c.add_child(_label("Kirlenen odaları kendiliğinden temizler — gelir hiç durmaz.", 13, PALETTE.muted))
+		c.add_child(_label("Cleans dirty rooms by itself — income never stops.", 13, PALETTE.muted))
 	_add_manage_buttons(c)
 
 
@@ -3042,36 +3042,36 @@ func _build_facility_popup(c: VBoxContainer) -> void:
 func _add_manage_buttons(c: VBoxContainer) -> void:
 	c.add_child(_spacer_y(6))
 	if not build_mode:
-		c.add_child(_label("Taşımak veya satmak için önce İnşa Modu'nu aç.", 12, PALETTE.muted))
+		c.add_child(_label("Turn on Build Mode first to move or sell.", 12, PALETTE.muted))
 		return
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
 	c.add_child(row)
 	var ridx := selected_room
-	var mv := _button("Taşı", 14, PALETTE.wood_dark, PALETTE.cream_text)
+	var mv := _button("Move", 14, PALETTE.wood_dark, PALETTE.cream_text)
 	mv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	mv.pressed.connect(func():
 		move_from = String(Game.rooms[ridx].id)
 		_close_popup()
-		_show_toast("Boş bir hücreye dokun — iptal için odana tekrar dokun"))
+		_show_toast("Tap an empty cell — tap your room again to cancel"))
 	row.add_child(mv)
-	var sell_text := "Sat — +%s coin" % _fmt(Game.room_sell_value(ridx))
+	var sell_text := "Sell — +%s coins" % _fmt(Game.room_sell_value(ridx))
 	var sell_gems := Game.room_sell_gem_value(ridx)
 	if sell_gems > 0:
-		sell_text += " +%d elmas" % sell_gems
+		sell_text += " +%s" % _count(sell_gems, "gem")
 	var sl := _button(sell_text, 14, PALETTE.banner_red, PALETTE.cream_text)
 	sl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	sl.pressed.connect(func():
 		if not sl.get_meta("armed", false):
 			sl.set_meta("armed", true)
-			sl.text = "Emin misin?\nSatmak için tekrar dokun"
+			sl.text = "Are you sure?\nTap again to sell"
 			return
 		if Game.sell_room(ridx):
 			_play("buy")
 			_close_popup()
-			_show_toast("Oda satıldı — iade kasada")
+			_show_toast("Room sold — the refund is in the till")
 		else:
-			_show_toast("Son oda satılamaz!"))
+			_show_toast("You can't sell your last room!"))
 	row.add_child(sl)
 
 
@@ -3080,17 +3080,17 @@ func _add_manage_buttons(c: VBoxContainer) -> void:
 ## İstatistik ikonu kaldırıldı, artık yalnızca Profil üzerinden erişilir.
 func _add_stats_rows(c: VBoxContainer) -> void:
 	var rows := [
-		["Toplam toplanan gelir", "%s coin" % _fmt(Game.stat_collected_total)],
-		["Toplama sayısı", str(Game.stat_collects)],
-		["Temizlenen oda", str(Game.stat_cleans)],
-		["Başlatılan vardiya", str(Game.stat_shifts)],
-		["Oda sayısı", "%d oda (%d / %d blok dolu)" % [Game.rooms.size(), _blocks_used(), Game.max_slots()]],
-		["Tesis çeşitliliği", "%d / 5" % Game.facility_diversity()],
-		["Yıldız derecesi", "%d / 5" % Game.star_rating()],
-		["Seviye", "%d (XP %s)" % [Game.level(), _fmt(Game.xp)]],
-		["Saatlik gelir (şu an)", "%.0f coin" % Game.hourly_income()],
-		["Prestij çarpanı", "×%.2f (devir %d)" % [Game.prestige_mult(), Game.prestige_level]],
-		["Günlük giriş serisi", "%d gün" % Game.daily_streak],
+		["Total income collected", "%s coins" % _fmt(Game.stat_collected_total)],
+		["Collections", str(Game.stat_collects)],
+		["Rooms cleaned", str(Game.stat_cleans)],
+		["Shifts started", str(Game.stat_shifts)],
+		["Rooms", "%s (%d / %d blocks used)" % [_count(Game.rooms.size(), "room"), _blocks_used(), Game.max_slots()]],
+		["Facility variety", "%d / 5" % Game.facility_diversity()],
+		["Star rating", "%d / 5" % Game.star_rating()],
+		["Level", "%d (XP %s)" % [Game.level(), _fmt(Game.xp)]],
+		["Income per hour (now)", "%.0f coins" % Game.hourly_income()],
+		["Prestige multiplier", "×%.2f (prestige %d)" % [Game.prestige_mult(), Game.prestige_level]],
+		["Daily login streak", _count(Game.daily_streak, "day")],
 	]
 	for r in rows:
 		var row := HBoxContainer.new()
@@ -3100,15 +3100,15 @@ func _add_stats_rows(c: VBoxContainer) -> void:
 		row.add_child(ll)
 		row.add_child(_label(String(r[1]), 14, PALETTE.text))
 	c.add_child(_spacer_y(6))
-	c.add_child(_label("Vardiya geçmişi (son %d):" % Game.shift_history.size(), 14, PALETTE.wood_dark))
+	c.add_child(_label("Shift history (last %d):" % Game.shift_history.size(), 14, PALETTE.wood_dark))
 	if Game.shift_history.is_empty():
-		c.add_child(_label("Henüz vardiya başlatılmadı.", 13, PALETTE.muted))
+		c.add_child(_label("No shift has been started yet.", 13, PALETTE.muted))
 		return
 	var bias: int = int(Time.get_time_zone_from_system().bias) * 60
 	for i in range(Game.shift_history.size() - 1, -1, -1):
 		var h: Dictionary = Game.shift_history[i]
 		var dt := Time.get_datetime_dict_from_unix_time(int(float(h.at)) + bias)
-		c.add_child(_label("%02d.%02d %02d:%02d — %d saat · maliyet %s coin" % [
+		c.add_child(_label("%02d.%02d %02d:%02d — %dh · cost %s coins" % [
 			dt.day, dt.month, dt.hour, dt.minute, int(h.hours), _fmt(int(h.cost))], 13, PALETTE.text))
 
 
@@ -3123,41 +3123,41 @@ func _build_profile_popup(c: VBoxContainer) -> void:
 	_build_cloud_section(c)
 
 	c.add_child(_spacer_y(6))
-	c.add_child(_label("Kaydı taşı — bulut yerine paylaşılabilir kod:", 14, PALETTE.text))
+	c.add_child(_label("Move your save — a shareable code instead of the cloud:", 14, PALETTE.text))
 	var export_code := Game.export_save_code()
 	var export_field := LineEdit.new()
 	export_field.text = export_code
 	export_field.editable = false
 	c.add_child(export_field)
-	var copy_b := _button("Kodu panoya kopyala", 14, PALETTE.wood, PALETTE.cream_text)
+	var copy_b := _button("Copy code to clipboard", 14, PALETTE.wood, PALETTE.cream_text)
 	copy_b.pressed.connect(func():
 		DisplayServer.clipboard_set(export_code)
-		_show_toast("Kayıt kodu panoya kopyalandı"))
+		_show_toast("Save code copied to the clipboard"))
 	c.add_child(copy_b)
 	c.add_child(_spacer_y(4))
 	var import_field := LineEdit.new()
-	import_field.placeholder_text = "Başka bir kaydın kodunu buraya yapıştır…"
+	import_field.placeholder_text = "Paste another save code here…"
 	c.add_child(import_field)
-	var import_b := _button("İçe aktar\nmevcut kaydın üzerine yazar", 14, PALETTE.banner_red, PALETTE.cream_text)
+	var import_b := _button("Import\noverwrites your current save", 14, PALETTE.banner_red, PALETTE.cream_text)
 	import_b.pressed.connect(func():
 		if not import_b.get_meta("armed", false):
 			import_b.set_meta("armed", true)
-			import_b.text = "Emin misin?\nÜzerine yazmak için tekrar dokun"
+			import_b.text = "Are you sure?\nTap again to overwrite"
 			return
 		if Game.import_save_code(import_field.text):
 			Game.save_game()
 			_close_popup()
-			_show_toast("Kayıt içe aktarıldı!")
+			_show_toast("Save imported!")
 		else:
-			_show_toast("Kod geçersiz — kontrol edip tekrar dene"))
+			_show_toast("Invalid code — check it and try again"))
 	c.add_child(import_b)
 
 	c.add_child(_spacer_y(10))
 	c.add_child(_label("Premium", 15, PALETTE.wood_dark))
 	if Game.remove_ads:
-		c.add_child(_label("Reklamlar kaldırıldı. Teşekkürler!", 13, PALETTE.green_deep))
+		c.add_child(_label("Ads removed. Thank you!", 13, PALETTE.green_deep))
 	else:
-		var no_ads_b := _button("Reklamları Kaldır", 15, PALETTE.green_deep, PALETTE.cream_text)
+		var no_ads_b := _button("Remove Ads", 15, PALETTE.green_deep, PALETTE.cream_text)
 		_button_icon(no_ads_b, "res://assets/ui/ad_video.png")
 		no_ads_b.pressed.connect(func():
 			IAP.purchase(IAP.PRODUCT_REMOVE_ADS, func(ok: bool):
@@ -3165,13 +3165,13 @@ func _build_profile_popup(c: VBoxContainer) -> void:
 					Game.remove_ads = true
 					Game.save_game()
 					_play("buy")
-					_show_toast("Reklamlar kaldırıldı!")
+					_show_toast("Ads removed!")
 					_rebuild_popup()))
 		c.add_child(no_ads_b)
 	if Game.permanent_income_mult > 1.0:
-		c.add_child(_label("Kazanç çarpanı aktif: ×%.1f" % Game.permanent_income_mult, 13, PALETTE.green_deep))
+		c.add_child(_label("Income multiplier active: ×%.1f" % Game.permanent_income_mult, 13, PALETTE.green_deep))
 	else:
-		var x2_b := _button("Kazancı 2x Yap", 15, PALETTE.green_deep, PALETTE.cream_text)
+		var x2_b := _button("Double Your Earnings", 15, PALETTE.green_deep, PALETTE.cream_text)
 		_button_icon(x2_b, "res://assets/ui/dollar.png")
 		x2_b.pressed.connect(func():
 			IAP.purchase(IAP.PRODUCT_INCOME_2X, func(ok: bool):
@@ -3179,30 +3179,30 @@ func _build_profile_popup(c: VBoxContainer) -> void:
 					Game.permanent_income_mult = 2.0
 					Game.save_game()
 					_play("buy")
-					_show_toast("Kazanç 2x oldu!")
+					_show_toast("Earnings doubled!")
 					_rebuild_popup()))
 		c.add_child(x2_b)
 
 	c.add_child(_spacer_y(10))
-	c.add_child(_label("Prestij — çarpan ×%.2f (devir %d)" % [Game.prestige_mult(), Game.prestige_level], 15, PALETTE.wood_dark))
+	c.add_child(_label("Prestige — multiplier ×%.2f (round %d)" % [Game.prestige_mult(), Game.prestige_level], 15, PALETTE.wood_dark))
 	if Game.can_prestige():
 		var next_mult: float = Game.prestige_mult() + float(Game.eco.prestige.mult_gain)
-		var p_b := _button("Oteli devret — yeni çarpan ×%.2f" % next_mult, 15, PALETTE.green_deep, PALETTE.cream_text)
+		var p_b := _button("Prestige the hotel — new multiplier ×%.2f" % next_mult, 15, PALETTE.green_deep, PALETTE.cream_text)
 		p_b.pressed.connect(func():
 			if p_b.get_meta("armed", false):
 				Game.do_prestige()
 				_close_popup()
-				_show_toast("Devrettin! Yeni gelir çarpanı: ×%.2f" % Game.prestige_mult())
+				_show_toast("Prestiged! New income multiplier: ×%.2f" % Game.prestige_mult())
 			else:
 				p_b.set_meta("armed", true)
-				p_b.text = "Emin misin?\nİlerleme sıfırlanacak, tekrar dokun")
+				p_b.text = "Are you sure?\nProgress will be reset — tap again")
 		c.add_child(p_b)
-		c.add_child(_label_wrap("Devretmek coin, oda, görev ve başarım ilerlemeni sıfırlar; çarpan kalıcıdır.", 12, PALETTE.muted))
+		c.add_child(_label_wrap("Prestige resets your coins, rooms, quests and achievements; the multiplier is permanent.", 12, PALETTE.muted))
 	else:
-		c.add_child(_label("Devretmek için Seviye %d gerekir (şu an %d)." % [int(Game.eco.prestige.min_level), Game.level()], 13, PALETTE.muted))
+		c.add_child(_label("Prestige requires level %d (you are %d)." % [int(Game.eco.prestige.min_level), Game.level()], 13, PALETTE.muted))
 
 	c.add_child(_spacer_y(10))
-	c.add_child(_label("İstatistikler", 15, PALETTE.wood_dark))
+	c.add_child(_label("Statistics", 15, PALETTE.wood_dark))
 	_add_stats_rows(c)
 
 
@@ -3214,26 +3214,26 @@ func _build_profile_popup(c: VBoxContainer) -> void:
 ## geldiğinde aynı bölüm kendiliğinden durum + yedekleme + hesap bağlamaya
 ## dönüşür — UI'da ayrıca bir bayrak açmak gerekmez.
 func _build_cloud_section(c: VBoxContainer) -> void:
-	c.add_child(_label("Hesap", 16, PALETTE.wood_dark))
+	c.add_child(_label("Account", 16, PALETTE.wood_dark))
 	if not CloudSave.is_enabled():
-		c.add_child(_label_wrap("Bulut kaydı bu sürümde henüz açık değil — şimdilik kaydını aşağıdaki kodla başka bir cihaza taşıyabilirsin.", 12, PALETTE.muted))
-		var soon_b := _button("Google ile bağlan — yakında", 14, PALETTE.wood_dark, PALETTE.cream_text)
+		c.add_child(_label_wrap("Cloud save is not enabled in this build yet — for now you can move your save to another device with the code below.", 12, PALETTE.muted))
+		var soon_b := _button("Link with Google — coming soon", 14, PALETTE.wood_dark, PALETTE.cream_text)
 		soon_b.disabled = true
 		c.add_child(soon_b)
 		return
 
 	if CloudSave.has_conflict():
-		c.add_child(_label_wrap("Bulutta bu cihazdakinden farklı bir ilerleme var. Hangisini tutacağına sen karar ver.", 12, PALETTE.banner_red))
-		var pick_b := _button("Kaydı seç — Bulut / Bu cihaz", 15, PALETTE.banner_red, PALETTE.cream_text)
+		c.add_child(_label_wrap("The cloud holds different progress than this device. You decide which one to keep.", 12, PALETTE.banner_red))
+		var pick_b := _button("Choose a save — Cloud / This device", 15, PALETTE.banner_red, PALETTE.cream_text)
 		pick_b.pressed.connect(func(): _show_cloud_conflict_modal())
 		c.add_child(pick_b)
 		c.add_child(_spacer_y(6))
 
-	var who := "Bu cihaza bağlı (anonim)" if not CloudSave.is_linked() else "Google hesabına bağlı"
+	var who := "Linked to this device (anonymous)" if not CloudSave.is_linked() else "Linked to a Google account"
 	c.add_child(_label(who, 13, PALETTE.text))
-	c.add_child(_label("Son yedekleme: %s" % _cloud_sync_text(), 12, PALETTE.muted))
+	c.add_child(_label("Last backup: %s" % _cloud_sync_text(), 12, PALETTE.muted))
 
-	var backup_b := _button("Şimdi yedekle", 14, PALETTE.wood, PALETTE.cream_text)
+	var backup_b := _button("Back up now", 14, PALETTE.wood, PALETTE.cream_text)
 	backup_b.pressed.connect(func():
 		backup_b.disabled = true
 		var result: String = await CloudSave.sync_now()
@@ -3241,18 +3241,18 @@ func _build_cloud_section(c: VBoxContainer) -> void:
 		_rebuild_popup())
 	c.add_child(backup_b)
 
-	var link_b := _button("Google ile bağlan", 14, PALETTE.green_deep, PALETTE.cream_text)
+	var link_b := _button("Link with Google", 14, PALETTE.green_deep, PALETTE.cream_text)
 	if CloudSave.is_linked():
-		link_b.text = "Hesabın bağlı"
+		link_b.text = "Your account is linked"
 		link_b.disabled = true
 	elif not CloudSave.is_account_linking_available():
 		# Google girişi bir platform eklentisi ister (bkz. cloud_save.gd
 		# set_google_id_token_provider) — eklenti yokken yedekleme yine çalışır,
 		# yalnızca cihaz değişiminde geri alınamaz.
-		link_b.text = "Google ile bağlan — yakında"
+		link_b.text = "Link with Google — coming soon"
 		link_b.disabled = true
 		c.add_child(link_b)
-		c.add_child(_label_wrap("Bağlanmadan da yedeklenir, ama kaydını yeni bir cihazda açabilmek için hesap bağlaman gerekir.", 12, PALETTE.muted))
+		c.add_child(_label_wrap("Your save is backed up even without linking, but you need a linked account to open it on a new device.", 12, PALETTE.muted))
 		return
 	else:
 		link_b.pressed.connect(func():
@@ -3267,21 +3267,21 @@ func _build_cloud_section(c: VBoxContainer) -> void:
 func _cloud_sync_text() -> String:
 	var at: float = CloudSave.last_success_unix()
 	if at <= 0.0:
-		return "henüz yapılmadı"
+		return "not yet"
 	return _fmt_relative(at)
 
 
 func _cloud_result_toast(result: String) -> String:
 	match result:
 		CloudPayload.RESULT_RESTORE:
-			return "Buluttaki kayıt geri yüklendi"
+			return "Cloud save restored"
 		CloudPayload.RESULT_CONFLICT:
-			return "Bulutta farklı bir ilerleme var — hangisini tutacağını seç"
+			return "The cloud holds different progress — pick which one to keep"
 		CloudPayload.RESULT_NEEDS_UPDATE:
-			return "Buluttaki kayıt daha yeni bir sürümden — önce oyunu güncelle"
+			return "The cloud save comes from a newer version — update the game first"
 		CloudPayload.RESULT_DISABLED:
-			return "Buluta ulaşılamadı — bağlantını kontrol edip tekrar dene"
-	return "Kaydın buluta yedeklendi"
+			return "Could not reach the cloud — check your connection and try again"
+	return "Your save is backed up to the cloud"
 
 
 ## "3 dakika önce" gibi göreli zaman. Bulut tarafı için SUNUCU damgası kullanılır
@@ -3289,12 +3289,12 @@ func _cloud_result_toast(result: String) -> String:
 func _fmt_relative(unix: float) -> String:
 	var diff := Time.get_unix_time_from_system() - unix
 	if diff < 60.0:
-		return "az önce"
+		return "just now"
 	if diff < 3600.0:
-		return "%d dakika önce" % int(diff / 60.0)
+		return "%s ago" % _count(int(diff / 60.0), "minute")
 	if diff < 86400.0:
-		return "%d saat önce" % int(diff / 3600.0)
-	return "%d gün önce" % int(diff / 86400.0)
+		return "%s ago" % _count(int(diff / 3600.0), "hour")
+	return "%s ago" % _count(int(diff / 86400.0), "day")
 
 
 ## Çakışma seçici: "Bulut / Bu cihaz". KOD KENDİ KARAR VERMEZ ve iki ilerlemeyi
@@ -3323,18 +3323,18 @@ func _show_cloud_conflict_modal(on_closed: Callable = Callable()) -> void:
 	var pv := VBoxContainer.new()
 	pv.add_theme_constant_override("separation", 12)
 	panel.add_child(pv)
-	pv.add_child(_label("Hangi kayıt devam etsin?", 20, PALETTE.wood_dark))
-	pv.add_child(_label_wrap("Bulutta ve bu cihazda birbirinden farklı iki ilerleme var. Otomatik birleştirme yapılmaz — birini seç, diğeri olduğu gibi kalır.", 12, PALETTE.muted))
+	pv.add_child(_label("Which save should continue?", 20, PALETTE.wood_dark))
+	pv.add_child(_label_wrap("There are two different saves, one in the cloud and one on this device. They are never merged automatically — pick one and the other stays as it is.", 12, PALETTE.muted))
 
 	var cols := HBoxContainer.new()
 	cols.add_theme_constant_override("separation", 12)
 	pv.add_child(cols)
-	cols.add_child(_cloud_side_column("Bulut",
+	cols.add_child(_cloud_side_column("Cloud",
 		int(cloud.get("level", 0)), int(cloud.get("coins", 0)),
 		int(cloud.get("gems", 0)), int(cloud.get("rooms", 0)),
-		_fmt_relative(cloud_at) if cloud_at > 0.0 else "zamanı bilinmiyor"))
-	cols.add_child(_cloud_side_column("Bu cihaz",
-		Game.level(), Game.coins, Game.gems, Game.rooms.size(), "şu an"))
+		_fmt_relative(cloud_at) if cloud_at > 0.0 else "time unknown"))
+	cols.add_child(_cloud_side_column("This device",
+		Game.level(), Game.coins, Game.gems, Game.rooms.size(), "now"))
 
 	var closed := false
 	var do_close := func():
@@ -3346,18 +3346,18 @@ func _show_cloud_conflict_modal(on_closed: Callable = Callable()) -> void:
 		if on_closed.is_valid():
 			on_closed.call()
 
-	var cloud_b := _button("Buluttakini kullan", 15, PALETTE.green_deep, PALETTE.cream_text)
+	var cloud_b := _button("Use the cloud's", 15, PALETTE.green_deep, PALETTE.cream_text)
 	cloud_b.pressed.connect(func():
 		var ok: bool = CloudSave.resolve_keep_cloud()
 		do_close.call()
-		_show_toast("Buluttaki kayıt yüklendi" if ok else "Buluttaki kayıt okunamadı, bu cihazdaki korundu")
+		_show_toast("Cloud save loaded" if ok else "The cloud save could not be read; this device's save was kept")
 		_refresh())
 	pv.add_child(cloud_b)
 
-	var local_b := _button("Bu cihazdakini kullan", 15, PALETTE.wood_dark, PALETTE.cream_text)
+	var local_b := _button("Use this device's", 15, PALETTE.wood_dark, PALETTE.cream_text)
 	local_b.pressed.connect(func():
 		do_close.call()
-		_show_toast("Bu cihazdaki kayıt tutuldu ve buluta gönderiliyor")
+		_show_toast("Kept this device's save and uploading it to the cloud")
 		await CloudSave.resolve_keep_local())
 	pv.add_child(local_b)
 
@@ -3374,16 +3374,16 @@ func _cloud_side_column(title: String, lv: int, coins: int, gems: int,
 	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	box.add_child(_label(title, 16, PALETTE.wood_dark))
 	box.add_child(_label(when, 12, PALETTE.muted))
-	box.add_child(_label("Seviye %d" % lv, 14, PALETTE.text))
-	box.add_child(_label("%s coin" % _fmt(coins), 14, PALETTE.text))
-	box.add_child(_label("%d elmas" % gems, 14, PALETTE.text))
-	box.add_child(_label("%d oda" % rooms, 14, PALETTE.text))
+	box.add_child(_label("Level %d" % lv, 14, PALETTE.text))
+	box.add_child(_label("%s coins" % _fmt(coins), 14, PALETTE.text))
+	box.add_child(_label(_count(gems, "gem"), 14, PALETTE.text))
+	box.add_child(_label(_count(rooms, "room"), 14, PALETTE.text))
 	return box
 
 
 func _build_gems_popup(c: VBoxContainer) -> void:
-	c.add_child(_label("Elmas satın al", 16, PALETTE.wood_dark))
-	c.add_child(_label_wrap("Fiyatlar mağazada (Play Console) ayarlanır — aşağıdakiler öneridir.", 12, PALETTE.muted))
+	c.add_child(_label("Buy gems", 16, PALETTE.wood_dark))
+	c.add_child(_label_wrap("Prices are set in the store (Play Console) — the ones below are suggestions.", 12, PALETTE.muted))
 	for pack in GEM_PACKS:
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 10)
@@ -3391,7 +3391,7 @@ func _build_gems_popup(c: VBoxContainer) -> void:
 		row.add_child(_icon("res://assets/ui/gem.svg", 32))
 		var product: String = pack.product
 		var amount: int = pack.gems
-		var b := _button("%d elmas — %s" % [amount, pack.price], 15, PALETTE.green_deep, PALETTE.cream_text)
+		var b := _button("%s — %s" % [_count(amount, "gem"), pack.price], 15, PALETTE.green_deep, PALETTE.cream_text)
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		b.pressed.connect(func():
 			IAP.purchase(product, func(ok: bool):
@@ -3399,13 +3399,13 @@ func _build_gems_popup(c: VBoxContainer) -> void:
 					Game.gems += amount
 					Game.save_game()
 					_play("buy")
-					_show_toast("%d elmas eklendi!" % amount)
+					_show_toast("%s added!" % _count(amount, "gem"))
 					_rebuild_popup()))
 		row.add_child(b)
 
 
 func _build_settings_popup(c: VBoxContainer) -> void:
-	var s_b := _button("Ses efektleri: %s" % ("Açık" if Game.sound_on else "Kapalı"), 15,
+	var s_b := _button("Sound effects: %s" % ("On" if Game.sound_on else "Off"), 15,
 		PALETTE.wood if Game.sound_on else PALETTE.wood_dark, PALETTE.cream_text)
 	s_b.pressed.connect(func():
 		Game.sound_on = not Game.sound_on
@@ -3414,7 +3414,7 @@ func _build_settings_popup(c: VBoxContainer) -> void:
 		_rebuild_popup())
 	c.add_child(s_b)
 
-	var m_b := _button("Lobi müziği: %s" % ("Açık" if Game.music_on else "Kapalı"), 15,
+	var m_b := _button("Lobby music: %s" % ("On" if Game.music_on else "Off"), 15,
 		PALETTE.wood if Game.music_on else PALETTE.wood_dark, PALETTE.cream_text)
 	m_b.pressed.connect(func():
 		Game.music_on = not Game.music_on
@@ -3424,41 +3424,41 @@ func _build_settings_popup(c: VBoxContainer) -> void:
 	c.add_child(m_b)
 
 	c.add_child(_spacer_y(8))
-	c.add_child(_label_wrap("Otomatik yenileme hakkı Vardiya'ya, Premium/Prestij ve kayıt aktarımı Profil'e taşındı.", 12, PALETTE.muted))
+	c.add_child(_label_wrap("Auto-renew moved to Shift; Premium/Prestige and save transfer moved to Profile.", 12, PALETTE.muted))
 	c.add_child(_spacer_y(4))
-	c.add_child(_label("Tehlikeli bölge:", 13, PALETTE.banner_red))
-	var r_b := _button("Kaydı sıfırla", 15, PALETTE.banner_red, PALETTE.cream_text)
+	c.add_child(_label("Danger zone:", 13, PALETTE.banner_red))
+	var r_b := _button("Reset save", 15, PALETTE.banner_red, PALETTE.cream_text)
 	r_b.pressed.connect(func():
 		if r_b.get_meta("armed", false):
 			Game.reset_game()
 			_close_popup()
-			_show_toast("Kayıt sıfırlandı — yeni oyun başladı!")
+			_show_toast("Save reset — a new game has begun!")
 		else:
 			r_b.set_meta("armed", true)
-			r_b.text = "Emin misin?\nSilmek için tekrar dokun")
+			r_b.text = "Are you sure?\nTap again to delete")
 	c.add_child(r_b)
-	c.add_child(_label("Sıfırlama tüm ilerlemeyi kalıcı olarak siler.", 12, PALETTE.muted))
+	c.add_child(_label("Resetting erases all progress permanently.", 12, PALETTE.muted))
 
 
 func _build_quests_popup(c: VBoxContainer) -> void:
 	var q: Dictionary = Game.current_quest()
 	if q.is_empty():
-		c.add_child(_label("Tüm görevler tamamlandı. Tebrikler, otelci!", 16, PALETTE.green_deep))
+		c.add_child(_label("Every quest is done. Congratulations, hotelier!", 16, PALETTE.green_deep))
 	else:
 		var p: Array = Game.quest_progress(q)
 		c.add_child(_label(String(q.name), 19, PALETTE.wood_dark))
 		var desc := _label(String(q.desc), 15, PALETTE.text)
 		desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		c.add_child(desc)
-		c.add_child(_label("İlerleme: %d / %d" % [mini(p[0], p[1]), p[1]], 14, PALETTE.muted))
-		var reward := "Ödül: %s coin" % _fmt(int(q.get("reward_coins", 0)))
+		c.add_child(_label("Progress: %d / %d" % [mini(p[0], p[1]), p[1]], 14, PALETTE.muted))
+		var reward := "Reward: %s coins" % _fmt(int(q.get("reward_coins", 0)))
 		if int(q.get("reward_gems", 0)) > 0:
-			reward += " + %d elmas" % int(q.reward_gems)
+			reward += " + %s" % _count(int(q.reward_gems), "gem")
 		c.add_child(_label(reward, 14, PALETTE.green_deep))
-	c.add_child(_label("Tamamlanan görev: %d / %d" % [Game.quest_index, Game.quests.size()], 13, PALETTE.muted))
+	c.add_child(_label("Quests completed: %d / %d" % [Game.quest_index, Game.quests.size()], 13, PALETTE.muted))
 
 	c.add_child(_spacer_y(10))
-	c.add_child(_label("Başarımlar — %d / %d açıldı" % [Game.unlocked_achievements.size(), Game.achievements.size()], 16, PALETTE.wood_dark))
+	c.add_child(_label("Achievements — %d / %d unlocked" % [Game.unlocked_achievements.size(), Game.achievements.size()], 16, PALETTE.wood_dark))
 	for a: Dictionary in Game.achievements:
 		var unlocked: bool = Game.unlocked_achievements.has(String(a.id))
 		var p: Array = Game.quest_progress(a)
@@ -3480,17 +3480,17 @@ func _build_quests_popup(c: VBoxContainer) -> void:
 
 func _on_quest_completed(q: Dictionary) -> void:
 	_play("quest")
-	var msg := "Görev tamam: %s — +%s coin" % [q.name, _fmt(int(q.get("reward_coins", 0)))]
+	var msg := "Quest complete: %s — +%s coins" % [q.name, _fmt(int(q.get("reward_coins", 0)))]
 	if int(q.get("reward_gems", 0)) > 0:
-		msg += ", +%d elmas" % int(q.reward_gems)
+		msg += ", +%s" % _count(int(q.reward_gems), "gem")
 	_show_toast(msg)
 
 
 func _on_achievement_unlocked(a: Dictionary) -> void:
 	_play("quest")
-	var msg := "Başarım açıldı: %s — +%s coin" % [a.name, _fmt(int(a.get("reward_coins", 0)))]
+	var msg := "Achievement unlocked: %s — +%s coins" % [a.name, _fmt(int(a.get("reward_coins", 0)))]
 	if int(a.get("reward_gems", 0)) > 0:
-		msg += ", +%d elmas" % int(a.reward_gems)
+		msg += ", +%s" % _count(int(a.reward_gems), "gem")
 	_show_toast(msg)
 
 
@@ -3503,12 +3503,12 @@ func _show_toast(msg: String) -> void:
 func _show_offline_popup(amount: int, renew_count: int = 0, renew_spent: int = 0) -> void:
 	var text := ""
 	if amount > 0:
-		text += "Sen yokken otelin çalıştı ve %s coin birikti.\nKasadan toplamayı unutma!" % _fmt(amount)
+		text += "Your hotel kept running while you were away and earned %s coins.\nDon't forget to collect from the till!" % _fmt(amount)
 	if renew_count > 0:
 		if not text.is_empty():
 			text += "\n\n"
-		text += "Vardiyan bitince otel boş durmadı: %d kez otomatik yenilendi (personel maliyeti %s coin)." % [renew_count, _fmt(renew_spent)]
-	_show_simple_modal("Hoş geldin!", text, "Harika", func(): pass)
+		text += "Your hotel didn't sit idle when the shift ended: it auto-renewed %s (staff cost %s coins)." % [_count(renew_count, "time"), _fmt(renew_spent)]
+	_show_simple_modal("Welcome back!", text, "Great", func(): pass)
 
 
 ## Uygulama açılışında (bugün henüz alınmadıysa) otomatik gösterilen günlük
@@ -3523,15 +3523,15 @@ func _show_daily_reward_popup(on_closed: Callable = Callable()) -> void:
 			on_closed.call()
 		return
 	var reward: Dictionary = cycle[(streak - 1) % cycle.size()]
-	var reward_text := "%s coin" % _fmt(int(reward.get("coins", 0)))
+	var reward_text := "%s coins" % _fmt(int(reward.get("coins", 0)))
 	if int(reward.get("gems", 0)) > 0:
-		reward_text += " + %d elmas" % int(reward.gems)
-	_show_simple_modal("Günlük Ödül", "%d. gün serisi!\nÖdülün: %s" % [streak, reward_text], "Al",
+		reward_text += " + %s" % _count(int(reward.gems), "gem")
+	_show_simple_modal("Daily Reward", "Day %d streak!\nYour reward: %s" % [streak, reward_text], "Buy",
 		func():
 			var granted := Game.claim_daily_reward()
 			if not granted.is_empty():
 				_play("quest")
-				_show_toast("Günlük ödül alındı — gün %d serisi!" % Game.daily_streak)
+				_show_toast("Daily reward claimed — day %d streak!" % Game.daily_streak)
 			if on_closed.is_valid():
 				on_closed.call(),
 		on_closed)
@@ -3540,6 +3540,15 @@ func _show_daily_reward_popup(on_closed: Callable = Callable()) -> void:
 func _fmt_hms(game_hours: float) -> String:
 	var total := int(game_hours * 3600.0)
 	return "%02d:%02d:%02d" % [total / 3600, (total % 3600) / 60, total % 60]
+
+
+## "1 hour" / "3 hours" — sayı ve ismi İngilizce çoğul kuralına göre birleştirir.
+## Türkçede sayıdan sonra isim çoğullanmadığı için ("1 saat", "4 saat") özgün
+## metinlerde bu ayrım yoktu; doğrudan çeviri "1 hours" gibi bozuk ifadeler
+## üretiyordu. Düzensiz çoğullar için ikinci biçim açıkça verilir.
+func _count(n: int, one: String, many: String = "") -> String:
+	var word: String = one if n == 1 else (many if many != "" else one + "s")
+	return "%d %s" % [n, word]
 
 
 func _fmt(n: int) -> String:

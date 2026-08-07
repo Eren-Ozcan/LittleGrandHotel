@@ -368,7 +368,7 @@ func _test_conflict_ui_renders() -> void:
 	_check(probe.get_child_count() > 0, "yapılandırma yokken Hesap bölümü çiziliyor")
 	probe.queue_free()
 
-	_check(main._fmt_relative(Time.get_unix_time_from_system() - 120.0) == "2 dakika önce",
+	_check(main._fmt_relative(Time.get_unix_time_from_system() - 120.0) == "2 minutes ago",
 		"göreli zaman metni doğru")
 	_check(main._cloud_result_toast(CloudPayload.RESULT_RESTORE) != "",
 		"senkron sonucu için kullanıcı metni var")
