@@ -79,17 +79,37 @@ var _last_result := ""
 var _last_success_unix := 0.0
 var _upload_acc := 0.0
 
-## Google kimliğini (OIDC id_token) sağlayan dış kanca. Godot'ta yerleşik bir
-## Google Sign-In yolu yok; bir eklenti eklendiğinde main.gd/bir autoload burayı
-## doldurur ve hesap bağlama kendiliğinden açılır. Doldurulmadıkça
-## is_account_linking_available() false döner ve UI "yakında" durumunda kalır.
+## Google kimliğini (OIDC id_token) sağlayan kanca. VARSAYILAN olarak _ready()'de
+## google_signin.gd'ye (saf GDScript, sistem tarayıcısı + PKCE) bağlanır — yani
+## hesap bağlama kutudan çıktığı gibi çalışır, bir eklenti beklemez.
+##
+## Kanca yine de dışa açık: ileride yerli (native) bir Google Sign-In eklentisi
+## gelirse tek yapılacak set_google_id_token_provider() ile onu geçirmektir;
+## cloud_save.gd'nin ya da UI'ın tek satırı değişmez.
 var _google_id_token_provider := Callable()
+
+## Varsayılan sağlayıcı düğümü. Yalnızca cancel_google_signin() için tutulur —
+## akışın kendisi tamamen _google_id_token_provider üzerinden yürür.
+var _google_signin: GoogleSignIn
+
+## Bağlama akışı tarayıcıya çıkıp DAKİKALARCA sürebilir (oyuncu uygulamadan
+## ayrılır). Bayrak hem ikinci bir çağrıyı engeller hem de UI'ın "tarayıcı
+## bekleniyor" durumunu çizebilmesini sağlar (bkz. main.gd _build_cloud_section).
+var _linking := false
 
 
 func _ready() -> void:
 	_auth = FirebaseAuthRest.new()
 	_auth.name = "FirebaseAuth"
 	add_child(_auth)
+	# Varsayılan Google sağlayıcısı. Ağaca EKLENMESİ şart: akış kare kare
+	# get_tree().process_frame bekliyor ve HTTPRequest'i kendine ekliyor.
+	# Yapılandırma yoksa da eklenir — düğüm bedava, kapıyı
+	# is_account_linking_available() tutuyor (FirebaseConfig.is_google_configured).
+	_google_signin = GoogleSignIn.new()
+	_google_signin.name = "GoogleSignIn"
+	add_child(_google_signin)
+	set_google_id_token_provider(_google_signin.request_id_token)
 	_load_state()
 	if not is_enabled():
 		return
@@ -163,18 +183,43 @@ func set_google_id_token_provider(provider: Callable) -> void:
 	_google_id_token_provider = provider
 
 
+## Bağlama akışı şu an tarayıcıyı bekliyor mu — UI bunu düğmeyi kilitli ve
+## "bekleniyor" durumunda çizmek için sorar.
+func is_linking() -> bool:
+	return _linking
+
+
+## Oyuncu vazgeçtiğinde (hesap popup'ı kapandı) bekleyen tarayıcı turunu bırakır;
+## aksi halde await, google_signin.gd'deki zaman aşımı dolana kadar asılı kalırdı.
+##
+## Yalnızca VARSAYILAN sağlayıcıyı iptal eder: yerini bir eklenti alırsa iptali
+## de o eklenti kendi yoluyla vermeli.
+func cancel_google_signin() -> void:
+	if _google_signin != null:
+		_google_signin.cancel()
+
+
 ## Google hesabına bağlar ve gerekiyorsa yeni hesabın kaydını indirir.
 func link_google() -> Dictionary:
 	if not is_account_linking_available():
 		return {"ok": false, "msg": "Linking with Google is not available in this build."}
+	# İkinci çağrı, ilkinin tarayıcı turunu (ve dinleyicisini) ortasından
+	# ezerdi — UI ayrıca düğmeyi kilitliyor, bu kapı son savunma.
+	if _linking:
+		return {"ok": false, "msg": "Sign-in is already in progress — finish it in your browser."}
+	_linking = true
+	status_changed.emit()
 	var google_token = await _google_id_token_provider.call()
 	if typeof(google_token) != TYPE_STRING or String(google_token).is_empty():
+		_linking = false
+		status_changed.emit()
 		return {"ok": false, "msg": "Google sign-in was not completed."}
 	var res: Dictionary = await _auth.link_with_google(String(google_token))
 	if res.get("ok", false) and res.get("switched", false):
 		# Hesap değişti: rev sayacı ESKİ hesaba aitti (bkz. _adopt_uid).
 		_adopt_uid(String(res.get("uid", "")))
 		await sync_now()
+	_linking = false
 	status_changed.emit()
 	return res
 

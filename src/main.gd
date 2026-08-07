@@ -390,6 +390,10 @@ func _ready() -> void:
 		if result == CloudPayload.RESULT_RESTORE:
 			_refresh()
 			_show_toast("Cloud save restored"))
+	# Hesap bölümü ("son yedekleme", bağlama durumu) oyuncu dokunmadan da
+	# değişebilir: arka plandaki yükleme biter ya da tarayıcıdan dönen bağlama
+	# akışı sonuçlanır. Açık popup varsa tazelenir (kapalıysa no-op).
+	CloudSave.status_changed.connect(_rebuild_popup)
 	Ads.rewarded_ad_result.connect(func(success: bool):
 		if not success:
 			_show_toast("No ad is ready right now, try again shortly."))
@@ -2815,9 +2819,20 @@ func _close_popup() -> void:
 	overlay.visible = false
 	popup_builder = Callable()
 	selected_room = -1
+	# Hesap bağlama tarayıcıyı bekliyorken bu ekranı kapatmak "vazgeçtim"
+	# demektir: bekleyen turu bırak, yoksa await zaman aşımına (dakikalar) kadar
+	# asılı kalır ve oyuncu yeniden deneyemez.
+	if CloudSave.is_linking():
+		CloudSave.cancel_google_signin()
 
 
 func _rebuild_popup() -> void:
+	# await'li düğmeler (yedekleme, hesap bağlama, IAP) işleri bitince buraya
+	# döner — popup o arada KAPANMIŞ olabilir. Geçersiz bir Callable'ı çağırmak
+	# çalışma zamanı hatası basardı; kapı burada tutulur ki her çağıranın ayrı
+	# ayrı kontrol etmesi gerekmesin (sinyalle bağlı çağrılar dahil).
+	if not overlay.visible or not popup_builder.is_valid():
+		return
 	for c in popup_content.get_children():
 		popup_content.remove_child(c)
 		c.queue_free()
@@ -3233,8 +3248,11 @@ func _build_profile_popup(c: VBoxContainer) -> void:
 func _build_cloud_section(c: VBoxContainer) -> void:
 	c.add_child(_label("Account", 16, PALETTE.wood_dark))
 	if not CloudSave.is_enabled():
-		c.add_child(_label_wrap("Cloud save is not enabled in this build yet — for now you can move your save to another device with the code below.", 12, PALETTE.muted))
-		var soon_b := _button("Link with Google — coming soon", 14, PALETTE.wood_dark, PALETTE.cream_text)
+		c.add_child(_label_wrap("Cloud save is not enabled in this build — for now you can move your save to another device with the code below.", 12, PALETTE.muted))
+		# Bulut tamamen kapalıyken bağlamanın anlamı yok: bağlanacak bir kayıt
+		# yok. "Coming soon" DEMEZ — kod hazır, eksik olan bu derlemenin
+		# yapılandırması; oyuncuya söz vermek yerine durumu söylüyoruz.
+		var soon_b := _button("Link with Google — unavailable in this build", 14, PALETTE.wood_dark, PALETTE.cream_text)
 		soon_b.disabled = true
 		c.add_child(soon_b)
 		return
@@ -3262,22 +3280,41 @@ func _build_cloud_section(c: VBoxContainer) -> void:
 	if CloudSave.is_linked():
 		link_b.text = "Your account is linked"
 		link_b.disabled = true
-	elif not CloudSave.is_account_linking_available():
-		# Google girişi bir platform eklentisi ister (bkz. cloud_save.gd
-		# set_google_id_token_provider) — eklenti yokken yedekleme yine çalışır,
-		# yalnızca cihaz değişiminde geri alınamaz.
-		link_b.text = "Link with Google — coming soon"
+		c.add_child(link_b)
+		return
+
+	if not CloudSave.is_account_linking_available():
+		# Giriş akışı ARTIK bir platform eklentisi istemiyor (saf GDScript,
+		# sistem tarayıcısı + PKCE — bkz. src/cloud/google_signin.gd); eksik olan
+		# tek şey bu derlemede bulunmayan OAuth istemci dosyası
+		# (src/cloud/google_oauth_client.gd, gitignore'lu). O yokken yedekleme
+		# yine çalışır, yalnızca cihaz değişiminde geri alınamaz.
+		link_b.text = "Link with Google — unavailable in this build"
 		link_b.disabled = true
 		c.add_child(link_b)
-		c.add_child(_label_wrap("Your save is backed up even without linking, but you need a linked account to open it on a new device.", 12, PALETTE.muted))
+		c.add_child(_label_wrap("Account linking isn't set up in this build. Your save is still backed up to the cloud, but you need a linked account to open it on a new device.", 12, PALETTE.muted))
 		return
+
+	# Bağlama SİSTEM TARAYICISINA çıkar: oyuncu uygulamadan ayrılır, girişi orada
+	# yapar ve elle geri döner — bu await dakikalarca sürebilir. Bu yüzden (a)
+	# oyuncuya ne olacağı BASMADAN ÖNCE söylenir, (b) düğme kilitlenir ve (c)
+	# durum CloudSave'de tutulur: popup arada yeniden çizilirse (state_changed /
+	# status_changed) düğme yeniden basılabilir hâle GELMEZ.
+	if CloudSave.is_linking():
+		link_b.text = "Waiting for your browser…"
+		link_b.disabled = true
 	else:
 		link_b.pressed.connect(func():
 			link_b.disabled = true
+			link_b.text = "Waiting for your browser…"
+			_show_toast("Opening your browser — sign in there, then come back to the game.")
 			var res: Dictionary = await CloudSave.link_google()
 			_show_toast(String(res.get("msg", "")))
+			# Popup bu arada kapanmış olabilir; _rebuild_popup kendi kapısını
+			# tutuyor (bkz. oradaki not).
 			_rebuild_popup())
 	c.add_child(link_b)
+	c.add_child(_label_wrap("Linking opens your browser. Sign in with Google there, then switch back to the game — closing this screen cancels it.", 12, PALETTE.muted))
 
 
 ## Son senkron durumunun tek satırlık özeti.
