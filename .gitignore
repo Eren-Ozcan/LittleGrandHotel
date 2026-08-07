@@ -24,6 +24,8 @@ android/build/*/build/
 android/build/libs/
 # Export sırasında proje varlıklarından/PCK'dan kopyalanan içerik.
 android/build/assetPackInstallTime/src/main/assets/
+# Aynı şeyin APK (assetPack'siz) hâli — ~10 MB, her export'ta yeniden üretilir.
+android/build/src/main/assets/
 # launcher_icons ayarından export'ta üretilen Android ikon kaynakları.
 android/build/res/mipmap*/
 android/build/res/drawable/
