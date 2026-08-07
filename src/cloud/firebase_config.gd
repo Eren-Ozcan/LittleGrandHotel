@@ -14,14 +14,14 @@ extends RefCounted
 ## Kurulum adımları: docs/cloud-save-setup.md
 
 ## Firebase Console → Proje ayarları → Genel → Web API Anahtarı
-const API_KEY := "REPLACE_WITH_FIREBASE_WEB_API_KEY"
+const API_KEY := "AIzaSyDVQ7-VJKP94TYJ-VFLzJaoukPeRbqBanU"
 
 ## Firebase Console → Proje ayarları → Proje kimliği
-const PROJECT_ID := "REPLACE_WITH_FIREBASE_PROJECT_ID"
+const PROJECT_ID := "little-grand-hotel"
 
 ## Google ile giriş için OAuth "Web istemcisi" kimliği. Yalnızca hesap bağlama
 ## (signInWithIdp) yolunda gerekir; anonim bulut kaydı bunsuz da çalışır.
-const GOOGLE_WEB_CLIENT_ID := "REPLACE_WITH_GOOGLE_WEB_CLIENT_ID"
+const GOOGLE_WEB_CLIENT_ID := "210451589020-cjd16vctnebvnef5p1ithf3ibq45r50o.apps.googleusercontent.com"
 
 
 ## Bulut kaydının açık olup olmadığı tek kapı — ağ isteği yapan HER yol önce

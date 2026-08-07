@@ -46,7 +46,15 @@ const FIRESTORE_BASE := "https://firestore.googleapis.com/v1/projects/%s/databas
 
 ## Firestore günlük yazma kotasını koru (Spark: 20K/gün) — sık state_changed
 ## sinyallerinde her değişiklikte yazmayız.
-const UPLOAD_THROTTLE_SEC := 60.0
+##
+## 5 dakika, 1 dakika DEĞİL: bu idle bir oyun, state_changed her yüklemeden hemen
+## sonra kaydı yeniden kirletiyor, yani periyodik yol pratikte her pencerede bir
+## yazma demek. 60 sn'de günde yarım saat oynayan bir oyuncu ~40 yazma eder ve
+## ücretsiz kota ~500 günlük aktif oyuncuda dolar; 300 sn'de aynı tavan ~4 katına
+## çıkar. Karşılığında kaybedilen: süreç arka plana alınma bildirimi GÖNDERMEDEN
+## sert çökerse bulut kopyası en fazla bu kadar bayat kalır — yerel kayıt yine
+## sağlam olduğu için bu ancak cihaz da kaybolursa fark eder.
+const UPLOAD_THROTTLE_SEC := 300.0
 const REQUEST_TIMEOUT_SEC := 8.0
 
 signal sync_finished(result: String)

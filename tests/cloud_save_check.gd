@@ -30,7 +30,7 @@ func _ready() -> void:
 	print("Little Grand Hotel — bulut kaydı (ağsız) testi")
 	print("=".repeat(64))
 
-	_test_gate_closed_without_config()
+	_test_config_gate()
 	_test_decision_table()
 	_test_entitlements_not_uploaded()
 	_test_entitlements_not_restored()
@@ -71,20 +71,30 @@ func _new_game() -> Object:
 
 # --- 1) Yapılandırma kapısı ---------------------------------------------
 
-## Placeholder'lar dururken bulut kaydı TAMAMEN sessiz olmalı — aksi halde
-## Firebase projesi kurulmadan yapılan bir sürüm her açılışta ağa çıkmaya
-## çalışırdı.
-func _test_gate_closed_without_config() -> void:
-	print("\n--- 1) Yapılandırma yokken kapı kapalı ---")
-	_check(not FirebaseConfig.is_configured(),
-		"FirebaseConfig.is_configured() placeholder'larla false")
-	_check(not FirebaseConfig.is_google_configured(),
-		"FirebaseConfig.is_google_configured() placeholder'larla false")
+## Bulut kaydına giden HER yol tek bir kapıdan geçer: FirebaseConfig.is_configured().
+## Placeholder'lar dururken kapı kapalı olmalı (Firebase projesi kurulmadan
+## yapılan bir sürüm her açılışta boşuna ağa çıkmasın), doldurulduktan sonra da
+## gerçekten açılmalı.
+##
+## Beklenti sabitlerin kendisinden türetiliyor, sabit bir "false" beklenmiyor:
+## proje yapılandırıldığında testin kırılmaması için. (Kırıldı da — yapılandırma
+## dolduruldu ve bu bölüm hâlâ boş placeholder varsayıyordu.)
+func _test_config_gate() -> void:
+	print("\n--- 1) Yapılandırma kapısı ---")
+	var configured: bool = not FirebaseConfig.API_KEY.begins_with("REPLACE_") \
+		and not FirebaseConfig.PROJECT_ID.begins_with("REPLACE_")
+	var google_configured: bool = configured \
+		and not FirebaseConfig.GOOGLE_WEB_CLIENT_ID.begins_with("REPLACE_")
+	print("    (yapılandırma dolu mu: %s)" % configured)
+	_check(FirebaseConfig.is_configured() == configured,
+		"is_configured() sabitlerle tutarlı")
+	_check(FirebaseConfig.is_google_configured() == google_configured,
+		"is_google_configured() sabitlerle tutarlı")
 	var cs := get_node_or_null("/root/CloudSave")
 	_check(cs != null, "CloudSave autoload'ı kayıtlı")
 	if cs:
-		_check(not cs.is_enabled(), "CloudSave.is_enabled() false")
-		_check(not cs.has_conflict(), "yapılandırma yokken çakışma yok")
+		_check(cs.is_enabled() == configured, "CloudSave.is_enabled() kapıyla aynı")
+		_check(not cs.has_conflict(), "açılışta çakışma yok")
 
 
 # --- 2) Çakışma karar tablosu -------------------------------------------
