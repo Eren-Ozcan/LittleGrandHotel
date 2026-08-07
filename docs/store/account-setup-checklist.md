@@ -39,9 +39,10 @@ were created and wired into the code:
 - **Rewarded ad unit**: `ca-app-pub-9709993577664180/1269057042`
   (`src/autoload/ads.gd` → `_REWARDED_AD_UNIT_ID`)
 - **Interstitial ad unit**: `ca-app-pub-9709993577664180/5208302053`
-  (`src/autoload/ads.gd` → `_INTERSTITIAL_AD_UNIT_ID`) — the ID is ready but
-  `show_interstitial()` is still an empty stub (it is not called from anywhere in
-  `main.gd`); the display logic should be added as a separate piece of work.
+  (`src/autoload/ads.gd` → `_INTERSTITIAL_AD_UNIT_ID`) — `show_interstitial()` is
+  implemented (5 min session cooldown) and called from `main.gd` at three natural
+  break points: shift end, app resume (`NOTIFICATION_APPLICATION_FOCUS_IN`), and
+  every 12th room/upgrade purchase (`_maybe_show_upgrade_ad`).
 
 Note: it can take ~1 hour on the AdMob side for new ad units to start serving real
 ads.
