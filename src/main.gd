@@ -106,6 +106,11 @@ const ZOOM_MAX := 1.5
 const ZOOM_STEP := 0.15
 const PAN_DRAG_THRESHOLD := 6.0
 
+## Kaç oda/geliştirme satın alımında bir geçiş reklamı denenecek. Düşük
+## tutulmadı: satın alma bu oyunun ana döngüsü, sık reklam doğrudan
+## oynanışı böler. Ads ayrıca kendi soğuma süresini uygular.
+const UPGRADE_AD_EVERY := 12
+
 ## Haftalık dekorasyon teması: sunucusuz, Game.current_week_index()'e göre
 ## deterministik seçilir — çatı tabelasını hafta boyunca tek renkte boyar.
 const WEEKLY_THEMES := [
@@ -201,6 +206,16 @@ var _delivered_guest_types: Array = []
 ## _arrived_guests vb. sayaçlar yeni vardiyaya taşınıp odalar kimse
 ## gelmeden dolu görünüyordu ("3 misafir geldi ama 6 oda doldu" şikâyeti).
 var _last_stat_shifts := -1
+## Oda/geliştirme satın alımlarını sayar; her _UPGRADE_AD_EVERY satın alımda
+## bir düşük-sıklıklı geçiş reklamı denenir (bkz. _maybe_show_upgrade_ad) —
+## oyuncu ilerledikçe reklam sıklığı da hafifçe artmış olur, ama asla bir
+## satın alımın ORTASINDA değil, satın alım TAMAMLANDIKTAN sonra.
+var _upgrade_ad_counter := 0
+## Bir önceki karede vardiya açık mıydı — açıktan kapalıya geçiş "vardiya
+## bitti" demektir ve reklam için doğal bir moladır (oyuncu zaten toplayıp
+## duraklıyor). Otomatik yenilemede bu geçiş hiç yaşanmaz (bkz.
+## _last_stat_shifts açıklaması), o durumda tetiklenmez.
+var _shift_was_active := false
 ## Yürüyen yayaların yaşadığı, _rebuild_hotel'in SİLMEDİĞİ kalıcı katman —
 ## building_canvas'ın çocuğu olduğu için zoom/pan'i dünyayla birlikte alır
 ## (eskiden yayalar ekran-uzayında root'a ekleniyordu; kullanıcı pan/zoom
@@ -295,6 +310,35 @@ func _notification(what: int) -> void:
 			_close_popup()
 		else:
 			get_tree().quit()
+	# Uygulama arka plandan öne gelince (ör. kullanıcı başka bir uygulamadan
+	# döndü): doğal bir mola noktası.
+	elif what == NOTIFICATION_APPLICATION_FOCUS_IN:
+		_try_break_interstitial()
+
+
+## Geçiş reklamı için "doğal mola" kapısı. Bir popup açıkken asla göstermez —
+## oyuncu o an bir eylemin (satın alma listesi, vardiya seçimi, ayarlar)
+## ortasındadır. Sıklık sınırını Ads kendi soğuma süresiyle uyguladığı için
+## burada tekrarlanmaz; reklamsız sürüm kararı da tek yerde kalsın diye
+## show_if olarak geçilir.
+func _try_break_interstitial() -> void:
+	if overlay != null and overlay.visible:
+		return
+	Ads.show_interstitial(not Game.remove_ads)
+
+
+## Bir oda/geliştirme satın alımı TAMAMLANDIKTAN sonra çağrılır.
+## Eşiğe gelindiğinde bir popup açıksa sayaç sıfırlanmaz: reklam kaybolmaz,
+## popup'sız ilk satın alımda gösterilir — böylece "satın alma listesinin
+## ortasında reklam" durumu hiç oluşmaz.
+func _maybe_show_upgrade_ad() -> void:
+	_upgrade_ad_counter += 1
+	if _upgrade_ad_counter < UPGRADE_AD_EVERY:
+		return
+	if overlay != null and overlay.visible:
+		return
+	_upgrade_ad_counter = 0
+	Ads.show_interstitial(not Game.remove_ads)
 
 
 func _ready() -> void:
@@ -309,6 +353,9 @@ func _ready() -> void:
 		for i in _arrived_guests:
 			_delivered_guest_types.append(GUEST_TYPES[i % GUEST_TYPES.size()])
 	_last_stat_shifts = Game.stat_shifts
+	# Açılışta zaten süren bir vardiya varsa bunu "yeni biten vardiya" sanıp
+	# ilk karede reklam açmayalım.
+	_shift_was_active = Game.shift_active()
 	Game.state_changed.connect(_refresh)
 	Game.quest_completed.connect(_on_quest_completed)
 	Game.achievement_unlocked.connect(_on_achievement_unlocked)
@@ -395,6 +442,11 @@ func _process(delta: float) -> void:
 	_update_room_drag()
 	_update_elevator(delta)
 	_update_pedestrians(delta)
+	# Vardiya bitti: oyuncu zaten duraklıyor, reklam için doğal bir mola.
+	var shift_now := Game.shift_active()
+	if _shift_was_active and not shift_now:
+		_try_break_interstitial()
+	_shift_was_active = shift_now
 	if _toast_timer > 0.0:
 		_toast_timer -= delta
 		if _toast_timer <= 0.0:
@@ -862,7 +914,8 @@ func _build_ui() -> void:
 	new_floor_button.pressed.connect(func():
 		if Game.buy_floor():
 			_play("buy")
-			_show_toast("Yeni kat açıldı!"))
+			_show_toast("Yeni kat açıldı!")
+			_maybe_show_upgrade_ad())
 	view_col.add_child(new_floor_button)
 
 	# --- Alt bar: koyu şerit üzerinde ikonlu kategoriler (Hotel City tarzı)
@@ -1683,7 +1736,8 @@ func _make_block_cell_button(floor_i: int, col: int) -> Control:
 	b.pressed.connect(func():
 		if Game.buy_block(floor_i):
 			_play("buy")
-			_show_toast("Yeni blok açıldı!"))
+			_show_toast("Yeni blok açıldı!")
+			_maybe_show_upgrade_ad())
 	return b
 
 
@@ -2311,6 +2365,7 @@ func _finish_drag() -> void:
 		if Game.place_room(new_type, cell.x, cell.y):
 			_play("buy")
 			_show_toast("%s yerleştirildi!" % Game.room_def(new_type).name)
+			_maybe_show_upgrade_ad()
 		else:
 			_show_toast("Buraya sığmıyor, seviye yetmiyor ya da bedeli karşılanamıyor")
 
@@ -2824,7 +2879,8 @@ func _build_staff_popup(c: VBoxContainer) -> void:
 	b.pressed.connect(func():
 		if Game.buy_staff_upgrade():
 			_play("buy")
-			_show_toast("Personel kalitesi yükseltildi! (Kademe %d)" % Game.staff_tier))
+			_show_toast("Personel kalitesi yükseltildi! (Kademe %d)" % Game.staff_tier)
+			_maybe_show_upgrade_ad())
 	c.add_child(b)
 
 
@@ -2870,7 +2926,8 @@ func _build_room_popup(c: VBoxContainer) -> void:
 				pb.pressed.connect(func():
 					if Game.buy_bundle(selected_room, bid):
 						_play("buy")
-						_show_toast("%s yerleştirildi!" % Game.bundle_def(bid).name))
+						_show_toast("%s yerleştirildi!" % Game.bundle_def(bid).name)
+						_maybe_show_upgrade_ad())
 			c.add_child(pb)
 
 	# Taban eşyalar: duvar kağıdı / zemin / yatak — odayla birlikte ücretsiz
@@ -2904,7 +2961,8 @@ func _build_room_popup(c: VBoxContainer) -> void:
 				b2.pressed.connect(func():
 					if Game.upgrade_base(selected_room, iid2):
 						_play("buy")
-						_show_toast("%s güncellendi!" % Game.item_def(iid2).name))
+						_show_toast("%s güncellendi!" % Game.item_def(iid2).name)
+						_maybe_show_upgrade_ad())
 			c.add_child(b2)
 
 	c.add_child(_label("Dekor eşyası ekle:", 14, PALETTE.muted))
@@ -2931,7 +2989,8 @@ func _build_room_popup(c: VBoxContainer) -> void:
 			b.pressed.connect(func():
 				if Game.buy_item(selected_room, iid):
 					_play("buy")
-					_show_toast("%s yerleştirildi (+%d SP)" % [Game.item_def(iid).name, int(Game.item_def(iid).sp)]))
+					_show_toast("%s yerleştirildi (+%d SP)" % [Game.item_def(iid).name, int(Game.item_def(iid).sp)])
+					_maybe_show_upgrade_ad())
 		row.add_child(b)
 	_add_manage_buttons(c)
 
