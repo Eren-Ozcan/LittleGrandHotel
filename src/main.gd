@@ -319,9 +319,11 @@ func _notification(what: int) -> void:
 		else:
 			get_tree().quit()
 	# Uygulama arka plandan öne gelince (ör. kullanıcı başka bir uygulamadan
-	# döndü): doğal bir mola noktası.
+	# döndü). Burada GEÇİŞ reklamı gösterilmez: AdMob uygulama açılışında ve
+	# öne gelişinde interstitial'ı açıkça yasaklıyor, bu senaryonun formatı
+	# App Open (bkz. Ads.show_app_open).
 	elif what == NOTIFICATION_APPLICATION_FOCUS_IN:
-		_try_break_interstitial()
+		_try_app_open_ad()
 
 
 ## Geçiş reklamı için "doğal mola" kapısı. Bir popup açıkken asla göstermez —
@@ -333,6 +335,15 @@ func _try_break_interstitial() -> void:
 	if overlay != null and overlay.visible:
 		return
 	Ads.show_interstitial(not Game.remove_ads)
+
+
+## Uygulamaya dönüşte App Open reklamı. Geçiş reklamıyla aynı popup kuralına
+## ve aynı (kalıcı) soğuma sayacına tabidir; oyuncu bir modalin ortasında
+## uygulamadan çıkıp döndüyse ekranına reklam basılmaz.
+func _try_app_open_ad() -> void:
+	if overlay != null and overlay.visible:
+		return
+	Ads.show_app_open(not Game.remove_ads)
 
 
 ## Bir oda/geliştirme satın alımı TAMAMLANDIKTAN sonra çağrılır.
