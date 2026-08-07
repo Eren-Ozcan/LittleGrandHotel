@@ -14,6 +14,13 @@ android/debug.keystore
 android/*.jks
 android/RELEASE_KEYSTORE_SECRETS.txt
 
+# Google OAuth "Desktop app" istemcisi (yerelde oluşturulur — şablon
+# src/cloud/google_oauth_client.example.gd commit EDİLİR, gerçek dosya edilmez;
+# gerekçe: src/cloud/firebase_config.gd). Godot'un ürettiği .uid eşlikçisi de
+# repo'ya girmemeli.
+src/cloud/google_oauth_client.gd
+src/cloud/google_oauth_client.gd.uid
+
 # android/build/ Godot'un gradle şablonudur (commit edilir — bkz. README), ama
 # aşağıdakiler her export'ta yeniden üretilir, commit edilmemeli:
 android/build/build/
