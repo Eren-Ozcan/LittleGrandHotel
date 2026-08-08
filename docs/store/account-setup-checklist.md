@@ -72,7 +72,21 @@ so they match the code (`remove_ads`, `income_2x`).
 
 ## 5. Data Safety form (Play Console → App content → Data safety)
 
-Only you can fill this in. What this game actually does, as of 2026-08-08:
+**Completed 2026-08-08.** Two things were wrong in this repo's own notes and are worth
+recording so the next game does not repeat them:
+
+- The form was **not** unfilled, as this checklist previously implied — it had been
+  completed on 2026-07-26. It was *stale*, not missing: written two weeks before cloud
+  save existed, so it described a game that sent nothing anywhere. Always check the
+  **Completed** tab before assuming a declaration is absent.
+- Declaring `OAuth` under account creation makes Play demand a separate, **mandatory
+  account deletion URL**, shown on the store listing. The privacy policy cannot serve as
+  that URL: Google requires the page to name the app or developer, show the deletion
+  steps prominently, and state which data is deleted, which is kept and for how long.
+  That is why <https://yilkgames.com/account-deletion/> was written — all three games use
+  it, with `#data-only` as the second (data-without-account) URL.
+
+What this game actually does, and what was declared:
 
 | Data type | Collected | Shared | Purpose | Optional? |
 |---|---|---|---|---|
