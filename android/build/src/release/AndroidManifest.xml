@@ -12,7 +12,7 @@
     <uses-feature tools:node="replace" android:name="android.hardware.vulkan.level" android:required="false" android:version="1" />
     <uses-feature tools:node="replace" android:name="android.hardware.vulkan.version" android:required="false" android:version="0x401000" />
     <application android:label="@string/godot_project_name_string"
-        android:allowBackup="false"
+        android:allowBackup="true"
         android:icon="@mipmap/icon"
         android:isGame="true"
         android:hasFragileUserData="false"
