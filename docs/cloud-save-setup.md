@@ -302,14 +302,33 @@ on the emulator at all (see below).
   identical to what a genuinely disabled `allowBackup` produces. Launch the app and leave
   it running before backing up. This is a testing artifact only; a real player who opens
   the game is never in that state.
-- **The game does not render on the emulator, and it is not a regression.** The Vulkan
-  path fails with `Couldn't present to Vulkan queue (VkResult error 5)` and the screen
-  stays black — on the host GPU *and* on `swiftshader_indirect`. Confirmed not to be
-  caused by any of our changes: an untouched earlier build produces a byte-identical
-  black screenshot. Note that switching the renderer for a test needs
-  `rendering/renderer/rendering_method.mobile`; changing the platform-agnostic
-  `rendering_method` has no effect on Android. Do not commit such an override — it would
-  change the shipped renderer.
+- **The game renders black on the emulator — root cause found, one-line workaround.**
+  The symptom is `Couldn't present to Vulkan queue (VkResult error 5)` and a black
+  screen, on the host GPU *and* on `swiftshader_indirect`. It is **not** a regression of
+  ours: an untouched earlier build produces a byte-identical black screenshot.
+
+  It is [godot#121035](https://github.com/godotengine/godot/issues/121035), fixed by
+  PR #121701 in the **4.8** milestone — we are on 4.7, which is explicitly listed as
+  affected. The mechanism: the emulator's **gfxstream** driver returns a *different*
+  `VkQueue` handle from every `vkGetDeviceQueue()` call for the same family/index, so
+  Swappy (frame pacing) cannot find the queue at present time and returns `VK_INCOMPLETE`
+  — which is exactly the "error 5" in the log.
+
+  **This cannot happen on a physical device**, and that is a statement about the
+  mechanism, not just about our luck: a real Adreno/Mali driver returns a stable handle.
+  It matches the field evidence — the same renderer config ran fine on a TECNO Spark 20
+  Pro (180 s) and a Mi 9T (60 s) on 2026-08-08.
+
+  Workaround for emulator testing only: set
+  `display/window/frame_pacing/android/enable_frame_pacing=false` in `project.godot`,
+  export, and the game renders and runs normally (verified — it reached gameplay and
+  wrote its own `user://` state with a real anonymous UID). **Do not commit that
+  setting.** Frame pacing is a real smoothness win on actual devices and the emulator is
+  the only thing it breaks; flip it temporarily and revert, or wait for Godot 4.8.
+
+  Unrelated trap noticed while chasing this: switching the *renderer* for a test needs
+  `rendering/renderer/rendering_method.mobile`. Changing the platform-agnostic
+  `rendering_method` has no effect on Android.
 
 ## Privacy policy
 
