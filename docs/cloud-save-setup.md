@@ -248,6 +248,69 @@ and restored across launches on the same install. What does not: a new device or
 reinstall, because the anonymous session's refresh token lives in `user://` and is wiped
 with the app.
 
+## Android Auto Backup — the zero-UI half
+
+Enabled on 2026-08-08 (`user_data_backup/allow=true` in `export_presets.cfg`, which
+writes `android:allowBackup="true"` into the manifest). Godot ships this **off** by
+default, so it was off here purely by inheritance, not by decision.
+
+Auto Backup covers `getFilesDir()`, and Godot's `user://` maps to exactly that, so all
+three of our state files ride along: `save.json`, `cloud_state.json` and
+`firebase_auth.json`. **The one that matters is `firebase_auth.json`.** When the refresh
+token comes back, the reinstall resumes under the *same anonymous UID*, the startup sync
+finds the existing Firestore document, and `CloudPayload.decide()` corrects the stale
+local save from the cloud. That is why Auto Backup's laziness (once a day, on wifi, while
+idle) does not hurt us: the backup carries the **identity**, and the cloud already carries
+the data.
+
+This is deliberately not a replacement for Google account linking. It buys durability
+across *reinstall on the same Google account*, silently and with no consent screen —
+Google's docs are explicit that the restore flow's own consent covers it, so no extra
+prompt is required. It does **not** cover two live devices, cross-platform continuity, or
+a player who has device backup switched off. Linking remains the answer for those.
+
+Limits worth knowing before trusting it: 25 MB per app (we use a few KB), Android 6+,
+first backup only after ~24 h of idle+wifi, and the user must have backup enabled with a
+Google account.
+
+### What was verified, and what was not
+
+Verified by A/B on an Android 14 emulator with `com.android.localtransport`, same
+sequence both times, only the flag differing:
+
+| Build | Manifest | `bmgr backupnow` |
+|---|---|---|
+| `lgh-return.apk` (2026-08-08 06:11) | `allowBackup=false` | `Backup is not allowed` |
+| current | `allowBackup=true` | `Success`, 919 KB transferred |
+
+**Not verified: the restore leg.** `bmgr restore` failed with `PM agent has no metadata,
+so not restoring`, and `adb install` did not trigger an automatic restore. Both are
+limitations of the local transport, which does not faithfully reproduce the real path
+(Play install against a Google account). So "the backup is taken" is proven; "it comes
+back" is not. Closing that needs a physical device: play, let the nightly backup run,
+uninstall, reinstall from Play.
+
+Also unverified: that the game itself adopts a *restored* `firebase_auth.json` and
+resumes the same UID. The mechanism is sound and the code path is the ordinary startup
+sync, but it was never watched end to end, because the game could not be made to render
+on the emulator at all (see below).
+
+### Two emulator traps that cost a session
+
+- **`am force-stop` makes the app ineligible for backup.** Android skips packages in the
+  stopped state, and `bmgr backupnow` reports the confusing `Backup is not allowed` —
+  identical to what a genuinely disabled `allowBackup` produces. Launch the app and leave
+  it running before backing up. This is a testing artifact only; a real player who opens
+  the game is never in that state.
+- **The game does not render on the emulator, and it is not a regression.** The Vulkan
+  path fails with `Couldn't present to Vulkan queue (VkResult error 5)` and the screen
+  stays black — on the host GPU *and* on `swiftshader_indirect`. Confirmed not to be
+  caused by any of our changes: an untouched earlier build produces a byte-identical
+  black screenshot. Note that switching the renderer for a test needs
+  `rendering/renderer/rendering_method.mobile`; changing the platform-agnostic
+  `rendering_method` has no effect on Android. Do not commit such an override — it would
+  change the shipped renderer.
+
 ## Privacy policy
 
 Cloud save uploads game progress to Google servers and creates a per-player
