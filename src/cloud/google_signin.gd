@@ -65,8 +65,30 @@ const REQUEST_TIMEOUT_SEC := 15.0
 ## yüzden sabit bir port kaydetmek gerekmez ve port çakışması yaşanmaz.
 const LOOPBACK_PORT_ANY := 0
 
+## How long we wait for the player to come back to the game before giving up on
+## the token exchange (see _await_foreground).
+const FOREGROUND_WAIT_SEC := 120.0
+
+## The exchange is retried because the first request right after a resume can
+## still time out while the network stack wakes up. Retrying with the same code
+## is safe: Google only consumes it on a successful exchange, and a consumed
+## code just fails again, which is the outcome we already had.
+const EXCHANGE_ATTEMPTS := 3
+const EXCHANGE_RETRY_SEC := 1.5
+
+## Used to bounce the browser back to the game once the round is done. Must match
+## `package/unique_name` in export_presets.cfg — if it drifts, the auto-return
+## quietly stops working and the player falls back to the button on the page.
+const ANDROID_PACKAGE := "com.littlegrandhotel.app"
+
 var _server: TCPServer
 var _cancelled := false
+
+## Tracks whether the game is in front. The browser round necessarily pushes the
+## game into the background, and Android both throttles Godot's main loop and
+## defers background network requests there — so a token exchange fired at that
+## moment times out with an empty body and the sign-in fails silently.
+var _foreground := true
 
 
 ## Tarayıcıyı açar ve oyuncu girişi tamamlayınca Google OIDC `id_token`'ını
@@ -108,12 +130,43 @@ func request_id_token() -> String:
 	_stop_server()
 	if code.is_empty():
 		return ""
+	# Hold the code until the game is in front again — exchanging it from the
+	# background is what used to fail.
+	if not await _await_foreground():
+		return ""
 	return await _exchange_code(code, verifier, redirect_uri, client)
 
 
 ## Oyuncu "İptal"e bastığında (ya da popup kapandığında) bekleyen akışı bırakır.
 func cancel() -> void:
 	_cancelled = true
+
+
+func _notification(what: int) -> void:
+	match what:
+		NOTIFICATION_APPLICATION_PAUSED, NOTIFICATION_APPLICATION_FOCUS_OUT:
+			_foreground = false
+		NOTIFICATION_APPLICATION_RESUMED, NOTIFICATION_APPLICATION_FOCUS_IN:
+			_foreground = true
+
+
+## Waits until the game is in front again. Only mobile suspends us hard enough
+## to matter, so desktop returns immediately and keeps its current behaviour
+## (there the browser is a separate window and the game keeps running).
+##
+## Returns false if the player never came back, cancelled, or the wait ran out —
+## the caller then reports "sign-in was not completed" as it always did.
+func _await_foreground() -> bool:
+	if not OS.has_feature("mobile"):
+		return true
+	var deadline := Time.get_ticks_msec() + int(FOREGROUND_WAIT_SEC * 1000.0)
+	while not _foreground:
+		if _cancelled:
+			return false
+		if Time.get_ticks_msec() > deadline:
+			return false
+		await get_tree().process_frame
+	return true
 
 
 # --- Loopback dinleyicisi -----------------------------------------------
@@ -211,12 +264,34 @@ func _write_page(peer: StreamPeerTCP, params: Dictionary) -> void:
 background:#f3e6cf;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:#4a3728">
 <div style="text-align:center;padding:24px;max-width:26rem">
 <h1 style="font-size:1.4rem;margin:0 0 .5rem">%s</h1>
-<p style="margin:0;opacity:.75;line-height:1.5">%s</p></div></body></html>""" % [title, title, body]
+<p style="margin:0;opacity:.75;line-height:1.5">%s</p>%s</div></body></html>""" \
+		% [title, title, body, _return_block(ok)]
 	var bytes := html.to_utf8_buffer()
 	var head := "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\n" \
 		+ "Content-Length: %d\r\nConnection: close\r\n\r\n" % bytes.size()
 	peer.put_data(head.to_utf8_buffer())
 	peer.put_data(bytes)
+
+
+## Android only: sends the browser back to the game as soon as the round is done,
+## so the player is not left staring at a tab wondering what to do. The button is
+## kept visible as a fallback because not every stock browser honours intent://
+## links, and it doubles as the manual way back if the jump is blocked.
+##
+## KNOWN LIMIT — this cannot rescue a suspended game, and it was measured failing
+## to: the page is written by the very process it is supposed to wake, so while
+## Android holds the game frozen the browser's request just sits unaccepted in
+## the kernel backlog and this HTML is never sent. It helps only when the game is
+## still alive behind the browser. The real cure is dropping the loopback flow
+## for a native Credential Manager plugin (see TODO.md).
+func _return_block(ok: bool) -> String:
+	if not ok or not OS.has_feature("android"):
+		return ""
+	var uri := "intent://signed-in#Intent;package=%s;end" % ANDROID_PACKAGE
+	return """<p style="margin:1.25rem 0 0"><a href="%s" style="display:inline-block;
+padding:.6rem 1.2rem;border-radius:.5rem;background:#2f6f4f;color:#fff;
+text-decoration:none">Return to the game</a></p>
+<script>setTimeout(function(){location.href="%s"},600)</script>""" % [uri, uri]
 
 
 func _stop_server() -> void:
@@ -245,10 +320,14 @@ func _exchange_code(code: String, verifier: String, redirect_uri: String,
 	if not secret.is_empty():
 		form["client_secret"] = secret
 
-	var res: Dictionary = await _post_form(TOKEN_ENDPOINT, form)
-	if not res.ok:
-		return ""
-	return String(res.body.get("id_token", ""))
+	for attempt in EXCHANGE_ATTEMPTS:
+		var res: Dictionary = await _post_form(TOKEN_ENDPOINT, form)
+		if res.ok:
+			return String(res.body.get("id_token", ""))
+		if _cancelled or attempt == EXCHANGE_ATTEMPTS - 1:
+			break
+		await get_tree().create_timer(EXCHANGE_RETRY_SEC).timeout
+	return ""
 
 
 func _post_form(url: String, form: Dictionary) -> Dictionary:
