@@ -494,12 +494,31 @@ device. Setup, reasoning and the remaining manual step: `docs/cloud-save-setup.m
       removed from the docs: fingerprints identify *Android* OAuth clients, and this flow
       presents a Desktop client through the browser, so nothing in the path depends on how
       the APK was signed.
-- Not done, and deliberately not ticked: the OAuth Desktop app client does not exist yet,
-      so **no part of the sign-in flow has ever run against a real Google account** and
-      cross-device restore is still unproven on this game. Account linking stays a
-      disabled "coming soon" button until someone creates that client. Also open: whether
-      Google requires a verification review before the consent screen can be published for
-      all players.
+- [x] **Superseded 2026-08-08 — this section's closing caveat is no longer true.** It used
+      to read that the OAuth Desktop client did not exist and no leg of the flow had ever
+      reached Google. Both were overtaken the same night: the client was created, linking
+      was run against a real account and proven across two real devices, and `afe359d`
+      fixed the one bug that run exposed — the browser round trip backgrounds the game,
+      Android freezes Godot's main loop and defers background network, so the token
+      exchange timed out with an empty body and linking failed *silently*. The exchange
+      now waits for the app to return to the foreground and retries three times.
+      Still open from the original caveat: whether Google requires a verification review
+      before the consent screen can be published for all players.
+
+### Android Auto Backup (2026-08-08)
+- [x] `user_data_backup/allow=true` — Godot ships this off by default, so the save had
+      been dying with the app on every uninstall for no reason anyone had chosen. Now
+      `user://` (`save.json`, `cloud_state.json`, `firebase_auth.json`) rides Android's
+      own backup. The load-bearing file is `firebase_auth.json`: restoring the refresh
+      token resumes the same anonymous UID, so the startup sync repairs the local save
+      from Firestore — the backup carries the identity, the cloud carries the data.
+- [x] Verified by A/B on an Android 14 emulator, same sequence, only the flag differing:
+      the previous build reports `Backup is not allowed`, this one `Success` (919 KB).
+- [ ] **The restore leg is still unproven.** `bmgr restore` died on
+      `PM agent has no metadata` and `adb install` did not auto-restore — both local
+      transport limitations, not product findings. Needs a physical device: play, let the
+      nightly backup run, uninstall, reinstall from Play. Reasoning and the two emulator
+      traps are written up in `docs/cloud-save-setup.md`.
 
 ## To do
 
@@ -507,11 +526,15 @@ device. Setup, reasoning and the remaining manual step: `docs/cloud-save-setup.m
 - [ ] **Drop the manual save-transfer UI** — remove the "Backup now" button and both halves of "Move your save" (export *and* import). Google account linking now covers this end to end (proven across two real devices, 2026-08-08), so the save-code path is redundant surface that can only confuse players.
 - [ ] **Surface the Remove ads / Double your earnings offers** — both products exist and work (`main.gd:3188-3209`), but they only live inside the Profile popup, which opens by tapping the top bar: an invisible gesture with no affordance. Most players will never see either offer. Needs a discoverable entry point. Check the same promotion gap in cengeBulmaca and reefy.
 - [ ] **Add an unlink button and the logic behind it** — there is currently no way back: nothing in `cloud_save.gd`, `firebase_auth.gd` or `main.gd` signs out or unlinks, so once a player links an account they are stuck with it. That is bad on a shared device and worse if they linked the wrong account, which is a real possibility the sign-in code already worries about (`google_signin.gd` passes `prompt=select_account` for exactly this reason). Needs: a button in Profile, clearing `firebase_auth.json` and the uid in `cloud_state.json`, stopping sync, and a decision on what happens to the local save (keep the current progress on the device rather than wiping it, with a clear warning that it will no longer be backed up).
-- [ ] **Replace the browser sign-in with a native Credential Manager plugin** — the loopback flow works but sits on ground Google is actively removing, and it is the slowest, most fragile of our three games' sign-ins. Researched 2026-08-08:
-  - Google [deprecated the loopback flow](https://developers.google.com/identity/protocols/oauth2/resources/loopback-migration) for the Android/iOS/Chrome-app client types, and [custom URI schemes are no longer supported either](https://developers.google.com/identity/protocols/oauth2/native-app) (app-impersonation risk). Their only recommendation is the native SDKs. Ours only still works because the client is registered as a *Desktop app* — a gap, not a guarantee.
-  - Candidate plugin: [GodotGoogleSignIn](https://github.com/NiqueWrld/GodotGoogleSignIn) (Godot 4.2+, v2 Android plugin architecture, `sign_in_success` hands back the `id_token` that `signInWithIdp` needs). Broader alternative: [GodotFirebaseAndroid](https://github.com/syntaxerror247/GodotFirebaseAndroid).
-  - Our side is already shaped for this: `cloud_save.gd` exposes `set_google_id_token_provider()` precisely so the provider can be swapped. Wiring the plugin's signal in place of `google_signin.gd` removes the browser, the loopback listener, the suspend problem and the return-to-app problem in one move.
-  - Two catches: the plugin needs **API 33+**, so Android 9 devices like the Mi 9T lose linking — keep the browser flow as the fallback rather than deleting it. And the plugin is young (7 commits, no tags), so try it on a real device before trusting it.
+- [ ] **Consider a native Credential Manager plugin — but there is no urgency, and the earlier entry here was wrong on both counts.** Re-researched 2026-08-08 against the primary docs:
+  - **Correction 1: the loopback flow is not being removed from under us.** The deprecation applies to the **iOS, Android and Chrome-app** client types and it *finished in 2022* (new clients blocked 2022-03-14, all existing clients 2022-10-21). The [migration guide](https://developers.google.com/identity/protocols/oauth2/resources/loopback-migration) — last updated 2026-05-26 — still states verbatim that you need do nothing "if you are using the loopback IP address flow on a Desktop app OAuth client as usage with that OAuth client type will continue to be supported". Ours is a Desktop client. There is no announced sunset and no timeline to race.
+  - What *is* real, and much softer: [OAuth 2.0 Policies](https://developers.google.com/identity/protocols/oauth2/policies) requires "a separate OAuth client for each platform" of "the client type that best matches the platform". Desktop-in-mobile is a type mismatch. The only example given is web-client-in-native-app, desktop-in-mobile is never named, and enforcement is discretionary ("Google can revoke or suspend access... for apps that misrepresent their identity"). Treat this as "could be caught by a future tightening", not "will break".
+  - **Correction 2: the API 33+ claim was false.** `plugin/build.gradle.kts` declares **minSdk 24** — the README's "API 33+" is the SDK needed to *compile from source*, not a device requirement, and we would not compile anyway (a prebuilt `.aar` is committed). Google's own docs: Sign in with Google via Credential Manager "works on devices running Android 4.4 (API level 19) and higher". The Mi 9T (API 28) would **not** lose linking.
+  - Candidate: [GodotGoogleSignIn](https://github.com/NiqueWrld/GodotGoogleSignIn) — MIT, 18 stars, **last push 2026-01-19** (stale), no tags, Kotlin package still named `com.niquewrld.casino.googlesignin`, compileSdk 34 against our targetSdk 36. Broader alternative: [GodotFirebaseAndroid](https://github.com/syntaxerror247/GodotFirebaseAndroid) (8 stars, last push 2026-02-13).
+  - The dependency-risk objection is weaker than it looks: the whole plugin is one Kotlin file doing the standard Credential Manager → `GoogleIdTokenCredential` → `id_token` dance. Forking and maintaining it ourselves is realistic, and needs no Mac.
+  - **The real cost is what it drags back in.** The plugin needs an Android OAuth client, a Web client *and* the signing SHA-1 — which means `google-services.json` returns, and so does the Play app-signing fingerprint trap ("fails only in store builds, silently") that `docs/cloud-save-setup.md` explains we designed *out*. It is also Android-only, so it forfeits the single-code-path property; iOS would need [godot-firebase-ios](https://github.com/SomniGameStudios/godot-firebase-ios) (mirrors GodotFirebaseAndroid's API, also does Sign in with Apple — but Godot 4.4+, iOS 17+, and **requires macOS/Xcode to build**).
+  - **Verdict: do not migrate now.** The urgency was a misreading, the player-facing pain was already fixed (`afe359d`, foreground wait + retry), and `set_google_id_token_provider()` keeps the switch a one-call change whenever it is actually warranted. Revisit if Google announces an Android/iOS client requirement, or when the iOS port starts — at which point evaluate the Android+iOS plugin pair together rather than Android alone.
+- [ ] **Consider Block Store for silent durability** — researched 2026-08-08, not started. [Block Store](https://developer.android.com/identity/block-store) stores up to 16 entries of 4 KB each and is built precisely for re-authenticating on a new device with no sign-in screen; the docs are explicit that "the user has already agreed to restore your app data as a part of the restore flow, so no additional consents are required". Storing the anonymous refresh token there would carry the identity across a reinstall *and* a device transfer with zero UI, and unlike the sign-in migration it needs **no console setup at all** — no SHA-1, no OAuth client, no consent screen, no `google-services.json`. Caveats: needs a native plugin, Android/GMS only, device-to-device transfer only fires during the factory-reset restore flow, and cloud restore targets need Android 12+ (Pixel 9+). Auto Backup (now enabled) already covers the reinstall case more broadly — it restores on *any* APK install — so Block Store is the fresher-but-narrower complement, not a prerequisite.
 - [ ] Touch testing on a real Android device/emulator (so far only the headless export has been verified) — no device/emulator was connected in this session (`adb` not found), manual testing is required
 - [ ] A second building (a differently themed building after prestige) — currently limited to the single building + multiplier model, the economy/theme design needs to be settled first
 
