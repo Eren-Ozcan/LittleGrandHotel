@@ -42,5 +42,11 @@ static func lobby_music() -> AudioStreamWAV:
 		steps.append([f, 0.5])
 	var wav := tone_stream(steps, 3.0, 0.18)
 	wav.loop_mode = AudioStreamWAV.LOOP_FORWARD
-	wav.loop_end = wav.data.size() / 2
+	wav.loop_begin = 0
+	# loop_end is an inclusive sample index, so it must stay one below the frame
+	# count. The resampler reads pos + 1 to interpolate, and pointing loop_end at
+	# the frame count makes it read one sample past the buffer when the loop
+	# wraps. Android 9's allocator absorbs that; Android 11+ (Scudo) places large
+	# buffers against a guard page and turns it into a SIGSEGV.
+	wav.loop_end = wav.data.size() / 2 - 1
 	return wav
