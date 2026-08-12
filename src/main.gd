@@ -41,14 +41,19 @@ const UI_TEXT_SCALE := 1.3
 const GUEST_TYPES := ["a", "b", "c", "d_elder", "e_couple", "f_business", "g_kid"]
 
 ## Açılış tutorial'ı: yalnızca yepyeni bir kayıtta (Game.tutorial_seen == false)
-## sırayla gösterilen basit popup dizisi (bkz. _maybe_show_tutorial).
+## gösterilen adım dizisi (bkz. _maybe_show_tutorial). İki tür adım var:
+## "modal" — bilgilendirme, Next butonuna basınca ilerler (bkz. _show_simple_modal).
+## "tap" — oyuncuyu GERÇEK arayüz elemanına dokunmaya zorlar: buton yok, ekranın
+## geri kalanı karartılır, hedef aydınlıkta kalır ve yalnızca o elemana dokununca
+## (bkz. _tutorial_advance_on çağrı noktaları) bir sonraki adıma geçilir.
 const TUTORIAL_STEPS := [
-	{"title": "Welcome!", "text": "Welcome to Little Grand Hotel! You'll turn one small hotel into a grand empire, step by step. Let's take a quick look.", "btn": "Next"},
-	{"title": "1. Start a Shift", "text": "Tap the clock icon in the bottom bar to start a shift — the hotel only runs, and only earns, during a shift.", "btn": "Next"},
-	{"title": "2. Welcome Your Guests", "text": "Once a shift starts, guests come through the door and ride the elevator to their rooms. As rooms fill up, income starts building.", "btn": "Next"},
-	{"title": "3. Collect From the Till", "text": "Tap the coin counter at the top to collect what you have earned. Don't forget — earnings sit in the till until the shift ends.", "btn": "Next"},
-	{"title": "4. Decorate the Rooms", "text": "Tap a room and buy furnishings — as Style Points rise the room moves up a tier and your hotel gains stars.", "btn": "Next"},
-	{"title": "5. Follow the Quests", "text": "The quest icon in the bottom bar shows your active quest — each one pays out coins and gems. Now open your doors!", "btn": "Start!"},
+	{"type": "modal", "title": "Welcome!", "text": "Welcome to Little Grand Hotel! You'll turn one small hotel into a grand empire, step by step. Let's take a quick look.", "btn": "Next"},
+	{"type": "tap", "title": "1. Start a Shift", "text": "Tap the clock icon to start a shift — the hotel only runs, and only earns, during a shift.", "target": "shift_button", "event": "shift_tap"},
+	{"type": "modal", "title": "2. Welcome Your Guests", "text": "Once a shift starts, guests come through the door and ride the elevator to their rooms. As rooms fill up, income starts building.", "btn": "Next"},
+	{"type": "tap", "title": "3. Collect From the Till", "text": "Tap the coin counter to collect what you have earned. Earnings sit in the till until the shift ends.", "target": "collect_button", "event": "collect_tap"},
+	{"type": "tap", "title": "4. Decorate the Rooms", "text": "Tap a room and buy furnishings — as Style Points rise the room moves up a tier and your hotel gains stars.", "target": "zoom_viewport", "event": "room_tap"},
+	{"type": "tap", "title": "5. Follow the Quests", "text": "Tap the quest icon — it shows your active quest, which pays out coins and gems.", "target": "quest_bar_button", "event": "quest_tap"},
+	{"type": "modal", "title": "You're Ready!", "text": "Now open your doors and start building your grand hotel!", "btn": "Start!"},
 ]
 
 
@@ -147,6 +152,21 @@ var collect_button: Button
 ## çekmek için) — bkz. _start_collect_pulse/_stop_collect_pulse.
 var _collect_pulse_on := false
 var _collect_tween: Tween
+var shift_button: Button
+var quest_bar_button: Button
+
+## "Dokunmak zorunda" tutorial adımları için spotlight katmanı — bkz.
+## _build_tutorial_layer / _show_tutorial_spotlight / TUTORIAL_STEPS.
+var tutorial_layer: Control
+var _tutorial_dim_top: ColorRect
+var _tutorial_dim_bottom: ColorRect
+var _tutorial_dim_left: ColorRect
+var _tutorial_dim_right: ColorRect
+var _tutorial_ring: Panel
+var _tutorial_bubble: PanelContainer
+var _tutorial_bubble_label: Label
+var _tutorial_step_index := -1
+var _tutorial_pulse_tween: Tween
 var street_node: Control
 var toast_panel: PanelContainer
 var toast_label: Label
@@ -433,12 +453,23 @@ func _after_tutorial() -> void:
 
 
 func _show_tutorial_step(step: int) -> void:
+	_tutorial_clear_spotlight()
 	if step >= TUTORIAL_STEPS.size():
+		_tutorial_step_index = -1
 		Game.tutorial_seen = true
 		Game.save_game()
 		_after_tutorial()
 		return
 	var s: Dictionary = TUTORIAL_STEPS[step]
+	if String(s.get("type", "modal")) == "tap":
+		_tutorial_step_index = step
+		# Gerçek bir popup hâlâ açıksa (ör. az önce basılan Shift ikonunun kendi
+		# popup'ı) spotlight'ı hemen göstermeyiz — dim şeritleri o popup'ın Close
+		# düğmesini de bloklardı (bkz. _close_popup, popup kapanınca gösterir).
+		if not overlay.visible:
+			_show_tutorial_spotlight(s)
+		return
+	_tutorial_step_index = -1
 	_show_simple_modal(String(s.title), String(s.text), String(s.btn),
 		func(): _show_tutorial_step(step + 1),
 		func():
@@ -446,6 +477,157 @@ func _show_tutorial_step(step: int) -> void:
 			Game.tutorial_seen = true
 			Game.save_game()
 			_after_tutorial())
+
+
+## Bir "tap" adımını, hedefi kesinlikle görülür olana dek geçen adım
+## sayacına bekletmeden, dokunulunca ilerlet. Yalnızca AKTİF adımın
+## event alanı eşleşirse tetiklenir — diğer tüm tıklama akışları etkilenmez.
+func _tutorial_advance_on(event: String) -> void:
+	if _tutorial_step_index < 0 or _tutorial_step_index >= TUTORIAL_STEPS.size():
+		return
+	var s: Dictionary = TUTORIAL_STEPS[_tutorial_step_index]
+	if String(s.get("event", "")) == event:
+		_show_tutorial_step(_tutorial_step_index + 1)
+
+
+func _tutorial_target_control(name: String) -> Control:
+	match name:
+		"shift_button":
+			return shift_button
+		"collect_button":
+			return collect_button
+		"zoom_viewport":
+			return zoom_viewport
+		"quest_bar_button":
+			return quest_bar_button
+	return null
+
+
+## Spotlight: 4 karartma şeridi hedefin rect'i etrafına yerleşir (hedefin
+## kendisi boşta kalır, dokunuş normal buton/viewport'a düşer), altın bir
+## çerçeve hedefi vurgular, balon konum bilgisiyle metni gösterir. Boyut/
+## konum her karede _tutorial_reposition_spotlight ile güncellenir (bkz.
+## _process) — layout, ekran döndürme ya da bina kaydırmasıyla kaymasın.
+func _show_tutorial_spotlight(s: Dictionary) -> void:
+	tutorial_layer.visible = true
+	_tutorial_bubble_label.text = "%s\n%s" % [String(s.title), String(s.text)]
+	_tutorial_reposition_spotlight()
+	_start_tutorial_pulse()
+
+
+func _tutorial_clear_spotlight() -> void:
+	_stop_tutorial_pulse()
+	if tutorial_layer != null:
+		tutorial_layer.visible = false
+
+
+func _tutorial_reposition_spotlight() -> void:
+	if _tutorial_step_index < 0 or not tutorial_layer.visible:
+		return
+	var s: Dictionary = TUTORIAL_STEPS[_tutorial_step_index]
+	var target := _tutorial_target_control(String(s.get("target", "")))
+	if target == null or not is_instance_valid(target) or target.size == Vector2.ZERO:
+		return
+	var pad := 6.0
+	var top_left: Vector2 = target.global_position - tutorial_layer.global_position - Vector2(pad, pad)
+	var sz: Vector2 = target.size + Vector2(pad, pad) * 2.0
+	var full: Vector2 = tutorial_layer.size
+
+	_tutorial_dim_top.position = Vector2(0, 0)
+	_tutorial_dim_top.size = Vector2(full.x, max(top_left.y, 0.0))
+	_tutorial_dim_bottom.position = Vector2(0, top_left.y + sz.y)
+	_tutorial_dim_bottom.size = Vector2(full.x, max(full.y - (top_left.y + sz.y), 0.0))
+	_tutorial_dim_left.position = Vector2(0, top_left.y)
+	_tutorial_dim_left.size = Vector2(max(top_left.x, 0.0), sz.y)
+	_tutorial_dim_right.position = Vector2(top_left.x + sz.x, top_left.y)
+	_tutorial_dim_right.size = Vector2(max(full.x - (top_left.x + sz.x), 0.0), sz.y)
+
+	_tutorial_ring.position = top_left
+	_tutorial_ring.size = sz
+
+	var bubble_sz: Vector2 = _tutorial_bubble.size
+	var bubble_below := top_left.y < full.y * 0.5
+	_tutorial_bubble.position = Vector2(
+		clamp(top_left.x + sz.x / 2.0 - bubble_sz.x / 2.0, 12.0, max(12.0, full.x - bubble_sz.x - 12.0)),
+		(top_left.y + sz.y + 14.0) if bubble_below else (top_left.y - bubble_sz.y - 14.0))
+
+
+## Hedefi ring'i nabız gibi büyütüp küçülterek vurgular — bkz.
+## _start_collect_pulse (aynı desen, "topla" butonundaki dikkat çekme).
+func _start_tutorial_pulse() -> void:
+	if _tutorial_pulse_tween and is_instance_valid(_tutorial_pulse_tween):
+		_tutorial_pulse_tween.kill()
+	_tutorial_ring.pivot_offset = _tutorial_ring.size / 2.0
+	_tutorial_pulse_tween = _tutorial_ring.create_tween()
+	_tutorial_pulse_tween.set_loops()
+	_tutorial_pulse_tween.tween_property(_tutorial_ring, "scale", Vector2(1.06, 1.06), 0.55) \
+		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	_tutorial_pulse_tween.tween_property(_tutorial_ring, "scale", Vector2(1.0, 1.0), 0.55) \
+		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+
+
+func _stop_tutorial_pulse() -> void:
+	if _tutorial_pulse_tween and is_instance_valid(_tutorial_pulse_tween):
+		_tutorial_pulse_tween.kill()
+	if _tutorial_ring != null:
+		_tutorial_ring.scale = Vector2.ONE
+
+
+## Tüm tutorial'ı atlamak için sağ üstte küçük, göze batmayan bir bağlantı —
+## "dokunmaya zorlama" tasarımı erişilebilirlik için hâlâ bir çıkış yolu
+## bırakmalı (eski modal-zincirin dışına-tıkla/ESC ile atla desenine eşdeğer).
+func _on_tutorial_skip() -> void:
+	_tutorial_step_index = -1
+	_tutorial_clear_spotlight()
+	Game.tutorial_seen = true
+	Game.save_game()
+	_after_tutorial()
+
+
+func _build_tutorial_layer() -> void:
+	tutorial_layer = Control.new()
+	tutorial_layer.set_anchors_preset(Control.PRESET_FULL_RECT)
+	tutorial_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	tutorial_layer.visible = false
+	tutorial_layer.z_index = 80
+	add_child(tutorial_layer)
+
+	var dim_color := Color(0.05, 0.03, 0.02, 0.72)
+	for dim_ref in [&"_tutorial_dim_top", &"_tutorial_dim_bottom", &"_tutorial_dim_left", &"_tutorial_dim_right"]:
+		var d := ColorRect.new()
+		d.color = dim_color
+		d.mouse_filter = Control.MOUSE_FILTER_STOP
+		tutorial_layer.add_child(d)
+		set(dim_ref, d)
+
+	_tutorial_ring = Panel.new()
+	_tutorial_ring.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var ring_sb := StyleBoxFlat.new()
+	ring_sb.bg_color = Color(0, 0, 0, 0)
+	ring_sb.border_color = PALETTE.gold
+	ring_sb.set_border_width_all(4)
+	ring_sb.set_corner_radius_all(16)
+	ring_sb.shadow_color = Color(PALETTE.gold, 0.55)
+	ring_sb.shadow_size = 12
+	_tutorial_ring.add_theme_stylebox_override("panel", ring_sb)
+	tutorial_layer.add_child(_tutorial_ring)
+
+	_tutorial_bubble = _panel(PALETTE.cream, PALETTE.gold)
+	_tutorial_bubble.custom_minimum_size = Vector2(320, 0)
+	_tutorial_bubble.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	tutorial_layer.add_child(_tutorial_bubble)
+	_tutorial_bubble_label = _label_wrap("", 15, PALETTE.text)
+	_tutorial_bubble.add_child(_tutorial_bubble_label)
+
+	var skip_b := _button("Skip tutorial", 12, PALETTE.bar_dark, PALETTE.cream_text)
+	skip_b.mouse_filter = Control.MOUSE_FILTER_STOP
+	skip_b.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	skip_b.offset_left = -140
+	skip_b.offset_right = -12
+	skip_b.offset_top = 12
+	skip_b.offset_bottom = 40
+	skip_b.pressed.connect(_on_tutorial_skip)
+	tutorial_layer.add_child(skip_b)
 
 
 ## Gerçek mağazada zaten sahip olunan satın almalar bağlantı kurulunca otomatik
@@ -486,6 +668,8 @@ func _process(delta: float) -> void:
 	_update_room_drag()
 	_update_elevator(delta)
 	_update_pedestrians(delta)
+	if _tutorial_step_index >= 0 and tutorial_layer != null and tutorial_layer.visible:
+		_tutorial_reposition_spotlight()
 	# Vardiya bitti: oyuncu zaten duraklıyor, reklam için doğal bir mola.
 	var shift_now := Game.shift_active()
 	if _shift_was_active and not shift_now:
@@ -1055,6 +1239,7 @@ func _build_ui() -> void:
 	toast_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	toast_panel.add_child(toast_label)
 
+	_build_tutorial_layer()
 	_build_start_screen()
 
 
