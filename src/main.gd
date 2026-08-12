@@ -1159,9 +1159,12 @@ func _build_ui() -> void:
 	bar_panel.add_child(bottom)
 
 	var shift_b := _bar_button("res://assets/ui/icon_clock.svg", "Shift")
-	shift_b.pressed.connect(func(): _open_popup("Shift", _build_shift_popup))
+	shift_b.pressed.connect(func():
+		_tutorial_advance_on("shift_tap")
+		_open_popup("Shift", _build_shift_popup))
 	bottom.add_child(shift_b)
 	shift_bar_label = shift_b.get_meta("label")
+	shift_button = shift_b
 
 	# "Shop" artık popup açmıyor — İnşa Modu'nu açıp mağaza rafını gösterir
 	# (oda ekleme tek yol: rafından sürükleyip binaya bırakmak).
@@ -1181,8 +1184,13 @@ func _build_ui() -> void:
 		var b := _bar_button(def[0], def[1])
 		var builder: Callable = def[2]
 		var title: String = def[1]
-		b.pressed.connect(func(): _open_popup(title, builder))
+		b.pressed.connect(func():
+			if title == "Quests":
+				_tutorial_advance_on("quest_tap")
+			_open_popup(title, builder))
 		bottom.add_child(b)
+		if title == "Quests":
+			quest_bar_button = b
 
 	# --- Popup katmanı
 	overlay = Control.new()
@@ -2432,6 +2440,7 @@ func _on_room_tapped(idx: int, btn: Control) -> void:
 			_show_toast("Clearing the infestation costs %d coins!" % cost)
 		return
 	selected_room = idx
+	_tutorial_advance_on("room_tap")
 	if Game.room_def(room.type).category == "guest":
 		_open_popup("Room Decoration", _build_room_popup)
 	else:
@@ -2635,6 +2644,7 @@ func _on_guest_poked(btn: Control) -> void:
 
 
 func _on_collect() -> void:
+	_tutorial_advance_on("collect_tap")
 	var from := collect_button.global_position + collect_button.size / 2.0
 	var got := Game.collect()
 	if got > 0:
