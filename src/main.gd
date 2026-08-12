@@ -3019,6 +3019,12 @@ func _close_popup() -> void:
 	# asılı kalır ve oyuncu yeniden deneyemez.
 	if CloudSave.is_linking():
 		CloudSave.cancel_google_signin()
+	# Bekleyen bir "tap" adımı varsa (popup açıkken _show_tutorial_step ertelemişti,
+	# bkz. orası) popup gerçekten kapanınca spotlight'ı şimdi göster.
+	if _tutorial_step_index >= 0 and _tutorial_step_index < TUTORIAL_STEPS.size() \
+			and String(TUTORIAL_STEPS[_tutorial_step_index].get("type", "")) == "tap" \
+			and not tutorial_layer.visible:
+		_show_tutorial_spotlight(TUTORIAL_STEPS[_tutorial_step_index])
 
 
 func _rebuild_popup() -> void:
