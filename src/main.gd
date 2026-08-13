@@ -1427,6 +1427,17 @@ func _panel(bg: Color, border: Color) -> PanelContainer:
 	return p
 
 
+## Verilen metin `max_w` piksele sığana kadar font boyutunu `base_size`'dan
+## `min_size`'a kadar küçültür — oda plaketlerinde metin taşmasın diye.
+func _fit_font_size(text: String, max_w: float, base_size: int, min_size: int) -> int:
+	var font := ThemeDB.fallback_font
+	for size in range(base_size, min_size - 1, -1):
+		var sz := roundi(size * UI_TEXT_SCALE)
+		if font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, sz).x <= max_w:
+			return size
+	return min_size
+
+
 func _label(text: String, size: int, color: Color) -> Label:
 	var l := Label.new()
 	l.text = text
@@ -2333,29 +2344,43 @@ func _make_room_button(idx: int) -> Button:
 		dust.custom_minimum_size = Vector2.ZERO
 		b.add_child(dust)
 
-	# İsim bandı
-	var plate := PanelContainer.new()
-	var psb := StyleBoxFlat.new()
-	psb.bg_color = PALETTE.banner_red if cat == "guest" else PALETTE.green_deep
-	psb.set_corner_radius_all(4)
-	psb.content_margin_left = 6
-	psb.content_margin_right = 6
-	psb.content_margin_top = 1
-	psb.content_margin_bottom = 1
-	plate.add_theme_stylebox_override("panel", psb)
-	plate.position = Vector2(4, 4)
-	plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var plate_text: String = d.name
-	if is_infested:
-		plate_text = "INFESTED! %d c" % int(Game.eco.infest.clean_cost)
-	elif is_dirty:
-		plate_text = "DIRTY!"
-	elif cat == "guest":
-		plate_text = "%s · SP %d" % [Game.tier_name(Game.room_tier(room)), Game.room_score(room)]
-	var pl := _label(plate_text, 11, PALETTE.cream_text)
-	pl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	plate.add_child(pl)
-	b.add_child(plate)
+	# İsim bandı — tier · SP bilgisi yalnızca İnşa Modu açıkken gösterilir
+	# (her zaman açık olunca dar odalarda "Basic · SP 20" gibi metin bitişik
+	# odanın üstüne taşıyordu); kirli/istila rozeti önemli bir uyarı olduğu
+	# için modu fark etmeksizin her zaman gösterilir.
+	var is_sp_plate := cat == "guest" and not is_dirty and not is_infested
+	if not is_sp_plate or build_mode:
+		var plate := PanelContainer.new()
+		var psb := StyleBoxFlat.new()
+		psb.bg_color = PALETTE.banner_red if cat == "guest" else PALETTE.green_deep
+		psb.set_corner_radius_all(4)
+		psb.content_margin_left = 6
+		psb.content_margin_right = 6
+		psb.content_margin_top = 1
+		psb.content_margin_bottom = 1
+		plate.add_theme_stylebox_override("panel", psb)
+		# Oda kutusunun genişliğine sabitlenir (eskiden içeriğe göre serbest
+		# büyüyordu).
+		plate.anchor_right = 1.0
+		plate.offset_left = 4
+		plate.offset_top = 4
+		plate.offset_right = -4
+		plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var plate_text: String = d.name
+		if is_infested:
+			plate_text = "INFESTED! %d c" % int(Game.eco.infest.clean_cost)
+		elif is_dirty:
+			plate_text = "DIRTY!"
+		elif cat == "guest":
+			plate_text = "%s · SP %d" % [Game.tier_name(Game.room_tier(room)), Game.room_score(room)]
+		# Oda genişliğine göre sığana kadar font küçültülür — metin hiç
+		# kesilmeden tamamı görünür kalır.
+		var plate_w: float = int(room.get("w", 1)) * CELL_W - CELL_GAP - 8.0 - 12.0
+		var font_size := _fit_font_size(plate_text, plate_w, 11, 7)
+		var pl := _label(plate_text, font_size, PALETTE.cream_text)
+		pl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		plate.add_child(pl)
+		b.add_child(plate)
 
 	# Oda metresi (Hotel City): kademe ilerlemesi kırmızıdan yeşile dolar,
 	# tavan kademede tam yeşil kalır.
