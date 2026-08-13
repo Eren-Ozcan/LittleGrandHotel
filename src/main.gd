@@ -2094,6 +2094,7 @@ func _room_visual_signature(idx: int) -> Dictionary:
 		"guest_visible": guest_visible, "show_badge": show_badge,
 		"show_capacity": cat == "facility" and shift_active and _arrived_guests > 0,
 		"show_maid": room.type == "housekeeping" and shift_active,
+		"build_mode": build_mode,
 	}
 
 
