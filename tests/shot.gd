@@ -50,9 +50,22 @@ func _ready() -> void:
 				"stats": ["Statistics", main._build_stats_popup],
 				"profile": ["Profile", main._build_profile_popup],
 				"gems": ["Buy Gems", main._build_gems_popup],
+				"build": ["Build", main._build_build_popup],
+				"store": ["Store", main._build_store_popup],
+				"store_premium": ["Store", main._build_store_popup],
+				"profile_account": ["Profile", main._build_profile_popup],
+				"profile_prestige": ["Profile", main._build_profile_popup],
+				"profile_stats": ["Profile", main._build_profile_popup],
+				"profile_settings": ["Profile", main._build_profile_popup],
 			}
 			var key: String = arg.substr(6)
 			if builders.has(key):
+				# Sekmeli ekranlarda hangi sekmenin açık yakalanacağı anahtarın
+				# son parçasından gelir (store_premium -> premium).
+				if key.begins_with("store_"):
+					main._store_tab = key.substr(6)
+				elif key.begins_with("profile_"):
+					main._profile_tab = key.substr(8)
 				main._open_popup(builders[key][0], builders[key][1])
 	await get_tree().create_timer(0.3).timeout
 	var out_path := "user://shot.png"
