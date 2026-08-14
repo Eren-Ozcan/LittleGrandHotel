@@ -213,7 +213,8 @@ tools\Godot_v4.7-stable_win64_console.exe --path . res://tests/shot.tscn ^
 ```
 
 `popup=` değerleri (eklendi): `build`, `store`, `store_premium`,
-`profile_account`, `profile_prestige`, `profile_stats`, `profile_settings`.
+`profile_account`, `profile_prestige`, `profile_stats`, `profile_settings`,
+`room`.
 Ekran görüntüsünü prototipteki aynı ekranla yan yana koy.
 
 Ek kontrol (bölünme kuralı için): `_build_profile_popup` altında
@@ -222,6 +223,94 @@ Ek kontrol (bölünme kuralı için): `_build_profile_popup` altında
 Yığın doğrulaması geçti: Build → dekor paketi → oda seçimi → ‹ geri
 (stack 1 → 2 → 1, geri butonu yalnızca 2'de görünüyor, kökte pop popup'ı
 kapatıyor).
+
+## Kart turu (portun ikinci turu)
+
+İlk portta bilerek atlanmış iki madde tamamlandı:
+
+- **Kart tasarımı.** Popup içerikleri düz satır listesi olmaktan çıktı; her
+  mantıksal grup `_section(c, "Başlık")` ile kendi kartına girdi (krem zemin,
+  ince altın kenar, küçük büyük harf başlık — bkz. `_card` / `_section`,
+  `main.gd`). Popup gövdesi kartlardan ayrışsın diye `cream_dark`'a indi.
+  Tehlike bölgesi kartı kırmızı kenar + kırmızı başlık alır (`_section`'ın
+  `accent` parametresi).
+- **Saat ikonu.** Gökyüzü durum çipi artık `icon_clock.svg` + metin.
+
+## Tam ekran menü sayfası (portun üçüncü turu)
+
+Menüler ortalanmış popup kutusu olmaktan çıktı; prototipin `sheetOpen` bloğunun
+birebir karşılığı oldu:
+
+```html
+<div style="position:absolute;inset:0;z-index:6;background:#fff6e6;
+            display:flex;flex-direction:column">
+  <div style="padding:12px;background:#3a2c4d"> ‹  Başlık   🪙 …  💎 … </div>
+  <div style="flex:1;overflow:auto;padding:12px"> …kartlar… </div>
+</div>
+```
+
+- `overlay` tam ekran: karartma, ortalanmış kutu ve "dışına dokununca kapanır"
+  davranışı kalktı — dışarısı diye bir yer yok. Alt bar da örtülür (prototipte
+  bar `z-index:4`, sayfa `z-index:6`); `overlay` ağaçta `collect_button`'dan
+  sonra eklendiği için üstte kalıyor.
+- Başlık şeridi köşesiz, ekran genişliğinde, `bar_dark` (#3a2c4d).
+- `‹` **her zaman** görünür: yığın >1 ise bir seviye geri, kökteyse sayfayı
+  kapatır. `✕` de her zaman görünür ve doğrudan kapatır — Android geri tuşuna
+  bağımlı kalınmasın diye (kullanıcı isteği, prototipte yalnızca `‹` vardı).
+- Kartlar prototipteki değerlere hizalandı: zemin saf beyaz, kenar
+  `2px facade_line` (#e6b866), köşe 12. Sayfa gövdesi `cream` (#fff6e6).
+- `_fit_popup_height` kalktı: sayfa zaten tüm ekranı kaplıyor.
+- `overlay.z_index = 100`, `toast_panel.z_index = 110`. Ağaçta sonra gelmek
+  yetmiyordu: yürüyen misafirler `_walker_layer.z_index = 50` ile çiziliyor ve
+  menü açıkken listenin üstünde yürüyor görünüyorlardı.
+
+### Sayfa içi biçimler
+
+Menü gövdeleri de prototipin satır diline çevrildi. Ortak primitif
+`_sheet_row(c, cfg)`: görünen kutu bir `PanelContainer`, tıklama onun üstüne
+serilen şeffaf `Button` (Godot'da `Button` çocuklarından minimum boy almaz).
+Üzerine kurulan biçimler:
+
+| Yardımcı | Prototip karşılığı |
+|---|---|
+| `_row` | beyaz liste satırı: ikon 34px · ad + açıklama · sağda fiyat |
+| `_buy_row` | aynısı, fiyat yeşil hap içinde (gerçek para / gem) |
+| `_action` | sola hizalı kahverengi birincil buton, iki satır |
+| `_danger` | dolu kırmızı (veri silme) / yumuşak kırmızı (sıfırlama) |
+| `_tile` + `_add_room_tiles` | 3'lü ızgara karo: ikon üstte, ad, fiyat |
+| `_list_card` + `_list_row` | tek kutu, satırlar 1px `cream_dark` çizgiyle |
+| `_notice` | kutular: `gold` vurgu · `warn` kırmızı · `dark` plum |
+| `_bar` | 9 piksel, tam yuvarlak uçlu ilerleme çubuğu |
+| `_section` | kart İÇİNDE başlık değil, grubun ÜSTÜNDE büyük harf etiket |
+| `_inert` / `_style_field` | `#f7f1e2` inert şerit / metin kutusu |
+
+Sekmeler prototipteki gibi hap (`border-radius:999px`).
+
+### Üst bar ve gökyüzü çipleri
+
+- Krem kart artık YALNIZCA para/seviye bloğunu sarıyor; avatar kartın dışında,
+  gökyüzünün üstünde ayrı bir kutu (prototipte de öyle). Kart gölgesi
+  `0 3px 0 rgba(110,79,49,.18)` — yumuşak değil, kaydırılmış düz gölge.
+- Coin ile gem arasında 1 piksellik `cream_dark` ayraç; gem sayısı yeşil.
+  `+` butonu 30 piksel, yeşil kenarlı, `green_soft` zeminli.
+- Seviye satırı: `LEVEL n` küçük büyük harf · 10 piksel tam yuvarlak çubuk
+  (`cream_dark` iz + `facade_line` kenar, altın dolgu) · `n / m XP`.
+- Avatar 62×86 kutu + altında krem "Me" hapı.
+- Durum satırı, `✎ Build` ve haftanın teması artık `_chip()` hapları: yarı
+  saydam koyu zemin (`chip_dark`), tema hapı `theme.accent` %90 saydamlıkta.
+
+Uyarı: `Button` bir `Container` DEĞİL — çocuklarını yerleştirmez ve onlardan
+minimum boy almaz. Avatar butonu bir kez bu yüzden HBox'ta 0 genişlik sayılıp
+ekranın dışına taştı; boy elle veriliyor, içerik `PRESET_FULL_RECT` ile
+sabitleniyor (aynı desen `_sheet_row` ve `_tile`'da da var).
+
+Prototipten iki zorunlu sapma:
+
+- **Bulut ikonu kullanılmadı** (Account kartı, Restore satırı): `cloud.svg`
+  beyaz gövdeli bir gökyüzü bulutu, beyaz kartın üstünde görünmüyor.
+- **Misafir odalarının ikonu yatak görselleri** (`ROOM_LIST_ICONS`):
+  standard/deluxe/suite için `assets/rooms/` altında görsel yok — prototip de
+  aynı şeyi yapıyor.
 
 ## Kapsam dışı
 
