@@ -5,7 +5,8 @@ extends Node
 ## Çalıştırma (pencere açar, headless DEĞİL):
 ##   tools\Godot_v4.7-stable_win64_console.exe --path . res://tests/shot.tscn
 ## Argümanlar (-- ile ayrılır): demo, zoomin, zoomout, out=isim.png,
-## popup=shift|settings|staff|quests|stats|profile|gems (ilgili popup'ı açık yakalar)
+## popup=shift|settings|staff|quests|stats|profile|gems|build|store|room
+##   (ilgili popup'ı açık yakalar; store_*/profile_* ile sekme de seçilir)
 
 
 func _ready() -> void:
@@ -57,6 +58,7 @@ func _ready() -> void:
 				"profile_prestige": ["Profile", main._build_profile_popup],
 				"profile_stats": ["Profile", main._build_profile_popup],
 				"profile_settings": ["Profile", main._build_profile_popup],
+				"room": ["Room", main._build_room_popup],
 			}
 			var key: String = arg.substr(6)
 			if builders.has(key):
@@ -66,6 +68,9 @@ func _ready() -> void:
 					main._store_tab = key.substr(6)
 				elif key.begins_with("profile_"):
 					main._profile_tab = key.substr(8)
+				elif key == "room":
+					# Oda ekrani secili bir oda ister; ilk oda her kayitta var.
+					main.selected_room = 0
 				main._open_popup(builders[key][0], builders[key][1])
 	await get_tree().create_timer(0.3).timeout
 	var out_path := "user://shot.png"
