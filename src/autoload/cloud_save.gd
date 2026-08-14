@@ -387,6 +387,35 @@ func _upload(game) -> bool:
 	return ok
 
 
+## Oyuncunun buluttaki kayıt dokümanını siler (Ayarlar ▸ Delete account data).
+## Yerel kaydı SİLMEZ — onu çağıran taraf Game.reset_game() ile halleder.
+##
+## Bulut hiç yapılandırılmamışsa silinecek bir şey yoktur, `true` döner: oyuncu
+## açısından "verim silindi mi?" sorusunun cevabı evet. Ağ/izin hatasında
+## `false` döner ki UI dürüst bir mesaj gösterebilsin.
+func delete_cloud_data() -> bool:
+	if not is_enabled():
+		return true
+	var token: String = await _auth.ensure_token()
+	if token.is_empty():
+		return false
+	var uid: String = _auth.uid()
+	if uid.is_empty():
+		return false
+	var url := (FIRESTORE_BASE % FirebaseConfig.PROJECT_ID) + "/saves/" + uid.uri_encode()
+	var res: Dictionary = await _request(HTTPClient.METHOD_DELETE, url, token, "")
+	# 404 = doküman zaten yok; oyuncu için sonuç aynı.
+	var ok: bool = res.ok or res.code == 404
+	if ok:
+		# Bir sonraki yükleme yeni bir dokümanı sıfırdan yazsın.
+		_rev = 0
+		_dirty = false
+		_last_success_unix = 0.0
+		_save_state()
+		status_changed.emit()
+	return ok
+
+
 # --- Firestore REST -----------------------------------------------------
 
 func _doc_name(uid: String) -> String:

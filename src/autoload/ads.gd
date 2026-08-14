@@ -140,6 +140,32 @@ func _request_consent_then_init() -> void:
 	)
 
 
+## Ayarlar'daki "Ad preferences" satırı yalnızca gerçekten açılabilecekse
+## gösterilir: masaüstünde/test derlemesinde UMP singleton'ı yok, orada ölü bir
+## buton bırakmak yerine satır hiç çizilmez.
+func consent_options_available() -> bool:
+	return _real_ads_available()
+
+
+## Onay bir kez alındıktan sonra oyuncunun fikrini değiştirebilmesi gerekiyor
+## (GDPR + Play veri güvenliği). UMP gizlilik seçenekleri formunu yeniden açar;
+## form yoksa normal onay formuna düşer.
+func show_privacy_options_form() -> void:
+	if not _real_ads_available():
+		return
+	var consent_info := UserMessagingPlatform.consent_information
+	consent_info.update(
+		ConsentRequestParameters.new(),
+		func():
+			if consent_info.get_is_consent_form_available():
+				UserMessagingPlatform.load_consent_form(
+					func(form: ConsentForm): form.show(func(_err): pass),
+					func(_err): pass
+				),
+		func(_err): pass
+	)
+
+
 func _init_ads() -> void:
 	var listener := OnInitializationCompleteListener.new()
 	listener.on_initialization_complete = func(_status):
