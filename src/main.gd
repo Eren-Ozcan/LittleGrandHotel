@@ -35,6 +35,13 @@ const PALETTE := {
 ## İlk 1.15 denemesi sonrası "hâlâ küçük" geri bildirimiyle 1.3'e çıkarıldı.
 const UI_TEXT_SCALE := 1.3
 
+## Mağaza politikası bağlantıları (bkz. docs/store/store-listing.md ve
+## account-setup-checklist.md). Ayarlar'dan açılır, açılış ekranındaki sürüm
+## etiketiyle aynı sabiti kullanır.
+const GAME_VERSION := "1.0"
+const PRIVACY_POLICY_URL := "https://yilkgames.com/privacy-policy/"
+const SUPPORT_EMAIL := "yilkgamesstudio@gmail.com"
+
 ## Misafir oda tipine göre ayrı sanat havuzları: oyuncu daha pahalı oda
 ## Misafirler/sokak yürüyüşçüleri için karakter havuzu (referans sayfadaki
 ## 5 temel + 4 ekstra varyant) — tek tip 3'lü rotasyon yerine daha çeşitli.
@@ -48,9 +55,9 @@ const GUEST_TYPES := ["a", "b", "c", "d_elder", "e_couple", "f_business", "g_kid
 ## (bkz. _tutorial_advance_on çağrı noktaları) bir sonraki adıma geçilir.
 const TUTORIAL_STEPS := [
 	{"type": "modal", "title": "Welcome!", "text": "Welcome to Little Grand Hotel! You'll turn one small hotel into a grand empire, step by step. Let's take a quick look.", "btn": "Next"},
-	{"type": "tap", "title": "1. Start a Shift", "text": "Tap the clock icon to start a shift — the hotel only runs, and only earns, during a shift.", "target": "shift_button", "event": "shift_tap"},
+	{"type": "tap", "title": "1. Start a Shift", "text": "Tap the big button above the bar to start a shift — the hotel only runs, and only earns, during a shift.", "target": "shift_button", "event": "shift_tap"},
 	{"type": "modal", "title": "2. Welcome Your Guests", "text": "Once a shift starts, guests come through the door and ride the elevator to their rooms. As rooms fill up, income starts building.", "btn": "Next"},
-	{"type": "tap", "title": "3. Collect From the Till", "text": "Tap the coin counter to collect what you have earned. Earnings sit in the till until the shift ends.", "target": "collect_button", "event": "collect_tap"},
+	{"type": "tap", "title": "3. Collect From the Till", "text": "The same button now reads Collect — tap it to take what you have earned. Earnings sit in the till until you collect them.", "target": "collect_button", "event": "collect_tap"},
 	{"type": "tap", "title": "4. Decorate the Rooms", "text": "Tap a room and buy furnishings — as Style Points rise the room moves up a tier and your hotel gains stars.", "target": "zoom_viewport", "event": "room_tap"},
 	{"type": "tap", "title": "5. Follow the Quests", "text": "Tap the quest icon — it shows your active quest, which pays out coins and gems.", "target": "quest_bar_button", "event": "quest_tap"},
 	{"type": "modal", "title": "You're Ready!", "text": "Now open your doors and start building your grand hotel!", "btn": "Start!"},
@@ -145,8 +152,11 @@ var gems_label: Label
 var star_icons: Array = []
 var level_label: Label
 var xp_bar: ProgressBar
+var xp_text_label: Label
 var shift_label: Label
 var shift_bar_label: Label
+## Merkez birincil butonun üst satırı ("Start shift" / "Collect").
+var primary_label: Label
 var collect_button: Button
 ## Topla butonu birikim varken hafifçe nabız gibi büyüyüp küçülür (dikkat
 ## çekmek için) — bkz. _start_collect_pulse/_stop_collect_pulse.
@@ -154,6 +164,11 @@ var _collect_pulse_on := false
 var _collect_tween: Tween
 var shift_button: Button
 var quest_bar_button: Button
+## Alt bar sekmeleri, başlığa göre — aktif durumu boyamak için.
+var _bar_buttons := {}
+## Açık olan sekmenin başlığı ("" = popup kapalı).
+var _active_tab := ""
+var quest_badge: PanelContainer
 
 ## "Dokunmak zorunda" tutorial adımları için spotlight katmanı — bkz.
 ## _build_tutorial_layer / _show_tutorial_spotlight / TUTORIAL_STEPS.
@@ -257,7 +272,6 @@ var roof_theme_label: Label
 ## çerçevede (lobby.png) asılı bir tabela gibi gösteriliyor — bkz. _rebuild_hotel.
 var lobby_name_label: Label
 const HOTEL_NAME_MAX_LEN := 16
-var new_floor_button: Button
 var build_mode_button: Button
 ## İnşa Modu kapalıyken boş/kilitli hücreler sade durur (buton/metin yok);
 ## açıkken vurgulanır ve dokunulabilir olur (TODO: görsel kalabalığı azaltma).
@@ -272,7 +286,26 @@ var overlay: Control
 var popup_title: Label
 var popup_content: VBoxContainer
 var popup_scroll: ScrollContainer
+var popup_back_button: Button
+## Popup başlık şeridindeki para göstergesi (prototip): oyuncu satın alma
+## ekranındayken bakiyesini görmek için ekranı kapatmak zorunda kalmasın.
+var popup_coins_label: Label
+var popup_gems_label: Label
+## Top of _popup_stack, kept as a plain Callable so every existing caller
+## (_rebuild_popup, _refresh) can keep asking "is a popup live?".
 var popup_builder: Callable = Callable()
+## Screen stack: [{"title": String, "builder": Callable}]. _open_popup starts a
+## new stack (bottom-bar tabs must not pile up), _push_popup goes one level
+## deeper (Store -> room picker), _pop_popup walks back.
+var _popup_stack: Array[Dictionary] = []
+## Which tab is open inside the Store / Profile popups. Popups are rebuilt on
+## every state_changed, so the selection cannot live in a local.
+var _store_tab := "gems"
+var _profile_tab := "account"
+## Bundle waiting for the player to pick a room in the Store -> Offers flow.
+var _pending_bundle_id := ""
+## Save code stays masked until the player asks for it (audit item 13).
+var _save_code_visible := false
 
 var selected_room := -1
 ## Taşıma modunda seçili odanın kararlı kimliği ("" = taşıma modu kapalı).
@@ -335,7 +368,8 @@ func _notification(what: int) -> void:
 	# kapatırdı. Popup açıksa yalnızca onu kapat, değilse normal çıkışı yap.
 	if what == NOTIFICATION_WM_GO_BACK_REQUEST:
 		if overlay != null and overlay.visible:
-			_close_popup()
+			# Yığın varsa bir seviye geri, kökteysek kapat (bkz. _pop_popup).
+			_pop_popup()
 		else:
 			get_tree().quit()
 	# Uygulama arka plandan öne gelince (ör. kullanıcı başka bir uygulamadan
@@ -974,11 +1008,31 @@ func _build_ui() -> void:
 	top.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	top.gui_input.connect(func(ev):
 		if ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT:
+			_profile_tab = "account"
 			_open_popup("Profile", _build_profile_popup))
 	root.add_child(top)
+	var top_row := HBoxContainer.new()
+	top_row.add_theme_constant_override("separation", 8)
+	top.add_child(top_row)
 	var top_box := VBoxContainer.new()
 	top_box.add_theme_constant_override("separation", 6)
-	top.add_child(top_box)
+	top_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	top_row.add_child(top_box)
+
+	# Profil girişi artık görünür bir hedef (audit 9): resepsiyonist portresi +
+	# "Me". Otel logosu (icon.svg) BİLEREK kullanılmıyor — o otelin kimliği,
+	# bu ekranın arkasında ise oyuncunun hesabı var.
+	var avatar_col := VBoxContainer.new()
+	avatar_col.add_theme_constant_override("separation", 2)
+	avatar_col.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	top_row.add_child(avatar_col)
+	var avatar_frame := _panel(PALETTE.cream_dark, PALETTE.gold)
+	avatar_col.add_child(avatar_frame)
+	var avatar := _icon("res://assets/guests/receptionist.png", 48)
+	avatar_frame.add_child(avatar)
+	var me_l := _label("Me", 12, PALETTE.wood_dark)
+	me_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	avatar_col.add_child(me_l)
 
 	var row1 := HBoxContainer.new()
 	row1.add_theme_constant_override("separation", 6)
@@ -992,7 +1046,9 @@ func _build_ui() -> void:
 	row1.add_child(gems_label)
 	var gem_add_b := _button("+", 16, PALETTE.green_deep, PALETTE.cream_text)
 	gem_add_b.custom_minimum_size = Vector2(32, 32)
-	gem_add_b.pressed.connect(func(): _open_popup("Buy Gems", _build_gems_popup))
+	gem_add_b.pressed.connect(func():
+		_store_tab = "gems"
+		_open_popup("Store", _build_store_popup))
 	row1.add_child(gem_add_b)
 	var sp := Control.new()
 	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -1021,61 +1077,55 @@ func _build_ui() -> void:
 	xf.set_corner_radius_all(6)
 	xp_bar.add_theme_stylebox_override("fill", xf)
 	row2.add_child(xp_bar)
+	# Prototipteki "220 / 1,000 XP" sayacı — çubuk tek başına ne kadar kaldığını
+	# söylemiyordu.
+	xp_text_label = _label("", 11, PALETTE.muted)
+	row2.add_child(xp_text_label)
 
-	# --- Vardiya durumu + topla
-	shift_label = _label("", 14, PALETTE.text)
-	shift_label.add_theme_color_override("font_outline_color", PALETTE.cream)
-	shift_label.add_theme_constant_override("outline_size", 6)
-	root.add_child(shift_label)
-
-	collect_button = _button("", 16, PALETTE.gold, PALETTE.text)
-	collect_button.custom_minimum_size = Vector2(0, 52)
-	_button_icon(collect_button, "res://assets/ui/coin.svg")
-	collect_button.add_theme_constant_override("icon_max_width", 22)
-	# "Daha güzel bir topla butonu" isteği: normal/hover durumlarına kabartma
-	# (koyu alt kenar) + gölge eklendi, disabled'a dokunulmadı (soluk kalsın).
-	for state in ["normal", "hover", "pressed"]:
-		var sb: StyleBoxFlat = collect_button.get_theme_stylebox(state)
-		sb.border_width_bottom = 6
-		sb.border_color = PALETTE.gold.darkened(0.4)
-		sb.shadow_color = Color(0.1, 0.06, 0.02, 0.25)
-		sb.shadow_size = 6
-		sb.shadow_offset = Vector2(0, 3)
-	collect_button.pressed.connect(_on_collect)
-	root.add_child(collect_button)
+	# --- Gökyüzü durum çipi: bina üstündeki boş gökyüzü artık vardiya durumunu
+	# taşıyor (audit 14). Eski COLLECT barı buradan kalktı — tek birincil buton
+	# alt barın ortasına taşındı (bkz. collect_button aşağıda).
+	var status_wrap := CenterContainer.new()
+	root.add_child(status_wrap)
+	var status_chip := _panel(PALETTE.bar_dark, PALETTE.gold)
+	status_wrap.add_child(status_chip)
+	shift_label = _label("", 14, PALETTE.cream_text)
+	shift_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	status_chip.add_child(shift_label)
 
 	# --- Otel görünümü: çatı tabelası (sabit) + zoom kontrolleri (sabit) +
 	# zoom/pan alan tuval (kat sıraları + lobi + sokak + çim, serbest blok
 	# yerleşimi — kat genişlikleri farklı olabildiği için artık HBoxContainer
 	# satırları yerine manuel konumlandırılmış tek bir Control tuval).
-	roof_panel = PanelContainer.new()
-	var roof_sb := StyleBoxFlat.new()
-	roof_sb.corner_radius_top_left = 20
-	roof_sb.corner_radius_top_right = 20
-	roof_sb.set_content_margin_all(12)
-	roof_sb.border_color = PALETTE.gold
-	roof_sb.set_border_width_all(2)
-	roof_sb.border_width_bottom = 5
-	roof_sb.shadow_color = Color(0.1, 0.06, 0.02, 0.18)
-	roof_sb.shadow_size = 5
-	roof_sb.shadow_offset = Vector2(0, 3)
-	roof_panel.add_theme_stylebox_override("panel", roof_sb)
-	root.add_child(roof_panel)
-	roof_theme_label = _label("", 12, PALETTE.cream_text)
-	roof_theme_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	roof_panel.add_child(roof_theme_label)
-
+	# Tema çipi ve inşa aracı aynı satırda, zoom kontrollerinin yanında: eski
+	# tam genişlik "Theme of the week" barı ve "Shop" sekmesinin Build Mode
+	# toggle'ı kalktı, ikisi de canvas üstü birer çipe indi.
 	var zoom_row := HBoxContainer.new()
 	zoom_row.add_theme_constant_override("separation", 6)
 	root.add_child(zoom_row)
-	build_mode_button = _button("🔨 Build Mode", 13, PALETTE.wood, PALETTE.cream_text)
-	build_mode_button.custom_minimum_size = Vector2(0, 48)
+	build_mode_button = _button("✎ Build", 13, PALETTE.wood, PALETTE.cream_text)
+	build_mode_button.custom_minimum_size = Vector2(0, 44)
 	build_mode_button.toggle_mode = true
 	build_mode_button.toggled.connect(func(on: bool):
 		build_mode = on
-		build_mode_button.text = "🔨 Build Mode: On" if on else "🔨 Build Mode"
+		build_mode_button.text = "✎ Build: On" if on else "✎ Build"
 		_rebuild_hotel())
 	zoom_row.add_child(build_mode_button)
+	roof_panel = PanelContainer.new()
+	var roof_sb := StyleBoxFlat.new()
+	roof_sb.set_corner_radius_all(14)
+	roof_sb.set_content_margin_all(8)
+	roof_sb.border_color = PALETTE.gold
+	roof_sb.set_border_width_all(2)
+	roof_sb.shadow_color = Color(0.1, 0.06, 0.02, 0.18)
+	roof_sb.shadow_size = 4
+	roof_sb.shadow_offset = Vector2(0, 2)
+	roof_panel.add_theme_stylebox_override("panel", roof_sb)
+	roof_panel.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	zoom_row.add_child(roof_panel)
+	roof_theme_label = _label("", 12, PALETTE.cream_text)
+	roof_theme_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	roof_panel.add_child(roof_theme_label)
 	var zoom_row_spacer := Control.new()
 	zoom_row_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	zoom_row.add_child(zoom_row_spacer)
@@ -1138,13 +1188,40 @@ func _build_ui() -> void:
 	building_canvas.mouse_filter = Control.MOUSE_FILTER_PASS
 	zoom_viewport.add_child(building_canvas)
 
-	new_floor_button = _button("", 15, PALETTE.wood_dark, PALETTE.cream_text)
-	new_floor_button.pressed.connect(func():
-		if Game.buy_floor():
-			_play("buy")
-			_show_toast("New floor unlocked!")
-			_maybe_show_upgrade_ad())
-	view_col.add_child(new_floor_button)
+	# "Yeni kat aç" barı kalktı: yuvarlak birincil butonun altında kalıyordu ve
+	# aynı işlem artık Build sekmesinde duruyor (bkz. _build_build_popup).
+
+	# --- Birincil buton: tek durum makinesi. Vardiya yokken "Start shift"
+	# (Shift popup'ını açar), vardiya varken "Collect" + biriken tutar. Eski
+	# COLLECT barı ve Shift sekmesinin ikisinin de yerini tutar. Alt barın
+	# İÇİNDE, Staff ile Quests arasında, diğer sekmelerle aynı hizada durur.
+	collect_button = _button("", 17, PALETTE.banner_red, PALETTE.cream_text)
+	for state in ["normal", "hover", "pressed", "disabled"]:
+		var sb: StyleBoxFlat = collect_button.get_theme_stylebox(state)
+		sb.set_corner_radius_all(60)
+		sb.border_width_bottom = 6
+		sb.border_color = PALETTE.banner_red.darkened(0.35)
+		sb.shadow_color = Color(0.1, 0.06, 0.02, 0.3)
+		sb.shadow_size = 8
+		sb.shadow_offset = Vector2(0, 3)
+	var primary_col := VBoxContainer.new()
+	primary_col.set_anchors_preset(Control.PRESET_FULL_RECT)
+	primary_col.alignment = BoxContainer.ALIGNMENT_CENTER
+	primary_col.add_theme_constant_override("separation", 0)
+	primary_col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	collect_button.add_child(primary_col)
+	primary_label = _label("", 17, PALETTE.cream_text)
+	primary_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	primary_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	primary_col.add_child(primary_label)
+	# Alt satır: vardiya kalan süresi / biriken tutar (eski shift_bar_label).
+	shift_bar_label = _label("", 12, PALETTE.gold_soft)
+	shift_bar_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	shift_bar_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	primary_col.add_child(shift_bar_label)
+	collect_button.pressed.connect(_on_primary_pressed)
+	# Tutorial'ın "vardiya başlat" adımı da artık bu butonu işaret ediyor.
+	shift_button = collect_button
 
 	# --- Alt bar: koyu şerit üzerinde ikonlu kategoriler (Hotel City tarzı)
 	var bar_panel := PanelContainer.new()
@@ -1158,28 +1235,14 @@ func _build_ui() -> void:
 	bottom.add_theme_constant_override("separation", 6)
 	bar_panel.add_child(bottom)
 
-	var shift_b := _bar_button("res://assets/ui/icon_clock.svg", "Shift")
-	shift_b.pressed.connect(func():
-		_tutorial_advance_on("shift_tap")
-		_open_popup("Shift", _build_shift_popup))
-	bottom.add_child(shift_b)
-	shift_bar_label = shift_b.get_meta("label")
-	shift_button = shift_b
-
-	# "Shop" artık popup açmıyor — İnşa Modu'nu açıp mağaza rafını gösterir
-	# (oda ekleme tek yol: rafından sürükleyip binaya bırakmak).
-	var shop_b := _bar_button("res://assets/ui/icon_shop.svg", "Shop")
-	shop_b.pressed.connect(func():
-		build_mode_button.button_pressed = true
-		_show_toast("Build Mode is on — drag a room from the shelf onto the building"))
-	bottom.add_child(shop_b)
-
-	# İstatistik ikonu kaldırıldı — kullanıcı isteği: alt bardan Profil'e
-	# taşındı (bkz. _build_profile_popup, üst bar tıklamasıyla açılır).
+	# Dört sekme: coin harcanan her şey Build'de, gem/gerçek para harcanan her
+	# şey Store'da. Shift sekmesi kalktı (merkez butona döndü), Settings
+	# sekmesi kalktı (Profile ▸ ⚙ Settings'e indi, audit 10-11).
 	for def in [
-		["res://assets/ui/icon_gear.svg", "Staff", _build_staff_popup],
+		["res://assets/ui/wall_block.svg", "Build", _build_build_popup],
+		["res://assets/ui/broom.svg", "Staff", _build_staff_popup],
 		["res://assets/ui/icon_quest.svg", "Quests", _build_quests_popup],
-		["res://assets/ui/icon_gear.svg", "Settings", _build_settings_popup],
+		["res://assets/ui/gem.svg", "Store", _build_store_popup],
 	]:
 		var b := _bar_button(def[0], def[1])
 		var builder: Callable = def[2]
@@ -1187,10 +1250,46 @@ func _build_ui() -> void:
 		b.pressed.connect(func():
 			if title == "Quests":
 				_tutorial_advance_on("quest_tap")
+			if title == "Store":
+				_store_tab = "gems"
 			_open_popup(title, builder))
+		# Birincil buton barın ortasında: Staff ile Quests arasında, yuvarlak
+		# kırmızı buton barın üst kenarına biner (prototip). Burada yalnızca
+		# yerini tutan boşluk var, butonun kendisi ekran köküne asılı.
+		if title == "Quests":
+			var gap := Control.new()
+			gap.custom_minimum_size = Vector2(112, 0)
+			bottom.add_child(gap)
 		bottom.add_child(b)
+		_bar_buttons[title] = b
 		if title == "Quests":
 			quest_bar_button = b
+			# Ödül almaya hazır görev varsa kırmızı rozet (prototipteki "1").
+			quest_badge = _panel(PALETTE.banner_red, PALETTE.cream)
+			quest_badge.visible = false
+			quest_badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			quest_badge.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+			quest_badge.offset_left = -30
+			quest_badge.offset_top = 2
+			quest_badge.offset_right = -2
+			quest_badge.offset_bottom = 28
+			b.add_child(quest_badge)
+			var badge_l := _label("!", 12, PALETTE.cream_text)
+			badge_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			badge_l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			quest_badge.add_child(badge_l)
+
+	# Birincil buton yerleşimin DIŞINDA, ekran köküne asılı: alt barın orta
+	# boşluğuna oturur ve barın üst kenarına biner (prototipteki yuvarlak
+	# kırmızı buton). Bar 96 + alt kenar boşluğu 14 yüksekliğinde.
+	collect_button.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+	collect_button.offset_left = -60
+	collect_button.offset_right = 60
+	collect_button.offset_top = -180
+	collect_button.offset_bottom = -60
+	collect_button.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	collect_button.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	add_child(collect_button)
 
 	# --- Popup katmanı
 	overlay = Control.new()
@@ -1214,12 +1313,42 @@ func _build_ui() -> void:
 	var pv := VBoxContainer.new()
 	pv.add_theme_constant_override("separation", 10)
 	panel.add_child(pv)
+
+	# Başlık şeridi (prototip): koyu plum bant, solda yuvarlak geri/kapat
+	# butonu, ortada başlık, sağda güncel para göstergesi.
+	var head_panel := PanelContainer.new()
+	var head_sb := StyleBoxFlat.new()
+	head_sb.bg_color = PALETTE.bar_dark
+	head_sb.set_corner_radius_all(16)
+	head_sb.set_content_margin_all(8)
+	head_panel.add_theme_stylebox_override("panel", head_sb)
+	pv.add_child(head_panel)
 	var head := HBoxContainer.new()
-	pv.add_child(head)
-	popup_title = _label("", 21, PALETTE.wood_dark)
+	head.add_theme_constant_override("separation", 8)
+	head_panel.add_child(head)
+	popup_back_button = _button("‹", 20, PALETTE.wood, PALETTE.cream_text)
+	popup_back_button.custom_minimum_size = Vector2(48, 48)
+	for state in ["normal", "hover", "pressed"]:
+		(popup_back_button.get_theme_stylebox(state) as StyleBoxFlat).set_corner_radius_all(24)
+	popup_back_button.visible = false
+	popup_back_button.pressed.connect(_pop_popup)
+	head.add_child(popup_back_button)
+	popup_title = _label("", 21, PALETTE.cream_text)
 	popup_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	popup_title.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	head.add_child(popup_title)
-	var close_b := _button("Close", 15, PALETTE.wood, PALETTE.cream_text)
+	head.add_child(_icon("res://assets/ui/coin.svg", 20))
+	popup_coins_label = _label("", 14, PALETTE.cream_text)
+	popup_coins_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	head.add_child(popup_coins_label)
+	head.add_child(_icon("res://assets/ui/gem.svg", 20))
+	popup_gems_label = _label("", 14, PALETTE.cream_text)
+	popup_gems_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	head.add_child(popup_gems_label)
+	var close_b := _button("✕", 16, PALETTE.wood, PALETTE.cream_text)
+	close_b.custom_minimum_size = Vector2(48, 48)
+	for state in ["normal", "hover", "pressed"]:
+		(close_b.get_theme_stylebox(state) as StyleBoxFlat).set_corner_radius_all(24)
 	close_b.pressed.connect(_close_popup)
 	head.add_child(close_b)
 	popup_scroll = ScrollContainer.new()
@@ -1236,8 +1365,10 @@ func _build_ui() -> void:
 	toast_panel.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
 	toast_panel.offset_left = 40
 	toast_panel.offset_right = -40
-	toast_panel.offset_top = -156
-	toast_panel.offset_bottom = -84
+	# Barın (96 + 14) ve onun üstüne binen yuvarlak butonun (tepesi -180)
+	# ikisinin de ÜSTÜNDE kalır — hiçbirine binmez (audit 15).
+	toast_panel.offset_top = -272
+	toast_panel.offset_bottom = -200
 	toast_panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	toast_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(toast_panel)
@@ -1320,7 +1451,7 @@ func _build_start_screen() -> void:
 	col.add_child(title)
 
 	# Alt: sürüm etiketi — köşede, sade, merkez sütundan ayrı çapa.
-	var version_label := _label("v1.0", 11, PALETTE.muted)
+	var version_label := _label("v%s" % GAME_VERSION, 11, PALETTE.muted)
 	version_label.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
 	version_label.offset_top = -34
 	version_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -1490,16 +1621,52 @@ func _bar_button(icon_path: String, text: String) -> Button:
 	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	b.add_child(v)
 	if icon_path != "":
+		# Aktif sekmede ikon krem dolgulu, altın kenarlı bir kutucuğa oturur
+		# (prototipteki seçili durum) — kutu pasifken görünmez.
 		var wrap := CenterContainer.new()
 		wrap.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		wrap.add_child(_icon(icon_path, 38))
+		var box := PanelContainer.new()
+		box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var box_sb := StyleBoxFlat.new()
+		box_sb.bg_color = PALETTE.cream
+		box_sb.border_color = PALETTE.gold
+		box_sb.set_border_width_all(2)
+		box_sb.set_corner_radius_all(12)
+		box_sb.set_content_margin_all(4)
+		box.add_theme_stylebox_override("panel", box_sb)
+		var empty_sb := StyleBoxEmpty.new()
+		empty_sb.set_content_margin_all(6)
+		box.set_meta("active_sb", box_sb)
+		box.set_meta("idle_sb", empty_sb)
+		box.add_theme_stylebox_override("panel", empty_sb)
+		var ico := _icon(icon_path, 34)
+		ico.modulate.a = 0.72
+		box.add_child(ico)
+		wrap.add_child(box)
 		v.add_child(wrap)
+		b.set_meta("icon", ico)
+		b.set_meta("icon_box", box)
 	var l := _label(text, 18 if icon_path == "" else 12, PALETTE.cream_text)
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	l.modulate.a = 0.78
 	v.add_child(l)
 	b.set_meta("label", l)
 	return b
+
+
+## Alt bar sekmesini aktif/pasif görünüme geçirir (prototipteki seçili durum:
+## krem kutu + altın kenar, etiket altın ve tam opak).
+func _set_bar_button_active(b: Button, active: bool) -> void:
+	if b == null or not b.has_meta("icon_box"):
+		return
+	var box: PanelContainer = b.get_meta("icon_box")
+	box.add_theme_stylebox_override("panel", box.get_meta("active_sb") if active else box.get_meta("idle_sb"))
+	var ico: TextureRect = b.get_meta("icon")
+	ico.modulate.a = 1.0 if active else 0.72
+	var l: Label = b.get_meta("label")
+	l.modulate.a = 1.0 if active else 0.78
+	l.add_theme_color_override("font_color", PALETTE.gold_soft if active else PALETTE.cream_text)
 
 
 func _spacer_x(px: int) -> Control:
@@ -1566,6 +1733,9 @@ func _update_live_labels() -> void:
 		lobby_name_label.text = Game.hotel_name.to_upper()
 	coins_label.text = _fmt(Game.coins)
 	gems_label.text = str(Game.gems)
+	if popup_coins_label:
+		popup_coins_label.text = _fmt(Game.coins)
+		popup_gems_label.text = str(Game.gems)
 	var stars := Game.star_rating()
 	for i in 5:
 		star_icons[i].texture = _tex("res://assets/ui/star_full.svg" if i < stars else "res://assets/ui/star_empty.svg")
@@ -1575,24 +1745,50 @@ func _update_live_labels() -> void:
 	var need := Game.xp_for_level(lv + 1) - Game.xp_for_level(lv)
 	xp_bar.max_value = need
 	xp_bar.value = cur_xp
+	if xp_text_label:
+		xp_text_label.text = "%s / %s XP" % [_fmt(cur_xp), _fmt(need)]
+	_update_bar_active()
+	var has_income := int(Game.pending_income) > 0
 	if Game.shift_active():
 		shift_label.text = "%s left in the shift · %.0f coins/hour" % [
 			_fmt_hms(Game.shift_remaining_game_hours()), Game.hourly_income()]
-		shift_bar_label.text = _fmt_hms(Game.shift_remaining_game_hours())
-		shift_bar_label.add_theme_color_override("font_color", PALETTE.gold_soft)
 	else:
 		shift_label.text = "No shift running — the hotel isn't earning."
-		shift_bar_label.text = "Shift"
-		shift_bar_label.add_theme_color_override("font_color", PALETTE.cream_text)
-	collect_button.text = "COLLECT — %s" % _fmt(int(Game.pending_income))
-	var has_income := int(Game.pending_income) > 0
-	collect_button.disabled = not has_income
+	# Tek durum makinesi: biriken para varsa (vardiya bitmiş olsa da) "Collect",
+	# yoksa vardiya sürüyorsa kalan süre, hiçbiri yoksa "Start shift".
+	if has_income:
+		primary_label.text = "Collect"
+		shift_bar_label.text = "%s coins" % _fmt(int(Game.pending_income))
+		collect_button.disabled = false
+	elif Game.shift_active():
+		primary_label.text = "Collect"
+		shift_bar_label.text = "%s left" % _fmt_hms(Game.shift_remaining_game_hours())
+		collect_button.disabled = true
+	else:
+		primary_label.text = "Start shift"
+		shift_bar_label.text = "1-24 h"
+		collect_button.disabled = false
 	if has_income and not _collect_pulse_on:
 		_collect_pulse_on = true
 		_start_collect_pulse()
 	elif not has_income and _collect_pulse_on:
 		_collect_pulse_on = false
 		_stop_collect_pulse()
+
+
+## Alt barda hangi sekmenin "seçili" göründüğü: açık popup varsa o, yoksa
+## İnşa Modu açıkken Build. Görev rozeti de burada tazelenir.
+func _update_bar_active() -> void:
+	for title in _bar_buttons:
+		var active: bool = title == _active_tab or (title == "Build" and build_mode and _active_tab == "")
+		_set_bar_button_active(_bar_buttons[title], active)
+	if quest_badge:
+		var q: Dictionary = Game.current_quest()
+		var ready := false
+		if not q.is_empty():
+			var p: Array = Game.quest_progress(q)
+			ready = int(p[0]) >= int(p[1])
+		quest_badge.visible = ready
 
 
 ## Birikim varken topla butonunu hafifçe büyütüp küçültüp durur ("numaraların
@@ -1919,13 +2115,6 @@ func _rebuild_hotel() -> void:
 			c.queue_free()
 		for type in Game.eco.room_types:
 			build_shop_row.add_child(_make_shop_tray_card(type))
-
-	# Yeni kat (tuvalin dışında, sabit — satın alınca yeni bir kat satırı
-	# tuvale eklenir)
-	new_floor_button.visible = Game.floors < int(Game.eco.building.max_floors)
-	if new_floor_button.visible:
-		new_floor_button.text = "Unlock a new floor — %s coins" % _fmt(Game.floor_price())
-		new_floor_button.disabled = not Game.can_buy_floor()
 
 	_room_visual_cache = next_room_cache
 
@@ -2669,6 +2858,16 @@ func _on_guest_poked(btn: Control) -> void:
 		_show_toast("The guest yawned and went back to sleep… (%s left)" % _count(Game.pokes_left(), "nudge"))
 
 
+## Merkez butonun tek giriş noktası: biriken para varsa toplar, yoksa vardiya
+## seçme ekranını açar (bkz. _update_live_labels'daki aynı durum makinesi).
+func _on_primary_pressed() -> void:
+	if int(Game.pending_income) > 0:
+		_on_collect()
+		return
+	_tutorial_advance_on("shift_tap")
+	_open_popup("Shift", _build_shift_popup)
+
+
 func _on_collect() -> void:
 	_tutorial_advance_on("collect_tap")
 	var from := collect_button.global_position + collect_button.size / 2.0
@@ -3020,10 +3219,21 @@ func _show_rename_hotel_modal() -> void:
 	field.select_all()
 
 
+## Yeni bir ekran yığını başlatır: alt bar sekmeleri arasında gezinmek yığını
+## büyütmemeli, her sekme kendi kökü.
 func _open_popup(title: String, builder: Callable) -> void:
+	_popup_stack.clear()
+	_push_popup(title, builder)
+
+
+## Yığına bir seviye iner (ör. Store ▸ Offers → oda seçimi). Başlıktaki ‹
+## butonu buradan geri döner.
+func _push_popup(title: String, builder: Callable) -> void:
 	_play("tap")
-	popup_title.text = title
-	popup_builder = builder
+	if _popup_stack.is_empty():
+		_active_tab = title
+	_popup_stack.append({"title": title, "builder": builder})
+	_sync_popup_head()
 	overlay.visible = true
 	_rebuild_popup()
 	# ScrollContainer TÜM popup'lar arasında paylaşılıyor (bkz. popup_scroll) —
@@ -3036,10 +3246,42 @@ func _open_popup(title: String, builder: Callable) -> void:
 	popup_scroll.scroll_vertical = 0
 
 
+## Yığında bir seviye geri gider; kökteysek popup'ı kapatır. Android geri
+## tuşu ve başlıktaki ‹ butonu buraya bağlı.
+func _pop_popup() -> void:
+	if _popup_stack.size() <= 1:
+		_close_popup()
+		return
+	_popup_stack.pop_back()
+	_play("tap")
+	_sync_popup_head()
+	_rebuild_popup()
+	popup_scroll.scroll_vertical = 0
+
+
+## Başlık, geri butonu ve popup_builder'ı yığının tepesiyle eşitler.
+func _sync_popup_head() -> void:
+	if _popup_stack.is_empty():
+		popup_builder = Callable()
+		popup_title.text = ""
+		popup_back_button.visible = false
+		return
+	var top: Dictionary = _popup_stack.back()
+	popup_title.text = String(top.title)
+	popup_builder = top.builder
+	popup_back_button.visible = _popup_stack.size() > 1
+
+
 func _close_popup() -> void:
 	overlay.visible = false
+	_active_tab = ""
+	_popup_stack.clear()
 	popup_builder = Callable()
+	if popup_back_button:
+		popup_back_button.visible = false
 	selected_room = -1
+	_pending_bundle_id = ""
+	_save_code_visible = false
 	# Hesap bağlama tarayıcıyı bekliyorken bu ekranı kapatmak "vazgeçtim"
 	# demektir: bekleyen turu bırak, yoksa await zaman aşımına (dakikalar) kadar
 	# asılı kalır ve oyuncu yeniden deneyemez.
@@ -3375,10 +3617,31 @@ func _build_stats_popup(c: VBoxContainer) -> void:
 	_add_stats_rows(c)
 
 
-## Üst bardaki seviye/para alanına dokununca açılır (bkz. _rebuild_hotel'deki
-## top.gui_input). Hesap bağlama (ileride) + Premium + Prestij + İstatistik
-## tek ekranda toplandı — kullanıcı isteği: bunlar Ayarlar'dan sadeleştirildi.
+## Üst bardaki avatara dokununca açılır. Dört sekme: Account / Prestige /
+## Statistics / ⚙ Settings. Premium ürünler burada DEĞİL — gerçek para ve gem
+## harcanan her şey Store'a taşındı (audit 7-8), burada yalnızca "benim
+## hesabım ve geçmişim" duruyor.
 func _build_profile_popup(c: VBoxContainer) -> void:
+	var pick := func(k: String):
+		_profile_tab = k
+		_rebuild_popup()
+		popup_scroll.scroll_vertical = 0
+	_popup_tab_row(c, [
+		["account", "Account"], ["prestige", "Prestige"],
+		["stats", "Stats"], ["settings", "⚙ Settings"],
+	], _profile_tab, pick)
+	match _profile_tab:
+		"prestige":
+			_add_prestige_rows(c)
+		"stats":
+			_add_stats_rows(c)
+		"settings":
+			_build_settings_popup(c)
+		_:
+			_add_account_rows(c)
+
+
+func _add_account_rows(c: VBoxContainer) -> void:
 	_build_cloud_section(c)
 
 	c.add_child(_spacer_y(6))
@@ -3387,7 +3650,14 @@ func _build_profile_popup(c: VBoxContainer) -> void:
 	var export_field := LineEdit.new()
 	export_field.text = export_code
 	export_field.editable = false
+	# Ham base64 kod açıkta durmasın (audit 13) — istenince gösterilir.
+	export_field.secret = not _save_code_visible
 	c.add_child(export_field)
+	var show_b := _button("Hide code" if _save_code_visible else "Show code", 14, PALETTE.wood_dark, PALETTE.cream_text)
+	show_b.pressed.connect(func():
+		_save_code_visible = not _save_code_visible
+		_rebuild_popup())
+	c.add_child(show_b)
 	var copy_b := _button("Copy code to clipboard", 14, PALETTE.wood, PALETTE.cream_text)
 	copy_b.pressed.connect(func():
 		DisplayServer.clipboard_set(export_code)
@@ -3411,38 +3681,8 @@ func _build_profile_popup(c: VBoxContainer) -> void:
 			_show_toast("Invalid code — check it and try again"))
 	c.add_child(import_b)
 
-	c.add_child(_spacer_y(10))
-	c.add_child(_label("Premium", 15, PALETTE.wood_dark))
-	if Game.remove_ads:
-		c.add_child(_label("Ads removed. Thank you!", 13, PALETTE.green_deep))
-	else:
-		var no_ads_b := _button("Remove Ads", 15, PALETTE.green_deep, PALETTE.cream_text)
-		_button_icon(no_ads_b, "res://assets/ui/ad_video.png")
-		no_ads_b.pressed.connect(func():
-			IAP.purchase(IAP.PRODUCT_REMOVE_ADS, func(ok: bool):
-				if ok:
-					Game.remove_ads = true
-					Game.save_game()
-					_play("buy")
-					_show_toast("Ads removed!")
-					_rebuild_popup()))
-		c.add_child(no_ads_b)
-	if Game.permanent_income_mult > 1.0:
-		c.add_child(_label("Income multiplier active: ×%.1f" % Game.permanent_income_mult, 13, PALETTE.green_deep))
-	else:
-		var x2_b := _button("Double Your Earnings", 15, PALETTE.green_deep, PALETTE.cream_text)
-		_button_icon(x2_b, "res://assets/ui/dollar.png")
-		x2_b.pressed.connect(func():
-			IAP.purchase(IAP.PRODUCT_INCOME_2X, func(ok: bool):
-				if ok:
-					Game.permanent_income_mult = 2.0
-					Game.save_game()
-					_play("buy")
-					_show_toast("Earnings doubled!")
-					_rebuild_popup()))
-		c.add_child(x2_b)
 
-	c.add_child(_spacer_y(10))
+func _add_prestige_rows(c: VBoxContainer) -> void:
 	c.add_child(_label("Prestige — multiplier ×%.2f (round %d)" % [Game.prestige_mult(), Game.prestige_level], 15, PALETTE.wood_dark))
 	if Game.can_prestige():
 		var next_mult: float = Game.prestige_mult() + float(Game.eco.prestige.mult_gain)
@@ -3459,10 +3699,6 @@ func _build_profile_popup(c: VBoxContainer) -> void:
 		c.add_child(_label_wrap("Prestige resets your coins, rooms, quests and achievements; the multiplier is permanent.", 12, PALETTE.muted))
 	else:
 		c.add_child(_label("Prestige requires level %d (you are %d)." % [int(Game.eco.prestige.min_level), Game.level()], 13, PALETTE.muted))
-
-	c.add_child(_spacer_y(10))
-	c.add_child(_label("Statistics", 15, PALETTE.wood_dark))
-	_add_stats_rows(c)
 
 
 ## Profil popup'ının "Hesap / Bulut kaydı" bölümü.
@@ -3662,6 +3898,197 @@ func _cloud_side_column(title: String, lv: int, coins: int, gems: int,
 	return box
 
 
+## Popup içi sekme şeridi. Seçim popup dışında (üye değişkende) durur, çünkü
+## popup her state_changed'de baştan kurulur.
+func _popup_tab_row(c: VBoxContainer, tabs: Array, current: String, on_pick: Callable) -> void:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 6)
+	c.add_child(row)
+	for t in tabs:
+		var key: String = String(t[0])
+		var active: bool = key == current
+		var b := _button(String(t[1]), 14,
+			PALETTE.gold if active else PALETTE.wood,
+			PALETTE.text if active else PALETTE.cream_text)
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		b.custom_minimum_size = Vector2(0, 46)
+		b.pressed.connect(func(): on_pick.call(key))
+		row.add_child(b)
+	c.add_child(_spacer_y(2))
+
+
+## Mağaza: gem veya gerçek parayla alınan HER ŞEY burada. Coin harcanan hiçbir
+## şey buraya girmez (o taraf Build ve oda ekranı) — dekor paketleri ve
+## auto-renew coin fiyatlı olduğu için prototipin aksine Store'da DEĞİL.
+func _build_store_popup(c: VBoxContainer) -> void:
+	var pick := func(k: String):
+		_store_tab = k
+		_rebuild_popup()
+		popup_scroll.scroll_vertical = 0
+	_popup_tab_row(c, [["gems", "Gems"], ["premium", "Premium"]], _store_tab, pick)
+	match _store_tab:
+		"premium":
+			_add_premium_rows(c)
+		_:
+			_build_gems_popup(c)
+
+
+## Kalıcı ürünler + geri yükleme. Remove Ads ve 2x buraya Profile'dan taşındı
+## (audit 7): gerçek parayla alınan her şeyin tek adresi Store.
+func _add_premium_rows(c: VBoxContainer) -> void:
+	if Game.remove_ads:
+		c.add_child(_label("Ads removed. Thank you!", 14, PALETTE.green_deep))
+	else:
+		var no_ads_b := _button("Remove Ads — %s" % IAP.price_for(IAP.PRODUCT_REMOVE_ADS, "$4.99"), 15, PALETTE.green_deep, PALETTE.cream_text)
+		_button_icon(no_ads_b, "res://assets/ui/ad_video.png")
+		no_ads_b.pressed.connect(func():
+			IAP.purchase(IAP.PRODUCT_REMOVE_ADS, func(ok: bool):
+				if ok:
+					Game.remove_ads = true
+					Game.save_game()
+					_play("buy")
+					_show_toast("Ads removed!")
+					_rebuild_popup()))
+		c.add_child(no_ads_b)
+	if Game.permanent_income_mult > 1.0:
+		c.add_child(_label("Income multiplier active: ×%.1f" % Game.permanent_income_mult, 14, PALETTE.green_deep))
+	else:
+		var x2_b := _button("Double Your Earnings — %s" % IAP.price_for(IAP.PRODUCT_INCOME_2X, "$9.99"), 15, PALETTE.green_deep, PALETTE.cream_text)
+		_button_icon(x2_b, "res://assets/ui/dollar.png")
+		x2_b.pressed.connect(func():
+			IAP.purchase(IAP.PRODUCT_INCOME_2X, func(ok: bool):
+				if ok:
+					Game.permanent_income_mult = 2.0
+					Game.save_game()
+					_play("buy")
+					_show_toast("Earnings doubled!")
+					_rebuild_popup()))
+		c.add_child(x2_b)
+
+	# Auto-renew BİLEREK burada değil: coin ile alınıyor, kural para birimine
+	# göre — coin harcanan her şey oyun tarafında kalır. Yeri Shift popup'ı
+	# (bkz. _add_auto_renew_shop).
+	c.add_child(_spacer_y(8))
+	_add_restore_purchases_row(c)
+
+
+## Play politikası tüketilmeyen ürünler için geri yükleme yolu istiyor
+## (denetim kritik madde 1). Kanonik yer burası; Ayarlar'daki satır buraya
+## getirir, ikinci bir akış yazılmaz.
+func _add_restore_purchases_row(c: VBoxContainer) -> void:
+	var r_b := _button("Restore purchases", 15, PALETTE.wood, PALETTE.cream_text)
+	r_b.pressed.connect(func():
+		IAP.restore_purchases()
+		_show_toast("Checking the store for your earlier purchases…"))
+	c.add_child(r_b)
+	c.add_child(_label_wrap("Changed device? This brings back Remove Ads and Double Your Earnings.", 12, PALETTE.muted))
+
+
+## Hazır dekor paketleri (coin fiyatlı, bu yüzden Build'in altında). Oda
+## ekranından da alınabiliyor; burada önce paket, sonra oda seçiliyor — yığın
+## sayesinde geri dönüş çalışıyor.
+func _add_offer_rows(c: VBoxContainer) -> void:
+	var bundles: Array = Game.eco.get("bundles", [])
+	if bundles.is_empty():
+		c.add_child(_label("No offers right now — check back later.", 14, PALETTE.muted))
+		return
+	c.add_child(_label_wrap("Ready-made decor sets. Pick a set, then pick the room it goes into.", 12, PALETTE.muted))
+	for bd in bundles:
+		var sp_total := 0
+		for iid in bd.items:
+			sp_total += int(Game.item_def(iid).sp)
+		var need_lv := Game.bundle_unlock_level(bd)
+		var b := _button("%s — SP +%d — %s coins (%%%d off)" % [
+			bd.name, sp_total, _fmt(Game.bundle_price(bd)), int(float(bd.discount) * 100.0)],
+			14, PALETTE.green_deep, PALETTE.cream_text)
+		if Game.level() < need_lv:
+			b.text = "%s — unlocks at level %d" % [bd.name, need_lv]
+			b.disabled = true
+		else:
+			b.disabled = not Game.can_buy_bundle(bd)
+			var bid: String = bd.id
+			b.pressed.connect(func():
+				_pending_bundle_id = bid
+				_push_popup("Choose a room", _build_bundle_room_picker))
+		c.add_child(b)
+
+
+func _build_bundle_room_picker(c: VBoxContainer) -> void:
+	var bd := Game.bundle_def(_pending_bundle_id)
+	if bd.is_empty():
+		c.add_child(_label("That set is no longer available.", 14, PALETTE.muted))
+		return
+	c.add_child(_label("%s — %s coins" % [bd.name, _fmt(Game.bundle_price(bd))], 16, PALETTE.wood_dark))
+	c.add_child(_label_wrap("Which room should it decorate?", 12, PALETTE.muted))
+	if Game.rooms.is_empty():
+		c.add_child(_label("You have no rooms yet — build one first.", 14, PALETTE.muted))
+		return
+	var bid := _pending_bundle_id
+	for i in Game.rooms.size():
+		var room: Dictionary = Game.rooms[i]
+		var idx := i
+		var b := _button("%s — %s · SP %d" % [
+			Game.room_def(room.type).name, Game.tier_name(Game.room_tier(room)), Game.room_score(room)],
+			14, PALETTE.wood, PALETTE.cream_text)
+		b.pressed.connect(func():
+			if Game.buy_bundle(idx, bid):
+				_play("buy")
+				_show_toast("%s placed!" % Game.bundle_def(bid).name)
+				_pop_popup()
+				_maybe_show_upgrade_ad()
+			else:
+				_show_toast("Not enough coins for that set"))
+		c.add_child(b)
+
+
+## İnşa: coin harcanan yapısal alımlar. Oda tek tek buradan da alınabilir
+## (otomatik yerleşir), sürükle-bırak için İnşa Modu açılır.
+func _build_build_popup(c: VBoxContainer) -> void:
+	c.add_child(_label("Blocks used: %d / %d · floors %d" % [
+		_blocks_used(), Game.max_slots(), Game.floors], 14, PALETTE.muted))
+
+	if Game.floors < int(Game.eco.building.max_floors):
+		var f_b := _button("Unlock a new floor — %s coins" % _fmt(Game.floor_price()), 15, PALETTE.wood_dark, PALETTE.cream_text)
+		f_b.disabled = not Game.can_buy_floor()
+		f_b.pressed.connect(func():
+			if Game.buy_floor():
+				_play("buy")
+				_show_toast("New floor unlocked!")
+				_maybe_show_upgrade_ad())
+		c.add_child(f_b)
+
+	c.add_child(_spacer_y(8))
+	c.add_child(_label("Rooms", 16, PALETTE.wood_dark))
+	for type in Game.eco.room_types:
+		var d: Dictionary = Game.room_def(type)
+		var need_lv := int(d.unlock_level)
+		var b := _button("%s — %s coins" % [String(d.name), _fmt(int(d.price))], 14, PALETTE.wood, PALETTE.cream_text)
+		if Game.level() < need_lv:
+			b.text = "%s — unlocks at level %d" % [String(d.name), need_lv]
+			b.disabled = true
+		else:
+			b.disabled = not Game.can_buy_room(type)
+			var t: String = type
+			b.pressed.connect(func():
+				if Game.buy_room(t):
+					_play("buy")
+					_show_toast("%s built!" % String(Game.room_def(t).name))
+					_maybe_show_upgrade_ad())
+		c.add_child(b)
+
+	c.add_child(_spacer_y(8))
+	c.add_child(_label("Decor sets", 16, PALETTE.wood_dark))
+	_add_offer_rows(c)
+
+	c.add_child(_spacer_y(8))
+	var bm_b := _button("✎ Open Build Mode — place rooms yourself", 14, PALETTE.wood_dark, PALETTE.cream_text)
+	bm_b.pressed.connect(func():
+		build_mode_button.button_pressed = true
+		_close_popup()
+		_show_toast("Build Mode is on — drag a room from the shelf onto the building"))
+	c.add_child(bm_b)
+
+
 func _build_gems_popup(c: VBoxContainer) -> void:
 	c.add_child(_label("Buy gems", 16, PALETTE.wood_dark))
 	c.add_child(_label_wrap("Prices are set in the store (Play Console) — the ones below are suggestions.", 12, PALETTE.muted))
@@ -3706,8 +4133,27 @@ func _build_settings_popup(c: VBoxContainer) -> void:
 	c.add_child(m_b)
 
 	c.add_child(_spacer_y(8))
-	c.add_child(_label_wrap("Auto-renew moved to Shift; Premium/Prestige and save transfer moved to Profile.", 12, PALETTE.muted))
-	c.add_child(_spacer_y(4))
+	c.add_child(_label("Purchases", 15, PALETTE.wood_dark))
+	_add_restore_purchases_row(c)
+
+	c.add_child(_spacer_y(8))
+	c.add_child(_label("Support & legal", 15, PALETTE.wood_dark))
+	var privacy_b := _button("Privacy policy", 14, PALETTE.wood, PALETTE.cream_text)
+	privacy_b.pressed.connect(func(): OS.shell_open(PRIVACY_POLICY_URL))
+	c.add_child(privacy_b)
+	# Reklam onayı bir kez alınıp bir daha değiştirilemiyordu (audit 4) — UMP
+	# gizlilik seçenekleri formu buradan yeniden açılır.
+	if Ads.consent_options_available():
+		var ad_b := _button("Ad preferences", 14, PALETTE.wood, PALETTE.cream_text)
+		ad_b.pressed.connect(func():
+			Ads.show_privacy_options_form()
+			_show_toast("Opening your ad preferences…"))
+		c.add_child(ad_b)
+	var support_b := _button("Contact support", 14, PALETTE.wood, PALETTE.cream_text)
+	support_b.pressed.connect(func(): OS.shell_open("mailto:%s?subject=Little%%20Grand%%20Hotel" % SUPPORT_EMAIL))
+	c.add_child(support_b)
+
+	c.add_child(_spacer_y(8))
 	c.add_child(_label("Danger zone:", 13, PALETTE.banner_red))
 	var r_b := _button("Reset save", 15, PALETTE.banner_red, PALETTE.cream_text)
 	r_b.pressed.connect(func():
@@ -3720,6 +4166,25 @@ func _build_settings_popup(c: VBoxContainer) -> void:
 			r_b.text = "Are you sure?\nTap again to delete")
 	c.add_child(r_b)
 	c.add_child(_label("Resetting erases all progress permanently.", 12, PALETTE.muted))
+	# "Reset save" yalnızca yerel kaydı siliyordu; buluttaki doküman kalıyordu
+	# (audit 3). Bu satır ikisini birden siler.
+	var del_b := _button("Delete account data", 15, PALETTE.banner_red, PALETTE.cream_text)
+	del_b.pressed.connect(func():
+		if not del_b.get_meta("armed", false):
+			del_b.set_meta("armed", true)
+			del_b.text = "Are you sure?\nTap again to delete everything"
+			return
+		del_b.disabled = true
+		var cloud_ok: bool = await CloudSave.delete_cloud_data()
+		Game.reset_game()
+		_close_popup()
+		_show_toast("Your data was deleted." if cloud_ok else "Local data deleted — the cloud copy could not be reached.")
+	)
+	c.add_child(del_b)
+	c.add_child(_label_wrap("Deletes this device's save and the copy stored in the cloud for your account.", 12, PALETTE.muted))
+
+	c.add_child(_spacer_y(8))
+	c.add_child(_label("Little Grand Hotel · v%s" % GAME_VERSION, 12, PALETTE.muted))
 
 
 func _build_quests_popup(c: VBoxContainer) -> void:
@@ -3808,7 +4273,7 @@ func _show_daily_reward_popup(on_closed: Callable = Callable()) -> void:
 	var reward_text := "%s coins" % _fmt(int(reward.get("coins", 0)))
 	if int(reward.get("gems", 0)) > 0:
 		reward_text += " + %s" % _count(int(reward.gems), "gem")
-	_show_simple_modal("Daily Reward", "Day %d streak!\nYour reward: %s" % [streak, reward_text], "Buy",
+	_show_simple_modal("Daily Reward", "Day %d streak!\nYour reward: %s" % [streak, reward_text], "Claim",
 		func():
 			var granted := Game.claim_daily_reward()
 			if not granted.is_empty():
