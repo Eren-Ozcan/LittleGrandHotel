@@ -1435,13 +1435,13 @@ func _build_ui() -> void:
 
 	# Birincil buton yerleşimin DIŞINDA, ekran köküne asılı: alt barın orta
 	# boşluğuna oturur ve barın üst kenarına biner (prototipteki yuvarlak
-	# kırmızı buton). Bar 96 yüksekliğinde ve artık ekranın en altına oturuyor
-	# (kök kenar boşluğu kalktı), bu yüzden ofsetler 14 piksel aşağı kaydı.
+	# kırmızı buton). Bar 104 yüksekliğinde ve ekranın en altına oturuyor (kök
+	# kenar boşluğu kalktı); ofsetler bunun üzerinden veriliyor.
 	collect_button.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
 	collect_button.offset_left = -60
 	collect_button.offset_right = 60
-	collect_button.offset_top = -166
-	collect_button.offset_bottom = -46
+	collect_button.offset_top = -174
+	collect_button.offset_bottom = -54
 	collect_button.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	collect_button.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	add_child(collect_button)
@@ -1534,10 +1534,10 @@ func _build_ui() -> void:
 	toast_wrap.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
 	toast_wrap.offset_left = 40
 	toast_wrap.offset_right = -40
-	# Barın (96) ve onun üstüne binen yuvarlak butonun (tepesi -166) ikisinin de
+	# Barın (104) ve onun üstüne binen yuvarlak butonun (tepesi -174) ikisinin de
 	# ÜSTÜNDE kalır — hiçbirine binmez (audit 15).
-	toast_wrap.offset_top = -258
-	toast_wrap.offset_bottom = -186
+	toast_wrap.offset_top = -266
+	toast_wrap.offset_bottom = -194
 	toast_wrap.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	toast_wrap.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	# Menü sayfasının (z_index 100) da üstünde — bkz. oradaki not.
@@ -2138,7 +2138,7 @@ func _icon(path: String, px: int) -> TextureRect:
 func _bar_button(icon_path: String, text: String) -> Button:
 	var b := Button.new()
 	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	b.custom_minimum_size = Vector2(0, 84)
+	b.custom_minimum_size = Vector2(0, 92)
 	for state in ["normal", "hover", "pressed", "disabled"]:
 		var sb := StyleBoxFlat.new()
 		sb.bg_color = PALETTE.bar_dark
@@ -2163,7 +2163,9 @@ func _bar_button(icon_path: String, text: String) -> Button:
 		wrap.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		var box := PanelContainer.new()
 		box.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		box.custom_minimum_size = Vector2(42, 38)
+		# Prototip karosu 42x38 / ikon 34'tü; kullanıcı geri bildirimi "ikonlar
+		# küçük" olduğu için karo ve ikon bir kademe büyütüldü.
+		box.custom_minimum_size = Vector2(52, 46)
 		var box_sb := StyleBoxFlat.new()
 		box_sb.bg_color = PALETTE.cream
 		box_sb.border_color = PALETTE.gold
@@ -2191,7 +2193,7 @@ func _bar_button(icon_path: String, text: String) -> Button:
 		box.set_meta("active_sb", box_sb)
 		box.set_meta("idle_sb", idle_sb)
 		box.add_theme_stylebox_override("panel", idle_sb)
-		var ico := _icon(icon_path, 34)
+		var ico := _icon(icon_path, 42)
 		ico.modulate.a = 0.72
 		box.add_child(ico)
 		wrap.add_child(box)
