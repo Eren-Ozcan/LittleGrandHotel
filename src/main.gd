@@ -1179,13 +1179,23 @@ func _build_ui() -> void:
 	# taşıyor (audit 14). Eski COLLECT barı buradan kalktı — tek birincil buton
 	# alt barın ortasına taşındı (bkz. collect_button aşağıda).
 	var status_wrap := CenterContainer.new()
-	root.add_child(status_wrap)
+	_edge_pad(root).add_child(status_wrap)
 	# Prototipteki gökyüzü hapı: yarı saydam koyu zemin, kenar yok, tam yuvarlak
 	# uçlar. Saat ikonu çipi bir bakışta "zaman" olarak okutuyor.
 	var status_chip := _chip(PALETTE.chip_dark)
+	# Çip Shift sayfasının İKİNCİ girişi: merkez buton biriken para varken
+	# "Collect"e döndüğü için tek başına vardiyayı bitirmeye ("Finish now")
+	# ulaştırmıyordu. Durumu zaten yazan çip doğal hedef.
+	status_chip.mouse_filter = Control.MOUSE_FILTER_STOP
+	status_chip.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	status_chip.gui_input.connect(func(ev):
+		if ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT:
+			_tutorial_advance_on("shift_tap")
+			_open_popup("Shift", _build_shift_popup))
 	status_wrap.add_child(status_chip)
 	var status_row := HBoxContainer.new()
 	status_row.add_theme_constant_override("separation", 7)
+	status_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	status_chip.add_child(status_row)
 	var clock_icon := _icon("res://assets/ui/icon_clock.svg", 17)
 	clock_icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -1194,6 +1204,11 @@ func _build_ui() -> void:
 	shift_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	shift_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	status_row.add_child(shift_label)
+	# Dokunulabilir olduğunu gösteren chevron — çip aksi hâlde salt bilgi gibi
+	# okunuyor.
+	var status_arrow := _label("›", 14, PALETTE.gold_soft)
+	status_arrow.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	status_row.add_child(status_arrow)
 
 	# --- Otel görünümü: çatı tabelası (sabit) + zoom kontrolleri (sabit) +
 	# zoom/pan alan tuval (kat sıraları + lobi + sokak + çim, serbest blok
@@ -2349,8 +2364,9 @@ func _rebuild_hotel() -> void:
 	# Çatı tabelası (haftalık temaya göre renklenen tente) — sabit, tuvalin
 	# dışında; zoom/pan yalnızca kat sıraları + lobi + sokak + çimi kapsar.
 	var theme: Dictionary = _current_theme()
-	# Hap gökyüzünün üstünde duruyor: prototipteki gibi hafif saydam kalsın.
-	(roof_panel.get_theme_stylebox("panel") as StyleBoxFlat).bg_color = Color(theme.accent, 0.9)
+	# Hap rengi haftalık temaya göre DEĞİŞMİYOR: prototipte sabit
+	# rgba(224,85,74,.9). Bazı tema accent'leri (Golden Age, Winter Tale)
+	# gökyüzünün üstünde soluk kalıyordu; tema adı zaten metinde yazıyor.
 	roof_theme_label.text = "Theme of the week: %s" % String(theme.name)
 
 	var grid_cols := int(Game.eco.building.grid_cols)
