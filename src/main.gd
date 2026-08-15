@@ -1226,10 +1226,10 @@ func _build_ui() -> void:
 	# toggle'ı kalktı, ikisi de canvas üstü birer çipe indi.
 	var zoom_row := HBoxContainer.new()
 	zoom_row.add_theme_constant_override("separation", 6)
-	_edge_pad(root).add_child(zoom_row)
+	_edge_pad(root, 0, 10).add_child(zoom_row)
 	# ✎ Build ve haftanın teması: prototipte ikisi de gökyüzü hapı — Build koyu
-	# yarı saydam (rgba(47,36,24,.66), durum çipinden bir tık koyu), tema hapı
-	# sabit kırmızı. Kenarlıklı kutu görünümü kalktı.
+	# yarı saydam (durum çipinden koyu; prototipin .66'sı kullanıcı geri
+	# bildirimiyle .78'e çıktı), tema hapı sabit kırmızı.
 	build_mode_button = _chip_toggle("✎ Build")
 	build_mode_button.toggled.connect(func(on: bool): _set_build_mode(on))
 	zoom_row.add_child(build_mode_button)
@@ -1755,7 +1755,7 @@ func _chip(bg: Color) -> PanelContainer:
 ## Gökyüzündeki tuval modu çipi (✎ Build, 🧹 Clean): hap biçimli, kenarsız,
 ## yarı saydam koyu zemin — _chip() ile aynı dil, ama tıklanabilir/toggle.
 func _chip_toggle(text: String) -> Button:
-	var b := _button(text, 11, Color(PALETTE.chip_dark, 0.66), PALETTE.cream_text)
+	var b := _button(text, 11, Color(PALETTE.chip_dark, 0.78), PALETTE.cream_text)
 	b.toggle_mode = true
 	for state in ["normal", "hover", "pressed", "disabled"]:
 		var sb := b.get_theme_stylebox(state) as StyleBoxFlat
