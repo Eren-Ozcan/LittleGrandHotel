@@ -365,6 +365,34 @@ Doğrulama: `tests/shot.gd`'ye `modal=daily`, `modal=offline`, `modal=conflict`,
 çekimlerinde açılışta çıkan çevrimdışı modalı ekranı kapatmasın diye
 `offline_earned` sıfırlanıyor.
 
+### Cihaz/gözden geçirme sonrası düzeltmeler
+
+Turun ardından oyun üzerinden yapılan gözden geçirmede çıkanlar:
+
+- **Çim köşeleri düz**, kök VBox'ın ortak ayırıcısı kalktı — bina ile alt bar
+  arasından gökyüzünün pembe alt ucu sızıyordu. Aralar `_edge_pad`'in alt kenar
+  boşluğuyla veriliyor.
+- **Alt bar ikonları büyüdü** (karo 52×46, ikon 42, bar 104) — prototip ölçüsü
+  (42×38 / 34) kullanıcıya küçük geldi. Merkez buton ve toast ofsetleri kaydı.
+- **Merkez buton** vardiya sürerken ama kazanç yokken "Running" yazıyor;
+  "Collect" yalnızca toplanacak bir şey varken.
+- **Gökyüzü mod çipleri** `.66` yerine `.78` opaklıkta.
+- **Quest rozeti yeniden tanımlandı.** "Ödül almaya hazır görev" sayılamıyor:
+  görevler/başarımlar hedefe ulaşır ulaşmaz kendiliğinden tamamlanıp ödüyor,
+  yani hazır durum tek kare sürmüyor ve eski `!` rozeti pratikte hiç
+  görünmüyordu. Rozet artık "Quests ekranı en son açıldığından beri tamamlanan"
+  sayısını gösteriyor (oturumluk). Rozet ayrıca tam yuvarlak oldu ve karonun
+  köşesine oturdu.
+- **Gem ile vardiya bitirme hatası.** "Finish now"un iki adımlı onayı butonun
+  meta'sındaydı; popup her `state_changed`'de baştan kurulduğu için iki dokunuş
+  arasında siliniyor ve vardiya hiç bitmiyordu. Durum artık üye değişkende
+  (`_skip_shift_armed`). Motor tarafı temizdi — `tests/repro_skip_shift.tscn`
+  bunu gösteriyor.
+- **Kirli oda ekranı** artık doğrudan "Clean this room" butonu taşıyor.
+- **Android: `stretch/aspect="expand"`.** Varsayılan `keep`, 19.5:9 telefonlarda
+  alta/üste siyah bant koyuyor ve tam genişlik yerleşim fiziksel kenara
+  ulaşmıyordu.
+
 ## Kapsam dışı
 
 Mekanik ve ekonomi değişmiyor: vardiya süreleri, fiyatlar, SP eşikleri,
