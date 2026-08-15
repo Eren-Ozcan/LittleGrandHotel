@@ -2324,10 +2324,12 @@ func _update_live_labels() -> void:
 	# yoksa vardiya sürüyorsa kalan süre, hiçbiri yoksa "Start shift".
 	if has_income:
 		primary_label.text = "Collect"
+		# Alt satırda YALNIZCA tutar durur: kalan süre zaten gökyüzü çipinde
+		# yazıyor ve ikisi birlikte 120 piksellik daireye sığmıyor.
 		shift_bar_label.text = "%s coins" % _fmt(int(Game.pending_income))
 		collect_button.disabled = false
 	elif Game.shift_active():
-		primary_label.text = "Collect"
+		primary_label.text = "Running"
 		shift_bar_label.text = "%s left" % _fmt_hms(Game.shift_remaining_game_hours())
 		collect_button.disabled = true
 	else:
