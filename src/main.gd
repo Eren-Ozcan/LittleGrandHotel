@@ -291,6 +291,13 @@ var build_mode_button: Button
 ## İnşa Modu kapalıyken boş/kilitli hücreler sade durur (buton/metin yok);
 ## açıkken vurgulanır ve dokunulabilir olur (TODO: görsel kalabalığı azaltma).
 var build_mode := false
+var clean_mode_button: Button
+## Temizlik Modu: İnşa Modu gibi bir tuval modu. Açıkken kirli odalara tek tek
+## dokunarak temizlenir; kapalıyken kirli odaya dokunmak diğer odalarla aynı
+## şeyi yapar (oda ekranını açar). Eskiden dokunma anında temizliyordu —
+## kullanıcı isteğiyle kaldırıldı, temizlik artık bilinçli bir moda girmeyi
+## gerektiriyor. İki mod aynı anda açık olamaz (bkz. _set_clean_mode).
+var clean_mode := false
 var _zoom := 1.0
 var _canvas_pan := Vector2.ZERO
 var _pan_dragging := false
@@ -1197,25 +1204,18 @@ func _build_ui() -> void:
 	# toggle'ı kalktı, ikisi de canvas üstü birer çipe indi.
 	var zoom_row := HBoxContainer.new()
 	zoom_row.add_theme_constant_override("separation", 6)
-	root.add_child(zoom_row)
+	_edge_pad(root).add_child(zoom_row)
 	# ✎ Build ve haftanın teması: prototipte ikisi de gökyüzü hapı — Build koyu
-	# yarı saydam, tema kırmızı. Kenarlıklı kutu görünümü kalktı.
-	build_mode_button = _button("✎ Build", 11, PALETTE.chip_dark, PALETTE.cream_text)
-	build_mode_button.toggle_mode = true
-	for state in ["normal", "hover", "pressed", "disabled"]:
-		var bsb := build_mode_button.get_theme_stylebox(state) as StyleBoxFlat
-		bsb.set_corner_radius_all(999)
-		bsb.set_border_width_all(0)
-		bsb.content_margin_left = 11
-		bsb.content_margin_right = 11
-		bsb.content_margin_top = 6
-		bsb.content_margin_bottom = 6
-	build_mode_button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	build_mode_button.toggled.connect(func(on: bool):
-		build_mode = on
-		build_mode_button.text = "✎ Build: On" if on else "✎ Build"
-		_rebuild_hotel())
+	# yarı saydam (rgba(47,36,24,.66), durum çipinden bir tık koyu), tema hapı
+	# sabit kırmızı. Kenarlıklı kutu görünümü kalktı.
+	build_mode_button = _chip_toggle("✎ Build")
+	build_mode_button.toggled.connect(func(on: bool): _set_build_mode(on))
 	zoom_row.add_child(build_mode_button)
+	# Temizlik Modu çipi İnşa Modunun yanında: ikisi de aynı türden tuval modu,
+	# oyuncu ikisinden de aynı yerden çıkıyor.
+	clean_mode_button = _chip_toggle("🧹 Clean")
+	clean_mode_button.toggled.connect(func(on: bool): _set_clean_mode(on))
+	zoom_row.add_child(clean_mode_button)
 	roof_panel = _chip(Color(PALETTE.banner_red, 0.9))
 	zoom_row.add_child(roof_panel)
 	roof_theme_label = _label("", 11, PALETTE.cream)
@@ -1681,6 +1681,61 @@ func _chip(bg: Color) -> PanelContainer:
 	p.add_theme_stylebox_override("panel", sb)
 	p.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	return p
+
+
+## Gökyüzündeki tuval modu çipi (✎ Build, 🧹 Clean): hap biçimli, kenarsız,
+## yarı saydam koyu zemin — _chip() ile aynı dil, ama tıklanabilir/toggle.
+func _chip_toggle(text: String) -> Button:
+	var b := _button(text, 11, Color(PALETTE.chip_dark, 0.66), PALETTE.cream_text)
+	b.toggle_mode = true
+	for state in ["normal", "hover", "pressed", "disabled"]:
+		var sb := b.get_theme_stylebox(state) as StyleBoxFlat
+		sb.set_corner_radius_all(999)
+		sb.set_border_width_all(0)
+		sb.content_margin_left = 11
+		sb.content_margin_right = 11
+		sb.content_margin_top = 6
+		sb.content_margin_bottom = 6
+	b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	return b
+
+
+## İki tuval modu birbirini dışlar: tuvalde aynı dokunuşun iki farklı anlamı
+## olmasın (boş bloğa oda koymak / kirli odayı temizlemek).
+func _set_build_mode(on: bool) -> void:
+	if build_mode == on and build_mode_button.button_pressed == on:
+		return
+	if on:
+		_set_clean_mode(false)
+	build_mode = on
+	build_mode_button.button_pressed = on
+	build_mode_button.text = "✎ Build: On" if on else "✎ Build"
+	_rebuild_hotel()
+
+
+func _set_clean_mode(on: bool) -> void:
+	if clean_mode == on and clean_mode_button.button_pressed == on:
+		return
+	if on:
+		_set_build_mode(false)
+	clean_mode = on
+	clean_mode_button.button_pressed = on
+	clean_mode_button.text = "🧹 Clean: On" if on else "🧹 Clean"
+	_rebuild_hotel()
+	if on:
+		var dirty := _dirty_room_count()
+		if dirty > 0:
+			_show_toast("Cleaning mode on — tap the %s to clean." % _count(dirty, "dirty room"))
+		else:
+			_show_toast("Cleaning mode on — no dirty rooms right now.")
+
+
+func _dirty_room_count() -> int:
+	var n := 0
+	for r in Game.rooms:
+		if r.dirty:
+			n += 1
+	return n
 
 
 func _panel(bg: Color, border: Color) -> PanelContainer:
@@ -2736,6 +2791,7 @@ func _room_visual_signature(idx: int) -> Dictionary:
 		"show_capacity": cat == "facility" and shift_active and _arrived_guests > 0,
 		"show_maid": room.type == "housekeeping" and shift_active,
 		"build_mode": build_mode,
+		"clean_mode": clean_mode,
 	}
 
 
@@ -2763,6 +2819,10 @@ func _make_room_button(idx: int) -> Button:
 		wall = wall.darkened(0.45)
 	elif is_dirty:
 		wall = wall.darkened(0.25)
+	# Temizlik Modunda dokunulabilir hedefler ayrışsın: yalnızca kirli odalar
+	# altın çerçeve alır, diğerleri sönük durur.
+	if clean_mode and is_dirty:
+		border = PALETTE.gold
 	for state in ["normal", "hover", "pressed", "disabled"]:
 		var sb := _card_sb(wall if state != "hover" else wall.lightened(0.05), border, 8, 0.12)
 		sb.set_border_width_all(7)
@@ -3081,7 +3141,13 @@ func _on_room_tapped(idx: int, btn: Control) -> void:
 			move_from = ""
 			_show_toast("That spot is taken — tap an empty cell to move there")
 		return
-	if room.dirty:
+	# Temizlik yalnızca Temizlik Modunda: mod kapalıyken kirli odaya dokunmak
+	# diğer odalarla aynı şeyi yapar (oda ekranını açar). Eski "dokun = anında
+	# temizle" davranışı kaldırıldı — kullanıcı isteği.
+	if clean_mode:
+		if not room.dirty:
+			_show_toast("This room is already clean.")
+			return
 		# Buton yeniden kurulumda yok olacağı için merkezi temizlemeden önce al
 		var center := btn.global_position + btn.size / 2.0
 		var cost := Game.clean_cost(idx)
@@ -3092,6 +3158,9 @@ func _on_room_tapped(idx: int, btn: Control) -> void:
 				_show_toast("Infestation cleared! (−%d coins, +2 XP)" % cost)
 			else:
 				_show_toast("Room cleaned (+2 XP)")
+			# Son kirli oda da temizlendiyse modda kalmanın anlamı kalmıyor.
+			if _dirty_room_count() == 0:
+				_set_clean_mode(false)
 		elif cost > 0:
 			_show_toast("Clearing the infestation costs %d coins!" % cost)
 		return
@@ -3822,6 +3891,19 @@ func _add_auto_renew_shop(c: VBoxContainer) -> void:
 
 
 func _build_staff_popup(c: VBoxContainer) -> void:
+	# Temizlik bu ekranın işi: personel kadar odaların bakımı da burada. Buton
+	# İnşa Modu gibi bir tuval modu açar, sayfayı kapatır ve oyuncu kirli
+	# odalara tek tek dokunur (bkz. _set_clean_mode, _on_room_tapped).
+	_section(c, "Housekeeping")
+	var dirty := _dirty_room_count()
+	var clean_b := _action(c, "Cleaning mode",
+		"Tap dirty rooms one by one to clean them. %s right now." % _count(dirty, "dirty room"),
+		dirty > 0)
+	clean_b.pressed.connect(func():
+		_close_popup()
+		_set_clean_mode(true))
+
+	_section(c, "Staff")
 	var tier: int = Game.staff_tier
 	var max_tier: int = int(Game.eco.staff_upgrade.max_tier)
 	# Personel görseli bu ekranın tek görseli — liste satırlarının 34 piksellik
