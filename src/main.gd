@@ -3703,6 +3703,20 @@ func _fly_coins(from: Vector2, amount: int) -> void:
 ## ESC ile kapatılırsa çağrılır (verilmezse hiçbir şey yapılmaz).
 func _show_simple_modal(title: String, text: String, action_text: String,
 		on_action: Callable, on_dismiss: Callable = Callable()) -> void:
+	_show_modal({
+		"title": title, "text": text, "action_text": action_text,
+		"on_action": on_action, "on_dismiss": on_dismiss,
+	})
+
+
+## _show_simple_modal'ın genel hâli: gövde düz metin yerine bir builder ile de
+## doldurulabilir (günlük ödül şeridi, çevrimdışı kazanç kartı) ve birincil
+## butonun ALTINA ikincil bir buton konabilir (ödüllü reklam).
+##
+## cfg anahtarları: title · title_icon · text · body (Callable(VBoxContainer))
+## · action_text · on_action · secondary_text · secondary_icon · on_secondary
+## · on_dismiss.
+func _show_modal(cfg: Dictionary) -> void:
 	var dim := ColorRect.new()
 	dim.color = Color(0.2, 0.15, 0.05, 0.5)
 	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -3717,11 +3731,25 @@ func _show_simple_modal(title: String, text: String, action_text: String,
 	var pv := VBoxContainer.new()
 	pv.add_theme_constant_override("separation", 14)
 	panel.add_child(pv)
-	pv.add_child(_label(title, 20, PALETTE.wood_dark))
-	var body := _label(text, 15, PALETTE.text)
-	body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	pv.add_child(body)
-	var action_b := _button(action_text, 16, PALETTE.green_deep, PALETTE.cream_text)
+	# Başlık: prototipte günlük ödül başlığının solunda sparkle ikonu var.
+	var title_row := HBoxContainer.new()
+	title_row.add_theme_constant_override("separation", 8)
+	pv.add_child(title_row)
+	var title_icon: String = cfg.get("title_icon", "")
+	if title_icon != "":
+		var ti := _icon(title_icon, 26)
+		ti.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		title_row.add_child(ti)
+	title_row.add_child(_label(String(cfg.get("title", "")), 20, PALETTE.wood_dark))
+	var text: String = cfg.get("text", "")
+	if text != "":
+		var body := _label(text, 15, PALETTE.text)
+		body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		pv.add_child(body)
+	var body_builder: Callable = cfg.get("body", Callable())
+	if body_builder.is_valid():
+		body_builder.call(pv)
+	var action_b := _button(String(cfg.get("action_text", "OK")), 16, PALETTE.green_deep, PALETTE.cream_text)
 	action_b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	pv.add_child(action_b)
 	var closed := false
@@ -3730,10 +3758,25 @@ func _show_simple_modal(title: String, text: String, action_text: String,
 			return
 		closed = true
 		dim.queue_free()
+	var on_action: Callable = cfg.get("on_action", Callable())
 	action_b.pressed.connect(func():
 		do_close.call()
 		if on_action.is_valid():
 			on_action.call())
+	var secondary_text: String = cfg.get("secondary_text", "")
+	if secondary_text != "":
+		var sec_b := _button(secondary_text, 15, PALETTE.wood, PALETTE.cream_text)
+		sec_b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var secondary_icon: String = cfg.get("secondary_icon", "")
+		if secondary_icon != "":
+			_button_icon(sec_b, secondary_icon)
+		var on_secondary: Callable = cfg.get("on_secondary", Callable())
+		sec_b.pressed.connect(func():
+			do_close.call()
+			if on_secondary.is_valid():
+				on_secondary.call())
+		pv.add_child(sec_b)
+	var on_dismiss: Callable = cfg.get("on_dismiss", Callable())
 	dim.gui_input.connect(func(ev):
 		if ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT:
 			do_close.call()
@@ -4972,14 +5015,59 @@ func _show_toast(msg: String) -> void:
 
 
 func _show_offline_popup(amount: int, renew_count: int = 0, renew_spent: int = 0) -> void:
-	var text := ""
-	if amount > 0:
-		text += "Your hotel kept running while you were away and earned %s coins.\nDon't forget to collect from the till!" % _fmt(amount)
+	# Prototip 372-379: süre + 24 saat tavanı, coin ikonlu tutar kartı ve iki
+	# buton — Collect · "Watch an ad — double it". Eski hâli tek "Great"
+	# butonlu düz metindi; ikiye katlama hiç yoktu.
+	var away := Game.offline_seconds
+	var cap_hours := float(Game.eco.get("offline_cap_hours", 24))
+	var cap_real := cap_hours * 3600.0 / Game.time_scale
+	var capped := away > cap_real
+	var meta := "Away for %s" % _fmt_duration(away)
+	if capped:
+		meta += " · capped at %s of hotel time" % _count(int(cap_hours), "hour")
+	var lines: Array[String] = []
 	if renew_count > 0:
-		if not text.is_empty():
-			text += "\n\n"
-		text += "Your hotel didn't sit idle when the shift ended: it auto-renewed %s (staff cost %s coins)." % [_count(renew_count, "time"), _fmt(renew_spent)]
-	_show_simple_modal("Welcome back!", text, "Great", func(): pass)
+		lines.append("Your hotel didn't sit idle when the shift ended: it auto-renewed %s (staff cost %s coins)."
+			% [_count(renew_count, "time"), _fmt(renew_spent)])
+	var cfg := {
+		"title": "Welcome back!",
+		"text": "\n\n".join(lines),
+		"body": func(pv: VBoxContainer):
+			# Modal auto-renew yüzünden kazançsız da açılabilir — o zaman kart yok.
+			# Kart tıklanamaz ama SÖNÜK DEĞİL ("enabled": false satırı %50
+			# saydam yapıyor); modalın ana bilgisi bu tutar.
+			if amount > 0:
+				_sheet_row(pv, {
+					"icon": "res://assets/ui/coin.svg",
+					"title": "%s coins earned" % _fmt(amount), "title_size": 15,
+					"meta": meta,
+				}).disabled = true,
+		"action_text": "Collect",
+		"on_action": func(): _on_collect(),
+	}
+	if amount > 0:
+		cfg["secondary_text"] = "Watch an ad — double it"
+		cfg["secondary_icon"] = "res://assets/ui/ad_video.png"
+		cfg["on_secondary"] = func():
+			Ads.show_rewarded(func():
+				Game.add_pending_income(amount)
+				_play("buy")
+				_show_toast("Offline earnings doubled — +%s coins!" % _fmt(amount))
+				_on_collect())
+	_show_modal(cfg)
+
+
+## "45m" / "3h 12m" / "2d 4h" — çevrimdışı kalınan gerçek süre.
+func _fmt_duration(seconds: float) -> String:
+	var total := maxi(0, int(seconds))
+	var days := total / 86400
+	var hours := (total % 86400) / 3600
+	var minutes := (total % 3600) / 60
+	if days > 0:
+		return "%dd %dh" % [days, hours]
+	if hours > 0:
+		return "%dh %dm" % [hours, minutes]
+	return "%dm" % maxi(1, minutes)
 
 
 ## Uygulama açılışında (bugün henüz alınmadıysa) otomatik gösterilen günlük
@@ -4993,19 +5081,78 @@ func _show_daily_reward_popup(on_closed: Callable = Callable()) -> void:
 		if on_closed.is_valid():
 			on_closed.call()
 		return
-	var reward: Dictionary = cycle[(streak - 1) % cycle.size()]
+	var index := (streak - 1) % cycle.size()
+	var reward: Dictionary = cycle[index]
 	var reward_text := "%s coins" % _fmt(int(reward.get("coins", 0)))
 	if int(reward.get("gems", 0)) > 0:
 		reward_text += " + %s" % _count(int(reward.gems), "gem")
-	_show_simple_modal("Daily Reward", "Day %d streak!\nYour reward: %s" % [streak, reward_text], "Claim",
-		func():
+	_show_modal({
+		"title": "Daily Reward",
+		"title_icon": "res://assets/ui/sparkle.svg",
+		"text": "Day %d streak!\nYour reward: %s" % [streak, reward_text],
+		"body": func(pv: VBoxContainer): _daily_strip(pv, cycle, index),
+		"action_text": "Claim",
+		"on_action": func():
 			var granted := Game.claim_daily_reward()
 			if not granted.is_empty():
 				_play("quest")
 				_show_toast("Daily reward claimed — day %d streak!" % Game.daily_streak)
 			if on_closed.is_valid():
 				on_closed.call(),
-		on_closed)
+		"on_dismiss": on_closed,
+	})
+
+
+## Günlük ödül şeridi (prototip 360-370): D1…D7 karoları, bugünkü vurgulu,
+## alınmış günler sönük. Döngü uzunluğu economy.json'dan gelir, 7 sabit değil.
+func _daily_strip(c: VBoxContainer, cycle: Array, index: int) -> void:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 5)
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	c.add_child(row)
+	for i in cycle.size():
+		var d: Dictionary = cycle[i]
+		var today := i == index
+		var past := i < index
+		var p := PanelContainer.new()
+		var sb := StyleBoxFlat.new()
+		sb.bg_color = PALETTE.gold_soft if today else (PALETTE.cream_dark if past else PALETTE.card)
+		sb.border_color = PALETTE.gold if today else PALETTE.facade_line
+		sb.set_border_width_all(3 if today else 2)
+		sb.set_corner_radius_all(10)
+		sb.content_margin_left = 5
+		sb.content_margin_right = 5
+		sb.content_margin_top = 6
+		sb.content_margin_bottom = 6
+		p.add_theme_stylebox_override("panel", sb)
+		p.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(p)
+		var v := VBoxContainer.new()
+		v.add_theme_constant_override("separation", 2)
+		p.add_child(v)
+		var day_l := _label("D%d" % (i + 1), 10, PALETTE.wood_dark if today else PALETTE.muted)
+		day_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		v.add_child(day_l)
+		var gems := int(d.get("gems", 0))
+		var ico := _icon("res://assets/ui/gem.svg" if gems > 0 else "res://assets/ui/coin.svg", 18)
+		ico.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		v.add_child(ico)
+		var amount_l := _label(
+			str(gems) if gems > 0 else _fmt_short(int(d.get("coins", 0))),
+			10, PALETTE.green_deep if gems > 0 else PALETTE.text)
+		amount_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		v.add_child(amount_l)
+		if past:
+			p.modulate.a = 0.55
+
+
+## Şerit karosuna sığan kısa sayı: 1200 -> "1.2k". Tam biçim (_fmt) yedi karoyu
+## ekran dışına taşırıyor.
+func _fmt_short(n: int) -> String:
+	if n < 1000:
+		return str(n)
+	var k := float(n) / 1000.0
+	return ("%.1fk" % k).replace(".0k", "k")
 
 
 func _fmt_hms(game_hours: float) -> String:

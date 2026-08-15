@@ -95,6 +95,11 @@ var tutorial_seen: bool = false
 ## Uygulama açılışında sen-yokken kazanılan gelir (UI popup için; UI okur ve sıfırlar).
 var offline_earned: int = 0
 
+## Aynı popup için: uzak kalınan GERÇEK süre (saniye). Kazancın kendisi
+## offline_cap_hours ile sınırlı, bu değer sınırsız — modal "ne kadar süre" ile
+## "ne kadar kazanç" arasındaki farkı (tavan) anlatabilsin diye.
+var offline_seconds: float = 0.0
+
 ## Oyun içi zaman ölçeği. Canlı oynanışta her zaman 60.0 (1 gerçek dakika =
 ## 1 oyun saati, kullanıcı isteği — eskiden oyuncunun seçtiği bir ×1/×60/×3600
 ## hız düğmesi vardı, artık sabit) — bkz. new_game()/_load_from_dict() sonunda
@@ -250,6 +255,7 @@ func new_game() -> void:
 	poke_count = 0
 	last_catch_unix = 0.0
 	offline_earned = 0
+	offline_seconds = 0.0
 	staff_tier = 0
 	boost_end_unix = 0.0
 	boost_mult = 1.0
@@ -867,6 +873,17 @@ func catch_guest() -> int:
 	_check_progress()
 	state_changed.emit()
 	return bonus
+
+
+## Kasaya dışarıdan gelir ekler — bugün tek çağıran, "sen yokken" modalındaki
+## ödüllü reklamla ikiye katlama (bkz. main.gd _show_offline_popup). Doğrudan
+## coin vermek yerine kasaya yazılır: oyuncu yine normal Collect akışıyla
+## toplar, XP ve istatistikler tek yoldan işler.
+func add_pending_income(amount: int) -> void:
+	if amount <= 0:
+		return
+	pending_income += float(amount)
+	state_changed.emit()
 
 
 func collect() -> int:
@@ -1566,6 +1583,9 @@ func _load_from_dict(parsed) -> bool:
 	var pending_before := pending_income
 	auto_renew_count = 0
 	auto_renew_spent = 0
+	# Ne kadar süre uzak kalındığı: simulate_to() last_sim_unix'i ileri
+	# taşımadan ÖNCE ölçülür, yoksa her zaman 0 çıkar.
+	offline_seconds = maxf(0.0, now() - last_sim_unix) if last_sim_unix > 0.0 else 0.0
 	simulate_to(now())
 	offline_earned = int(pending_income - pending_before)
 	_check_achievements()  # yeni eklenen başarımlar için geriye dönük kontrol
