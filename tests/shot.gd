@@ -94,6 +94,11 @@ func _ready() -> void:
 				"updated_at": Time.get_unix_time_from_system() - 5400.0,
 			}
 			main._show_cloud_conflict_modal()
+		elif arg == "badge":
+			# Rozet "bu oturumda tamamlanan ama Quests ekraninda henuz
+			# gorulmemis" gorev/basarim sayisi — iki tamamlama taklit edilir.
+			main._quests_seen_index = get_node("/root/Game").quest_index - 2
+			main._update_live_labels()
 		elif arg.begins_with("toast="):
 			main._show_toast(arg.substr(6))
 		elif arg == "modal=offline":
