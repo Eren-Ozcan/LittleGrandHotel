@@ -18,6 +18,11 @@ func _ready() -> void:
 		game.tutorial_seen = true
 		if game.daily_reward_available():
 			game.claim_daily_reward()
+		# Cevrimdisi kazanc modali da acilista ekrani kapatiyor — kaydedilmis
+		# bir birikim varsa her cekimde onun arkasina dusuyorduk.
+		game.offline_earned = 0
+		game.auto_renew_count = 0
+		game.auto_renew_spent = 0
 	var main: Node = load("res://main.tscn").instantiate()
 	add_child(main)
 	# "demo" argümanıyla: bellekte coin ver + vardiya başlat (kayda yazılmaz),
@@ -48,6 +53,7 @@ func _ready() -> void:
 				"settings": ["Settings", main._build_settings_popup],
 				"staff": ["Staff", main._build_staff_popup],
 				"quests": ["Quests", main._build_quests_popup],
+				"quests_achievements": ["Quests", main._build_quests_popup],
 				"stats": ["Statistics", main._build_stats_popup],
 				"profile": ["Profile", main._build_profile_popup],
 				"gems": ["Buy Gems", main._build_gems_popup],
@@ -66,12 +72,33 @@ func _ready() -> void:
 				# son parçasından gelir (store_premium -> premium).
 				if key.begins_with("store_"):
 					main._store_tab = key.substr(6)
+				elif key.begins_with("quests_"):
+					main._quests_tab = key.substr(7)
 				elif key.begins_with("profile_"):
 					main._profile_tab = key.substr(8)
 				elif key == "room":
 					# Oda ekrani secili bir oda ister; ilk oda her kayitta var.
 					main.selected_room = 0
 				main._open_popup(builders[key][0], builders[key][1])
+	for arg in OS.get_cmdline_user_args():
+		# Popup yiginindan bagimsiz modallar (gunluk odul / cevrimdisi kazanc).
+		if arg == "modal=daily":
+			main._show_daily_reward_popup()
+		elif arg == "modal=conflict":
+			# Sahte bir bulut cakismasi kur — modal yalnizca has_conflict()
+			# dogruyken aciliyor.
+			var cs := get_node("/root/CloudSave")
+			cs._blocked = true
+			cs._pending_cloud = {
+				"summary": {"level": 7, "coins": 128400, "gems": 62, "rooms": 11},
+				"updated_at": Time.get_unix_time_from_system() - 5400.0,
+			}
+			main._show_cloud_conflict_modal()
+		elif arg.begins_with("toast="):
+			main._show_toast(arg.substr(6))
+		elif arg == "modal=offline":
+			get_node("/root/Game").offline_seconds = 5.0 * 3600.0 + 720.0
+			main._show_offline_popup(4820, 2, 900)
 	await get_tree().create_timer(0.3).timeout
 	var out_path := "user://shot.png"
 	for arg in OS.get_cmdline_user_args():
