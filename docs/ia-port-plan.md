@@ -312,6 +312,59 @@ Prototipten iki zorunlu sapma:
   standard/deluxe/suite için `assets/rooms/` altında görsel yok — prototip de
   aynı şeyi yapıyor.
 
+## Dördüncü tur — kalan istekler ve prototip farkları
+
+Kullanıcının 5 maddelik listesi + prototipte olup aktarılmamış 9 fark bu turda
+kapatıldı.
+
+### Kullanıcı istekleri
+
+1. **Alt bar sekmeleri karo oldu.** Pasif karo artık görünür: `rgba(cream,.10)`
+   zemin + `rgba(cream,.16)` kenar, ölçü 42×38, köşe 12. Aktif karo dolu krem +
+   altın kenar ve `0 3px 0 #b8862a` gölge (`_bar_button`).
+2. **Vardiya bitirilebiliyor.** Merkez buton birikim varken "Collect"e döndüğü
+   için Shift sayfasına ("Finish now — N gems") ulaşılamıyordu. Gökyüzü durum
+   çipi ikinci giriş oldu: tıklanabilir, sonunda `›` chevron taşıyor.
+3. **Tam genişlik yerleşim.** Kök `MarginContainer` 14 → 0; bina ve alt bar iki
+   kenara değiyor. Yan boşluğa ihtiyacı olan parçalar (üst bar, gökyüzü
+   çipleri, inşa rafı) `_edge_pad()` ile kendi boşluğunu taşıyor. Merkez buton
+   ve toast ofsetleri 14 piksel aşağı kaydı.
+4. **Temizlik Modu.** Kirli odaya dokununca anında temizleme KALKTI. Staff
+   ekranındaki "Cleaning mode" satırı İnşa Modu gibi bir tuval modu açıyor
+   (`_set_clean_mode`), gökyüzünde `🧹 Clean` çipi var, kirli odalar modda altın
+   çerçeve alıyor ve son kirli oda temizlenince mod kendiliğinden kapanıyor.
+   İki tuval modu birbirini dışlar.
+5. **Gökyüzü çip renkleri sabitlendi.** Tema hapı artık haftalık `theme.accent`
+   ile renklenmiyor, prototipteki sabit `rgba(224,85,74,.9)`; `✎ Build` çipi
+   `rgba(47,36,24,.66)`.
+
+### Prototipten aktarılan 9 fark
+
+1. **Günlük ödül D1…D7 şeridi** (`_daily_strip`) + başlıkta `sparkle.svg`.
+   Bugünkü karo vurgulu, geçmiş günler sönük.
+2. **Çevrimdışı kazanç modalı**: süre + tavan satırı, coin ikonlu tutar kartı,
+   **Collect** ve **Watch an ad — double it** (`Game.add_pending_income`).
+   Süreyi yazabilmek için `Game.offline_seconds` eklendi.
+3. **Quests ekranı iki hap sekme** (Quests · Achievements) + **NEXT UP** listesi
+   (sıradaki en fazla 4 görev, kilitli satır biçiminde).
+4. **Quest rozeti sayı taşıyor** (`quest_badge_label`), sabit `!` değil.
+5. **Build ekranında blok fiyatı satırı** — fiyat kata göre değiştiği için
+   "hâlâ genişletilebilen katların en ucuzu" yazılıyor.
+6. **Toast** koyu `#2f2418` hap oldu; içeriğe göre daralıyor (autowrap'ın
+   minimum genişlik tuzağı için metin genişliği elle ölçülüyor, üst sınır 420).
+7. **Alt bar şeridi** köşesiz, altın kenarsız: düz `bar_dark` + `3px` `bar_edge`
+   üst kenar.
+8. **Merkez yuvarlak buton**: StyleBoxFlat yalnızca sert alt gölge (`red_lip`),
+   üstüne 6 piksel yukarıda duran radial `GradientTexture2D` — son durağı
+   saydam olduğu için kare doku daire gibi görünüyor.
+9. **Bulut çakışma modalı** iki yan yana kart; seçim butonu her kartın içinde
+   (`_cloud_side_card`).
+
+Doğrulama: `tests/shot.gd`'ye `modal=daily`, `modal=offline`, `modal=conflict`,
+`toast=<metin>` ve `popup=quests_achievements` argümanları eklendi. Demo
+çekimlerinde açılışta çıkan çevrimdışı modalı ekranı kapatmasın diye
+`offline_earned` sıfırlanıyor.
+
 ## Kapsam dışı
 
 Mekanik ve ekonomi değişmiyor: vardiya süreleri, fiyatlar, SP eşikleri,
