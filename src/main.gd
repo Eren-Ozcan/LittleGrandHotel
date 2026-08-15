@@ -184,6 +184,7 @@ var _bar_buttons := {}
 ## Açık olan sekmenin başlığı ("" = popup kapalı).
 var _active_tab := ""
 var quest_badge: PanelContainer
+var quest_badge_label: Label
 
 ## "Dokunmak zorunda" tutorial adımları için spotlight katmanı — bkz.
 ## _build_tutorial_layer / _show_tutorial_spotlight / TUTORIAL_STEPS.
@@ -324,6 +325,7 @@ var _popup_stack: Array[Dictionary] = []
 ## every state_changed, so the selection cannot live in a local.
 var _store_tab := "gems"
 var _profile_tab := "account"
+var _quests_tab := "quests"
 ## Bundle waiting for the player to pick a room in the Store -> Offers flow.
 var _pending_bundle_id := ""
 ## Save code stays masked until the player asks for it (audit item 13).
@@ -1392,19 +1394,22 @@ func _build_ui() -> void:
 			quest_badge.offset_right = -2
 			quest_badge.offset_bottom = 28
 			b.add_child(quest_badge)
-			var badge_l := _label("!", 12, PALETTE.cream_text)
-			badge_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-			badge_l.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			quest_badge.add_child(badge_l)
+			# Prototipte rozet bir SAYI taşıyor (`t.badge`), sabit "!" değil —
+			# metni _update_bar_active tazeler.
+			quest_badge_label = _label("", 12, PALETTE.cream_text)
+			quest_badge_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			quest_badge_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			quest_badge.add_child(quest_badge_label)
 
 	# Birincil buton yerleşimin DIŞINDA, ekran köküne asılı: alt barın orta
 	# boşluğuna oturur ve barın üst kenarına biner (prototipteki yuvarlak
-	# kırmızı buton). Bar 96 + alt kenar boşluğu 14 yüksekliğinde.
+	# kırmızı buton). Bar 96 yüksekliğinde ve artık ekranın en altına oturuyor
+	# (kök kenar boşluğu kalktı), bu yüzden ofsetler 14 piksel aşağı kaydı.
 	collect_button.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
 	collect_button.offset_left = -60
 	collect_button.offset_right = 60
-	collect_button.offset_top = -180
-	collect_button.offset_bottom = -60
+	collect_button.offset_top = -166
+	collect_button.offset_bottom = -46
 	collect_button.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	collect_button.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	add_child(collect_button)
@@ -2293,12 +2298,19 @@ func _update_bar_active() -> void:
 		var active: bool = title == _active_tab or (title == "Build" and build_mode and _active_tab == "")
 		_set_bar_button_active(_bar_buttons[title], active)
 	if quest_badge:
+		# Rozet sayısı: ödül vermeye hazır görev + henüz görülmemiş hazır
+		# başarım yok, yani bugün en fazla 1 — yine de sayı olarak yazılır
+		# (prototipteki `t.badge`), ileride birden fazla hazır ödül olursa
+		# tek yerden büyür.
+		var ready_count := 0
 		var q: Dictionary = Game.current_quest()
-		var ready := false
 		if not q.is_empty():
 			var p: Array = Game.quest_progress(q)
-			ready = int(p[0]) >= int(p[1])
-		quest_badge.visible = ready
+			if int(p[0]) >= int(p[1]):
+				ready_count += 1
+		quest_badge.visible = ready_count > 0
+		if quest_badge_label:
+			quest_badge_label.text = str(ready_count)
 
 
 ## Birikim varken topla butonunu hafifçe büyütüp küçültüp durur ("numaraların
@@ -4684,6 +4696,20 @@ func _build_build_popup(c: VBoxContainer) -> void:
 	_notice(c, "Build Mode is a canvas tool, not a tab: the hotel stays visible, empty blocks light up, and this tray is what you place from.", "gold")
 	c.add_child(_label("Blocks used: %d / %d · floors %d" % [
 		_blocks_used(), Game.max_slots(), Game.floors], 11, PALETTE.muted))
+	# Prototip 349'daki blok fiyatı satırı. Fiyat kata göre değişiyor (kat ne
+	# kadar genişlediyse o kadar pahalı), bu yüzden tek bir sayı yerine hâlâ
+	# genişletilebilen katların en ucuzu yazılır.
+	var cheapest_block := -1
+	var grid_cols := int(Game.eco.building.grid_cols)
+	for floor_i in range(1, Game.floors + 1):
+		if Game.floor_open_width(floor_i) >= grid_cols:
+			continue
+		var price := Game.block_price(floor_i)
+		if cheapest_block < 0 or price < cheapest_block:
+			cheapest_block = price
+	if cheapest_block >= 0:
+		c.add_child(_label("Empty blocks: from %s coins each — widen a floor in Build Mode."
+			% _fmt(cheapest_block), 11, PALETTE.muted))
 
 	# Prototip misafir odalarını ve tesisleri ayrı ızgaralarda gösteriyor —
 	# ikisi farklı karar: biri gelir kapasitesi, diğeri yıldız çeşitliliği.
@@ -4793,7 +4819,21 @@ func _build_settings_popup(c: VBoxContainer) -> void:
 	c.add_child(ver)
 
 
+## Prototipteki iki hap sekme: Quests · Achievements. Eskiden ikisi tek uzun
+## sayfada alt alta duruyordu ve sıradaki görevler hiç görünmüyordu.
 func _build_quests_popup(c: VBoxContainer) -> void:
+	var pick := func(k: String):
+		_quests_tab = k
+		_rebuild_popup()
+		popup_scroll.scroll_vertical = 0
+	_popup_tab_row(c, [["quests", "Quests"], ["achievements", "Achievements"]], _quests_tab, pick)
+	if _quests_tab == "achievements":
+		_add_achievement_rows(c)
+	else:
+		_add_quest_rows(c)
+
+
+func _add_quest_rows(c: VBoxContainer) -> void:
 	var q: Dictionary = Game.current_quest()
 	if q.is_empty():
 		_notice(c, "Every quest is done. Congratulations, hotelier!", "gold")
@@ -4817,6 +4857,25 @@ func _build_quests_popup(c: VBoxContainer) -> void:
 
 	c.add_child(_label("Quests completed: %d / %d" % [Game.quest_index, Game.quests.size()], 11, PALETTE.muted))
 
+	# "NEXT UP" (prototip 222-249): sıradaki görevler bugüne kadar hiç
+	# görünmüyordu — oyuncu neyin peşinde olduğunu ancak güncel görev bitince
+	# öğreniyordu. Kilitli satır biçimi (%50 saydam) sırayı belli ediyor.
+	var upcoming: Array = []
+	for i in range(Game.quest_index + 1, Game.quests.size()):
+		upcoming.append(Game.quests[i])
+		if upcoming.size() >= 4:
+			break
+	if not upcoming.is_empty():
+		_section(c, "Next up")
+		for nq: Dictionary in upcoming:
+			var nreward := "%s coins" % _fmt(int(nq.get("reward_coins", 0)))
+			if int(nq.get("reward_gems", 0)) > 0:
+				nreward += " + %s" % _count(int(nq.reward_gems), "gem")
+			_row(c, "res://assets/ui/icon_quest.svg", String(nq.name), String(nq.desc),
+				nreward, false, PALETTE.green_deep)
+
+
+func _add_achievement_rows(c: VBoxContainer) -> void:
 	_section(c, "Achievements — %d / %d unlocked" % [
 		Game.unlocked_achievements.size(), Game.achievements.size()])
 	# Tek uzun çizgili liste yerine her başarım kendi kartında (kullanıcı
