@@ -187,6 +187,11 @@ var _bar_buttons := {}
 var _active_tab := ""
 var quest_badge: PanelContainer
 var quest_badge_label: Label
+## Quests ekranı en son açıldığında kaç görev/başarım tamamlanmıştı — rozet
+## sayısı bunun üstüne biriken "görülmemiş" tamamlamalar (bkz.
+## _update_bar_active). Oturumluk: uygulama yeniden açılınca sıfırlanır.
+var _quests_seen_index := 0
+var _achievements_seen_count := 0
 
 ## "Dokunmak zorunda" tutorial adımları için spotlight katmanı — bkz.
 ## _build_tutorial_layer / _show_tutorial_spotlight / TUTORIAL_STEPS.
@@ -452,6 +457,9 @@ func _ready() -> void:
 		for i in _arrived_guests:
 			_delivered_guest_types.append(GUEST_TYPES[i % GUEST_TYPES.size()])
 	_last_stat_shifts = Game.stat_shifts
+	# Rozet yalnızca BU oturumda tamamlananları sayar; açılışta sıfırdan başlar.
+	_quests_seen_index = Game.quest_index
+	_achievements_seen_count = Game.unlocked_achievements.size()
 	# Açılışta zaten süren bir vardiya varsa bunu "yeni biten vardiya" sanıp
 	# ilk karede reklam açmayalım.
 	_shift_was_active = Game.shift_active()
@@ -1416,15 +1424,26 @@ func _build_ui() -> void:
 		_bar_buttons[title] = b
 		if title == "Quests":
 			quest_bar_button = b
-			# Ödül almaya hazır görev varsa kırmızı rozet (prototipteki "1").
-			quest_badge = _panel(PALETTE.banner_red, PALETTE.cream)
+			# Görülmemiş tamamlama varsa kırmızı rozet (prototipteki "1").
+			# _panel'in 12 piksellik iç boşluğu rozeti dikey ovale çeviriyordu;
+			# rozet kendi tam yuvarlak stiliyle kuruluyor.
+			quest_badge = PanelContainer.new()
+			var badge_sb := StyleBoxFlat.new()
+			badge_sb.bg_color = PALETTE.banner_red
+			badge_sb.border_color = PALETTE.cream
+			badge_sb.set_border_width_all(2)
+			badge_sb.set_corner_radius_all(999)
+			badge_sb.set_content_margin_all(2)
+			quest_badge.add_theme_stylebox_override("panel", badge_sb)
 			quest_badge.visible = false
 			quest_badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			quest_badge.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-			quest_badge.offset_left = -30
+			# Rozet karonun sağ üst köşesine oturur — buton karodan çok daha
+			# geniş olduğu için sağ üst köşesine asılınca ikondan kopuyordu.
+			quest_badge.set_anchors_preset(Control.PRESET_CENTER_TOP)
+			quest_badge.offset_left = 12
 			quest_badge.offset_top = 2
-			quest_badge.offset_right = -2
-			quest_badge.offset_bottom = 28
+			quest_badge.offset_right = 40
+			quest_badge.offset_bottom = 30
 			b.add_child(quest_badge)
 			# Prototipte rozet bir SAYI taşıyor (`t.badge`), sabit "!" değil —
 			# metni _update_bar_active tazeler.
@@ -2351,19 +2370,17 @@ func _update_bar_active() -> void:
 		var active: bool = title == _active_tab or (title == "Build" and build_mode and _active_tab == "")
 		_set_bar_button_active(_bar_buttons[title], active)
 	if quest_badge:
-		# Rozet sayısı: ödül vermeye hazır görev + henüz görülmemiş hazır
-		# başarım yok, yani bugün en fazla 1 — yine de sayı olarak yazılır
-		# (prototipteki `t.badge`), ileride birden fazla hazır ödül olursa
-		# tek yerden büyür.
-		var ready_count := 0
-		var q: Dictionary = Game.current_quest()
-		if not q.is_empty():
-			var p: Array = Game.quest_progress(q)
-			if int(p[0]) >= int(p[1]):
-				ready_count += 1
-		quest_badge.visible = ready_count > 0
+		# Rozet "ödül almaya hazır görev" sayamaz: görevler ve başarımlar
+		# hedefe ulaşır ulaşmaz KENDİLİĞİNDEN tamamlanıp ödemesini yapıyor
+		# (Game._check_quests / _check_achievements), yani "hazır" durumu tek
+		# kare bile sürmüyor — eski `!` rozeti bu yüzden pratikte hiç
+		# görünmüyordu. Anlamlı olan sayı: oyuncunun Quests ekranını en son
+		# açmasından beri tamamlanan, HENÜZ GÖRMEDİĞİ görev/başarım.
+		var unseen := maxi(0, Game.quest_index - _quests_seen_index) \
+			+ maxi(0, Game.unlocked_achievements.size() - _achievements_seen_count)
+		quest_badge.visible = unseen > 0
 		if quest_badge_label:
-			quest_badge_label.text = str(ready_count)
+			quest_badge_label.text = str(unseen)
 
 
 ## Birikim varken topla butonunu hafifçe büyütüp küçültüp durur ("numaraların
@@ -4939,6 +4956,9 @@ func _build_settings_popup(c: VBoxContainer) -> void:
 ## Prototipteki iki hap sekme: Quests · Achievements. Eskiden ikisi tek uzun
 ## sayfada alt alta duruyordu ve sıradaki görevler hiç görünmüyordu.
 func _build_quests_popup(c: VBoxContainer) -> void:
+	# Ekran açıldı: birikmiş "görülmemiş" tamamlamalar sıfırlanır, rozet söner.
+	_quests_seen_index = Game.quest_index
+	_achievements_seen_count = Game.unlocked_achievements.size()
 	var pick := func(k: String):
 		_quests_tab = k
 		_rebuild_popup()
