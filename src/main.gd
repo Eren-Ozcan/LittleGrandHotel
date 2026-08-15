@@ -32,6 +32,8 @@ const PALETTE := {
 	"cream_text": Color("fdf6e3"),
 	"green_deep": Color("1f7a44"),
 	"banner_red": Color("e0554a"),
+	# Merkez yuvarlak butonun sert alt gölgesi (prototip: `0 6px 0 #96311f`).
+	"red_lip": Color("96311f"),
 	"floor_wood": Color("c19a6f"),
 	"locked": Color("6b5f52"),
 	"frame": Color("2f2418"),
@@ -1310,17 +1312,44 @@ func _build_ui() -> void:
 	# (Shift popup'ını açar), vardiya varken "Collect" + biriken tutar. Eski
 	# COLLECT barı ve Shift sekmesinin ikisinin de yerini tutar. Alt barın
 	# İÇİNDE, Staff ile Quests arasında, diğer sekmelerle aynı hizada durur.
-	collect_button = _button("", 17, PALETTE.banner_red, PALETTE.cream_text)
+	# Görsel iki katman (prototip: radial gradient + `0 6px 0 #96311f`):
+	#   1. StyleBoxFlat = yalnızca sert alt gölge. Zemin tamamen koyu kırmızı,
+	#      daire 120 piksel (köşe yarıçapı 60).
+	#   2. Üstüne 6 piksel YUKARIDA duran, alfası dairede biten radial
+	#      GradientTexture2D. StyleBoxFlat radial gradient veremiyor; dokunun
+	#      son durağı saydam olduğu için kare doku daire gibi görünüyor.
+	collect_button = _button("", 17, PALETTE.red_lip, PALETTE.cream_text)
 	for state in ["normal", "hover", "pressed", "disabled"]:
 		var sb: StyleBoxFlat = collect_button.get_theme_stylebox(state)
+		sb.bg_color = PALETTE.red_lip
 		sb.set_corner_radius_all(60)
-		sb.border_width_bottom = 6
-		sb.border_color = PALETTE.banner_red.darkened(0.35)
-		sb.shadow_color = Color(0.1, 0.06, 0.02, 0.3)
-		sb.shadow_size = 8
-		sb.shadow_offset = Vector2(0, 3)
+		sb.set_border_width_all(0)
+		sb.shadow_size = 0
+	var primary_grad := Gradient.new()
+	primary_grad.offsets = PackedFloat32Array([0.0, 0.55, 0.97, 1.0])
+	primary_grad.colors = PackedColorArray([
+		PALETTE.banner_red.lightened(0.22), PALETTE.banner_red,
+		PALETTE.banner_red.darkened(0.18), Color(PALETTE.banner_red.darkened(0.18), 0.0),
+	])
+	var primary_tex := GradientTexture2D.new()
+	primary_tex.gradient = primary_grad
+	primary_tex.fill = GradientTexture2D.FILL_RADIAL
+	primary_tex.fill_from = Vector2(0.5, 0.5)
+	primary_tex.fill_to = Vector2(1.0, 0.5)
+	primary_tex.width = 120
+	primary_tex.height = 120
+	var primary_face := TextureRect.new()
+	primary_face.texture = primary_tex
+	primary_face.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	primary_face.stretch_mode = TextureRect.STRETCH_SCALE
+	primary_face.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	primary_face.set_anchors_preset(Control.PRESET_FULL_RECT)
+	primary_face.offset_bottom = -6
+	collect_button.add_child(primary_face)
 	var primary_col := VBoxContainer.new()
 	primary_col.set_anchors_preset(Control.PRESET_FULL_RECT)
+	# Etiketler de gölge şeridinin üstünde kalsın, dairenin ortasında dursun.
+	primary_col.offset_bottom = -6
 	primary_col.alignment = BoxContainer.ALIGNMENT_CENTER
 	primary_col.add_theme_constant_override("separation", 0)
 	primary_col.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -1494,22 +1523,39 @@ func _build_ui() -> void:
 	popup_content.add_theme_constant_override("separation", 10)
 	pad.add_child(popup_content)
 
-	# --- Toast: alt barın üstünde yüzer, yerleşimi itmez; popup'ların da üstünde
-	toast_panel = _panel(PALETTE.green_deep, PALETTE.gold)
-	toast_panel.visible = false
+	# --- Toast: alt barın üstünde yüzer, yerleşimi itmez; popup'ların da üstünde.
+	# Prototipteki biçim: koyu (#2f2418) tam yuvarlak hap + yumuşak gölge,
+	# içeriğe göre daralır. Eski hâli yeşil, altın kenarlı, neredeyse tam
+	# genişlikte bir paneldi.
+	var toast_wrap := CenterContainer.new()
+	toast_wrap.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	toast_wrap.offset_left = 40
+	toast_wrap.offset_right = -40
+	# Barın (96) ve onun üstüne binen yuvarlak butonun (tepesi -166) ikisinin de
+	# ÜSTÜNDE kalır — hiçbirine binmez (audit 15).
+	toast_wrap.offset_top = -258
+	toast_wrap.offset_bottom = -186
+	toast_wrap.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	toast_wrap.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	# Menü sayfasının (z_index 100) da üstünde — bkz. oradaki not.
-	toast_panel.z_index = 110
-	toast_panel.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
-	toast_panel.offset_left = 40
-	toast_panel.offset_right = -40
-	# Barın (96 + 14) ve onun üstüne binen yuvarlak butonun (tepesi -180)
-	# ikisinin de ÜSTÜNDE kalır — hiçbirine binmez (audit 15).
-	toast_panel.offset_top = -272
-	toast_panel.offset_bottom = -200
-	toast_panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	toast_wrap.z_index = 110
+	add_child(toast_wrap)
+	toast_panel = PanelContainer.new()
+	var toast_sb := StyleBoxFlat.new()
+	toast_sb.bg_color = PALETTE.frame
+	toast_sb.set_corner_radius_all(999)
+	toast_sb.content_margin_left = 20
+	toast_sb.content_margin_right = 20
+	toast_sb.content_margin_top = 11
+	toast_sb.content_margin_bottom = 11
+	toast_sb.shadow_color = Color(0.1, 0.06, 0.02, 0.28)
+	toast_sb.shadow_size = 10
+	toast_sb.shadow_offset = Vector2(0, 4)
+	toast_panel.add_theme_stylebox_override("panel", toast_sb)
+	toast_panel.visible = false
 	toast_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(toast_panel)
-	toast_label = _label("", 16, PALETTE.cream_text)
+	toast_wrap.add_child(toast_panel)
+	toast_label = _label("", 15, PALETTE.cream_text)
 	toast_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	toast_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	toast_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -4914,6 +4960,13 @@ func _on_achievement_unlocked(a: Dictionary) -> void:
 
 func _show_toast(msg: String) -> void:
 	toast_label.text = msg
+	# Hap içeriğe göre daralsın: autowrap açık bir Label'ın minimum genişliği en
+	# uzun KELİME kadardır, o yüzden ortalanmış kapta metnin gerçek genişliği
+	# elle verilir (bir üst sınıra kadar; ötesinde sarar).
+	var font := toast_label.get_theme_font("font")
+	var fs := toast_label.get_theme_font_size("font_size")
+	toast_label.custom_minimum_size.x = minf(
+		font.get_string_size(msg, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x, 420.0)
 	toast_panel.visible = true
 	_toast_timer = 3.0
 
