@@ -333,6 +333,9 @@ var _popup_stack: Array[Dictionary] = []
 var _store_tab := "gems"
 var _profile_tab := "account"
 var _quests_tab := "quests"
+## Shift ▸ "Finish now" iki adımlı onayının durumu. Popup yeniden kurulduğunda
+## kaybolmaması için burada tutulur (bkz. _build_shift_popup).
+var _skip_shift_armed := false
 ## Bundle waiting for the player to pick a room in the Store -> Offers flow.
 var _pending_bundle_id := ""
 ## Save code stays masked until the player asks for it (audit item 13).
@@ -3872,6 +3875,7 @@ func _show_rename_hotel_modal() -> void:
 ## büyütmemeli, her sekme kendi kökü.
 func _open_popup(title: String, builder: Callable) -> void:
 	_popup_stack.clear()
+	_skip_shift_armed = false
 	_push_popup(title, builder)
 
 
@@ -3964,12 +3968,20 @@ func _build_shift_popup(c: VBoxContainer) -> void:
 		var skip_b := _action(c, "Finish now — %s" % _count(gem_cost, "gem"),
 			"Ends the shift immediately and banks the earnings.",
 			Game.gems >= gem_cost, PALETTE.green_deep)
+		# "Emin misin?" durumu butonun META'sında DEĞİL, üye değişkende durur:
+		# popup her state_changed'de baştan kuruluyor (oda kirlenmesi bile
+		# yetiyor), meta ile tutulunca iki dokunuş arasında silinip vardiya
+		# hiç bitmiyordu — "gem ile bitirdim ama süre devam ediyor" hatası.
+		if _skip_shift_armed:
+			_row_set(skip_b, "Tap again to finish anyway",
+				"No Housekeeping room — some rooms may not pay full rate.")
 		skip_b.pressed.connect(func():
-			if not hk_active and not skip_b.get_meta("armed", false):
-				skip_b.set_meta("armed", true)
+			if not hk_active and not _skip_shift_armed:
+				_skip_shift_armed = true
 				_row_set(skip_b, "Tap again to finish anyway",
 					"No Housekeeping room — some rooms may not pay full rate.")
 				return
+			_skip_shift_armed = false
 			if Game.skip_shift():
 				_play("buy")
 				_show_toast("Shift finished with gems — the earnings are in the till!")
