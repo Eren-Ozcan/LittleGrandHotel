@@ -4484,15 +4484,22 @@ func _show_cloud_conflict_modal(on_closed: Callable = Callable()) -> void:
 	pv.add_child(_label("Which save should continue?", 20, PALETTE.wood_dark))
 	pv.add_child(_label_wrap("There are two different saves, one in the cloud and one on this device. They are never merged automatically — pick one and the other stays as it is.", 12, PALETTE.muted))
 
+	# Prototipteki düzen: iki YAN YANA kart, seçim butonu her kartın kendi
+	# içinde. Eskiden özetler kartsız iki sütun, butonlar ise altta ayrı bir
+	# yığındı — hangi butonun hangi sütuna ait olduğu okunmuyordu.
 	var cols := HBoxContainer.new()
 	cols.add_theme_constant_override("separation", 12)
 	pv.add_child(cols)
-	cols.add_child(_cloud_side_column("Cloud",
+	var cloud_card := _cloud_side_card("Cloud",
 		int(cloud.get("level", 0)), int(cloud.get("coins", 0)),
 		int(cloud.get("gems", 0)), int(cloud.get("rooms", 0)),
-		_fmt_relative(cloud_at) if cloud_at > 0.0 else "time unknown"))
-	cols.add_child(_cloud_side_column("This device",
-		Game.level(), Game.coins, Game.gems, Game.rooms.size(), "now"))
+		_fmt_relative(cloud_at) if cloud_at > 0.0 else "time unknown",
+		"Use this one", PALETTE.green_deep)
+	cols.add_child(cloud_card)
+	var local_card := _cloud_side_card("This device",
+		Game.level(), Game.coins, Game.gems, Game.rooms.size(), "now",
+		"Use this one", PALETTE.wood_dark)
+	cols.add_child(local_card)
 
 	var closed := false
 	var do_close := func():
@@ -4504,20 +4511,18 @@ func _show_cloud_conflict_modal(on_closed: Callable = Callable()) -> void:
 		if on_closed.is_valid():
 			on_closed.call()
 
-	var cloud_b := _button("Use the cloud's", 15, PALETTE.green_deep, PALETTE.cream_text)
+	var cloud_b: Button = cloud_card.get_meta("button")
 	cloud_b.pressed.connect(func():
 		var ok: bool = CloudSave.resolve_keep_cloud()
 		do_close.call()
 		_show_toast("Cloud save loaded" if ok else "The cloud save could not be read; this device's save was kept")
 		_refresh())
-	pv.add_child(cloud_b)
 
-	var local_b := _button("Use this device's", 15, PALETTE.wood_dark, PALETTE.cream_text)
+	var local_b: Button = local_card.get_meta("button")
 	local_b.pressed.connect(func():
 		do_close.call()
 		_show_toast("Kept this device's save and uploading it to the cloud")
 		await CloudSave.resolve_keep_local())
-	pv.add_child(local_b)
 
 	# Çakışma modalı dışına tıklayarak KAPATILAMAZ: kararı ertelemek, seçim
 	# yapılana dek buluta hiç yazılmaması demek — oyuncunun bunu fark etmeden
@@ -4526,17 +4531,35 @@ func _show_cloud_conflict_modal(on_closed: Callable = Callable()) -> void:
 	_play("tap")
 
 
-func _cloud_side_column(title: String, lv: int, coins: int, gems: int,
-		rooms: int, when: String) -> Control:
+## Çakışma modalının bir tarafı: beyaz kart + özet + kendi seçim butonu.
+## Buton çağırana `get_meta("button")` ile döner (kart oluşturulurken kapanış
+## callable'ı henüz tanımlı değil).
+func _cloud_side_card(title: String, lv: int, coins: int, gems: int,
+		rooms: int, when: String, action_text: String, accent: Color) -> PanelContainer:
+	var p := PanelContainer.new()
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = PALETTE.card
+	sb.border_color = PALETTE.facade_line
+	sb.set_border_width_all(2)
+	sb.set_corner_radius_all(12)
+	sb.set_content_margin_all(11)
+	p.add_theme_stylebox_override("panel", sb)
+	p.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var box := VBoxContainer.new()
-	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	box.add_theme_constant_override("separation", 4)
+	p.add_child(box)
 	box.add_child(_label(title, 16, PALETTE.wood_dark))
-	box.add_child(_label(when, 12, PALETTE.muted))
-	box.add_child(_label("Level %d" % lv, 14, PALETTE.text))
-	box.add_child(_label("%s coins" % _fmt(coins), 14, PALETTE.text))
-	box.add_child(_label(_count(gems, "gem"), 14, PALETTE.text))
-	box.add_child(_label(_count(rooms, "room"), 14, PALETTE.text))
-	return box
+	box.add_child(_label(when, 11, PALETTE.muted))
+	box.add_child(_label("Level %d" % lv, 13, PALETTE.text))
+	box.add_child(_label("%s coins" % _fmt(coins), 13, PALETTE.text))
+	box.add_child(_label(_count(gems, "gem"), 13, PALETTE.text))
+	box.add_child(_label(_count(rooms, "room"), 13, PALETTE.text))
+	box.add_child(_spacer_y(2))
+	var b := _button(action_text, 13, accent, PALETTE.cream_text)
+	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	box.add_child(b)
+	p.set_meta("button", b)
+	return p
 
 
 ## Popup içi sekme şeridi. Seçim popup dışında (üye değişkende) durur, çünkü
