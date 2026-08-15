@@ -1026,7 +1026,10 @@ func _build_ui() -> void:
 	add_child(margin)
 
 	var root := VBoxContainer.new()
-	root.add_theme_constant_override("separation", 10)
+	# Ortak ayırıcı YOK: bina ile alt bar arasında kalan boşluktan gökyüzünün
+	# pembe alt ucu sızıyordu ("yeşille bar arasında beyazlık"). Aralar artık
+	# tek tek, _edge_pad'in alt kenar boşluğuyla veriliyor.
+	root.add_theme_constant_override("separation", 0)
 	margin.add_child(root)
 
 	# --- Üst bar (krem panel) — tıklanınca Profil açılır (kullanıcı isteği:
@@ -1037,7 +1040,7 @@ func _build_ui() -> void:
 	# avatar kartın DIŞINDA, gökyüzünün üstünde ayrı bir kutu olarak durur.
 	var top_row := HBoxContainer.new()
 	top_row.add_theme_constant_override("separation", 8)
-	_edge_pad(root, 14).add_child(top_row)
+	_edge_pad(root, 14, 10).add_child(top_row)
 	var top := PanelContainer.new()
 	var top_sb := StyleBoxFlat.new()
 	top_sb.bg_color = PALETTE.cream
@@ -1183,7 +1186,7 @@ func _build_ui() -> void:
 	# taşıyor (audit 14). Eski COLLECT barı buradan kalktı — tek birincil buton
 	# alt barın ortasına taşındı (bkz. collect_button aşağıda).
 	var status_wrap := CenterContainer.new()
-	_edge_pad(root).add_child(status_wrap)
+	_edge_pad(root, 0, 10).add_child(status_wrap)
 	# Prototipteki gökyüzü hapı: yarı saydam koyu zemin, kenar yok, tam yuvarlak
 	# uçlar. Saat ikonu çipi bir bakışta "zaman" olarak okutuyor.
 	var status_chip := _chip(PALETTE.chip_dark)
@@ -1265,7 +1268,7 @@ func _build_ui() -> void:
 	# açılan liste yerine Hotel City'deki gibi "mağazadan seç, sürükle" akışı.
 	# Raf kendi kenar boşluğunu taşır (kök yerleşim kenardan kenara): görünürlük
 	# sarmalayıcının kendisinde, yoksa gizliyken bile kök VBox'ta boşluk bırakır.
-	build_shop_panel = _edge_pad(root)
+	build_shop_panel = _edge_pad(root, 0, 6)
 	build_shop_panel.visible = false
 	var build_shop_col := VBoxContainer.new()
 	build_shop_col.add_theme_constant_override("separation", 2)
@@ -2661,13 +2664,11 @@ func _rebuild_hotel() -> void:
 	var grass := PanelContainer.new()
 	var gsb := StyleBoxFlat.new()
 	gsb.bg_color = PALETTE.grass
-	gsb.corner_radius_bottom_left = 20
-	gsb.corner_radius_bottom_right = 20
+	# Köşeler DÜZ: yerleşim kenardan kenara olduğu için yuvarlatılmış alt
+	# köşeler ekranın sol/sağ ucunda "çim bitmemiş" gibi okunuyordu.
+	gsb.set_corner_radius_all(0)
 	gsb.border_color = PALETTE.grass_dark
 	gsb.border_width_bottom = 4
-	gsb.shadow_color = Color(0.1, 0.06, 0.02, 0.18)
-	gsb.shadow_size = 5
-	gsb.shadow_offset = Vector2(0, 3)
 	grass.add_theme_stylebox_override("panel", gsb)
 	grass.position = Vector2(0, street_y + STREET_H)
 	grass.size = Vector2(canvas_w, GRASS_H)
