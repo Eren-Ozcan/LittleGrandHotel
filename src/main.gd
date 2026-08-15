@@ -39,6 +39,8 @@ const PALETTE := {
 	"sidewalk": Color("c9c3b4"),
 	"curb": Color("e0a83c"),
 	"bar_dark": Color("3a2c4d"),
+	# Alt bar şeridinin üst kenarı (prototip: `border-top:3px solid #2b2039`).
+	"bar_edge": Color("2b2039"),
 	"grass": Color("6cc24a"),
 	"grass_dark": Color("4e9e34"),
 }
@@ -1320,11 +1322,16 @@ func _build_ui() -> void:
 	shift_button = collect_button
 
 	# --- Alt bar: koyu şerit üzerinde ikonlu kategoriler (Hotel City tarzı)
+	# Prototipte şerit köşesiz ve altın kenarsız: düz #3a2c4d zemin, yalnızca
+	# 3 piksellik koyu üst kenar. Ekranın iki kenarına değdiği için yuvarlak
+	# köşe zaten kesik görünüyordu.
 	var bar_panel := PanelContainer.new()
-	var bar_sb := _card_sb(PALETTE.bar_dark, PALETTE.gold, 20, 0.25)
+	var bar_sb := StyleBoxFlat.new()
+	bar_sb.bg_color = PALETTE.bar_dark
+	bar_sb.set_corner_radius_all(0)
+	bar_sb.border_color = PALETTE.bar_edge
+	bar_sb.border_width_top = 3
 	bar_sb.set_content_margin_all(6)
-	bar_sb.shadow_size = 6
-	bar_sb.shadow_offset = Vector2(0, -2)
 	bar_panel.add_theme_stylebox_override("panel", bar_sb)
 	root.add_child(bar_panel)
 	var bottom := HBoxContainer.new()
@@ -2025,24 +2032,41 @@ func _bar_button(icon_path: String, text: String) -> Button:
 	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	b.add_child(v)
 	if icon_path != "":
-		# Aktif sekmede ikon krem dolgulu, altın kenarlı bir kutucuğa oturur
-		# (prototipteki seçili durum) — kutu pasifken görünmez.
+		# Sekme her iki durumda da bir karo (prototip satır 753-755): pasifken
+		# soluk krem zemin + kenar, aktifken dolu krem + altın kenar ve sert
+		# `0 3px 0 #b8862a` gölge. Karo ölçüsü 42x38, köşe 12.
 		var wrap := CenterContainer.new()
 		wrap.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		var box := PanelContainer.new()
 		box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		box.custom_minimum_size = Vector2(42, 38)
 		var box_sb := StyleBoxFlat.new()
 		box_sb.bg_color = PALETTE.cream
 		box_sb.border_color = PALETTE.gold
 		box_sb.set_border_width_all(2)
 		box_sb.set_corner_radius_all(12)
-		box_sb.set_content_margin_all(4)
+		box_sb.content_margin_left = 4
+		box_sb.content_margin_right = 4
+		box_sb.content_margin_top = 2
+		box_sb.content_margin_bottom = 2
+		# Prototipteki gölge bulanık değil, 3 piksel aşağı kaydırılmış düz bir
+		# katman: shadow_size küçük tutulur, tüm etkiyi offset verir.
+		box_sb.shadow_color = Color("b8862a")
+		box_sb.shadow_size = 1
+		box_sb.shadow_offset = Vector2(0, 3)
 		box.add_theme_stylebox_override("panel", box_sb)
-		var empty_sb := StyleBoxEmpty.new()
-		empty_sb.set_content_margin_all(6)
+		var idle_sb := StyleBoxFlat.new()
+		idle_sb.bg_color = Color(PALETTE.cream, 0.10)
+		idle_sb.border_color = Color(PALETTE.cream, 0.16)
+		idle_sb.set_border_width_all(2)
+		idle_sb.set_corner_radius_all(12)
+		idle_sb.content_margin_left = 4
+		idle_sb.content_margin_right = 4
+		idle_sb.content_margin_top = 2
+		idle_sb.content_margin_bottom = 2
 		box.set_meta("active_sb", box_sb)
-		box.set_meta("idle_sb", empty_sb)
-		box.add_theme_stylebox_override("panel", empty_sb)
+		box.set_meta("idle_sb", idle_sb)
+		box.add_theme_stylebox_override("panel", idle_sb)
 		var ico := _icon(icon_path, 34)
 		ico.modulate.a = 0.72
 		box.add_child(ico)
