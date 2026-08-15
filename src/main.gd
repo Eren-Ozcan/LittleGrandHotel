@@ -4095,6 +4095,23 @@ func _build_room_popup(c: VBoxContainer) -> void:
 		return
 	var room: Dictionary = Game.rooms[selected_room]
 	var tier := Game.room_tier(room)
+	# Kirli oda: tuvalde dokunmak artık temizlemiyor (bkz. Temizlik Modu), bu
+	# yüzden oda ekranı temizliğin ikinci yolu — oyuncu buraya kadar gelmişken
+	# moda girmek zorunda kalmasın.
+	if room.dirty:
+		var clean_cost := Game.clean_cost(selected_room)
+		_notice(c, "This room is dirty — it earns nothing until it's cleaned.", "warn")
+		var clean_b := _action(c,
+			"Clean this room" + ("" if clean_cost <= 0 else " — %s coins" % _fmt(clean_cost)),
+			"Or open Cleaning mode in Staff to clear several rooms in a row.",
+			clean_cost <= 0 or Game.coins >= clean_cost, PALETTE.green_deep)
+		clean_b.pressed.connect(func():
+			if Game.clean_room(selected_room):
+				_play("clean")
+				_show_toast("Room cleaned (+2 XP)" if clean_cost <= 0
+					else "Infestation cleared! (−%s coins, +2 XP)" % _fmt(clean_cost))
+			else:
+				_show_toast("Clearing the infestation costs %s coins!" % _fmt(clean_cost)))
 	# Oda başlığı kartı: ad + tier, altında bir sonraki tier'a SP ilerlemesi
 	# (prototipteki ince yeşil çubuk).
 	var head := _card(c)
