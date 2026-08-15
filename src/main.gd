@@ -1002,10 +1002,14 @@ func _build_ui() -> void:
 		cloud.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		add_child(cloud)
 
+	# Kök yerleşimin kenar boşluğu YOK (prototip: `left:0; right:0`) — bina ve
+	# alt bar ekranın iki kenarına değer. Yan boşluğa ihtiyacı olan parçalar
+	# (üst bar, gökyüzü çipleri, inşa rafı) kendi MarginContainer'ını taşır;
+	# bkz. _edge_pad.
 	var margin := MarginContainer.new()
 	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
 	for side in ["left", "right", "top", "bottom"]:
-		margin.add_theme_constant_override("margin_" + side, 14)
+		margin.add_theme_constant_override("margin_" + side, 0)
 	add_child(margin)
 
 	var root := VBoxContainer.new()
@@ -1020,7 +1024,7 @@ func _build_ui() -> void:
 	# avatar kartın DIŞINDA, gökyüzünün üstünde ayrı bir kutu olarak durur.
 	var top_row := HBoxContainer.new()
 	top_row.add_theme_constant_override("separation", 8)
-	root.add_child(top_row)
+	_edge_pad(root, 14).add_child(top_row)
 	var top := PanelContainer.new()
 	var top_sb := StyleBoxFlat.new()
 	top_sb.bg_color = PALETTE.cream
@@ -1238,15 +1242,18 @@ func _build_ui() -> void:
 	# İnşa Modu mağaza rafı: yalnızca build_mode açıkken görünür (bkz.
 	# _rebuild_hotel). Oda kartları buradan tuvale sürüklenir — tıklayınca
 	# açılan liste yerine Hotel City'deki gibi "mağazadan seç, sürükle" akışı.
-	build_shop_panel = VBoxContainer.new()
+	# Raf kendi kenar boşluğunu taşır (kök yerleşim kenardan kenara): görünürlük
+	# sarmalayıcının kendisinde, yoksa gizliyken bile kök VBox'ta boşluk bırakır.
+	build_shop_panel = _edge_pad(root)
 	build_shop_panel.visible = false
-	build_shop_panel.add_theme_constant_override("separation", 2)
-	root.add_child(build_shop_panel)
-	build_shop_panel.add_child(_label("Room Shop — drag and drop onto the building", 12, PALETTE.wood_dark))
+	var build_shop_col := VBoxContainer.new()
+	build_shop_col.add_theme_constant_override("separation", 2)
+	build_shop_panel.add_child(build_shop_col)
+	build_shop_col.add_child(_label("Room Shop — drag and drop onto the building", 12, PALETTE.wood_dark))
 	var build_shop_scroll := ScrollContainer.new()
 	build_shop_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	build_shop_scroll.custom_minimum_size = Vector2(0, 112)
-	build_shop_panel.add_child(build_shop_scroll)
+	build_shop_col.add_child(build_shop_scroll)
 	build_shop_row = HBoxContainer.new()
 	build_shop_row.add_theme_constant_override("separation", 6)
 	build_shop_scroll.add_child(build_shop_row)
@@ -2064,6 +2071,18 @@ func _set_bar_button_active(b: Button, active: bool) -> void:
 	var l: Label = b.get_meta("label")
 	l.modulate.a = 1.0 if active else 0.78
 	l.add_theme_color_override("font_color", PALETTE.gold_soft if active else PALETTE.cream_text)
+
+
+## Kök yerleşim kenardan kenara olduğu için (bkz. _build_ui'daki margin),
+## yan boşluğa ihtiyacı olan tekil parçalar kendi kenar boşluğunu taşır.
+func _edge_pad(parent: Node, top: int = 0, bottom: int = 0) -> MarginContainer:
+	var m := MarginContainer.new()
+	m.add_theme_constant_override("margin_left", 14)
+	m.add_theme_constant_override("margin_right", 14)
+	m.add_theme_constant_override("margin_top", top)
+	m.add_theme_constant_override("margin_bottom", bottom)
+	parent.add_child(m)
+	return m
 
 
 func _spacer_x(px: int) -> Control:
