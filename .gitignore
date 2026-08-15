@@ -39,3 +39,7 @@ android/build/res/drawable/
 
 # Private/local-only store & marketing assets (mirrored to private Eren-Ozcan/pictures repo)
 docs/store-assets-originals/
+
+# /graphify skill çıktısı: kod tabanının bilgi grafiği + AST önbelleği.
+# Tamamı üretilmiş dosya (~4 MB) ve her çalıştırmada yenilenir.
+graphify-out/
