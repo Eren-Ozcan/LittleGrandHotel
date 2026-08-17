@@ -40,10 +40,12 @@ service cloud.firestore {
                     && request.resource.data.schemaVersion is int
                     && request.resource.data.rev > resource.data.rev;
 
-      // Silme kapalı: kazara/kötü niyetli tek bir istekle ilerleme yok
-      // edilemesin. Kayıt sıfırlama oyun içinde yereldir; bulut sürümü
-      // bir sonraki yazmayla (rev artarak) üzerine yazılır.
-      allow delete: if false;
+      // Silme AÇIK ama yalnızca kaydın sahibi için. Kapalıyken oyun içindeki
+      // "Delete account data" yolu sessizce başarısız oluyordu; oysa Play'in
+      // hesap/veri silme şartı ve gizlilik politikamız buluttaki kopyanın da
+      // silinmesini gerektiriyor. Risk sınırlı: bir oyuncu ancak kendi
+      // dokümanını silebilir ve yerel kayıt zaten aynı akışta sıfırlanıyor.
+      allow delete: if request.auth != null && request.auth.uid == uid;
     }
   }
 }

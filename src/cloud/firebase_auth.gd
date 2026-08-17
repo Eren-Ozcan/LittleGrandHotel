@@ -24,6 +24,7 @@ const STATE_PATH := "user://firebase_auth.json"
 const SIGNUP_URL := "https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=%s"
 const REFRESH_URL := "https://securetoken.googleapis.com/v1/token?key=%s"
 const IDP_URL := "https://identitytoolkit.googleapis.com/v1/accounts:signInWithIdp?key=%s"
+const DELETE_URL := "https://identitytoolkit.googleapis.com/v1/accounts:delete?key=%s"
 
 ## Kötü ağda açılışı kilitlememek için — HTTPRequest.timeout, request_completed
 ## sinyalinin HER YOLDA tetiklenmesini garanti eder (bkz. cloud_save.gd'deki
@@ -171,6 +172,39 @@ func link_with_google(google_id_token: String) -> Dictionary:
 	var new_uid := _adopt_idp_session(res.body)
 	return {"ok": true, "switched": new_uid != previous, "uid": new_uid,
 		"msg": "Your account is linked — your progress can now be opened on your other devices."}
+
+
+## Firebase kullanıcısını tamamen siler (Ayarlar ▸ Delete account data).
+##
+## Bulut dokümanını silmek tek başına yetmiyor: hesap kaydı (uid, bağlı Google
+## kimliği) sunucuda kalırdı ve gizlilik politikası "hesabı da sileriz" diyor.
+## Silme başarılıysa yerel oturum da sıfırlanır, böylece oyun bir sonraki
+## açılışta temiz bir anonim kullanıcıyla başlar.
+##
+## Hesap zaten yoksa (token alınamıyorsa) silinecek bir şey de yok — `true`.
+func delete_account() -> bool:
+	if not FirebaseConfig.is_configured():
+		return true
+	var token: String = await ensure_token()
+	if token.is_empty():
+		return false
+	var res: Dictionary = await _post_json(DELETE_URL % FirebaseConfig.API_KEY,
+		{"idToken": token})
+	# USER_NOT_FOUND = sunucudaki kullanıcı zaten yok; oyuncu için sonuç aynı.
+	if not res.ok and String(res.error).find("USER_NOT_FOUND") < 0:
+		return false
+	_clear_session()
+	return true
+
+
+## Yerel oturumu unutur (diskteki kalıcı durum dahil).
+func _clear_session() -> void:
+	_uid = ""
+	_provider = "anonymous"
+	_refresh_token = ""
+	_id_token = ""
+	_id_token_expires_at = 0.0
+	_save_state()
 
 
 func _adopt_idp_session(body: Dictionary) -> String:

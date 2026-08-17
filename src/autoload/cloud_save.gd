@@ -407,9 +407,13 @@ func delete_cloud_data() -> bool:
 	# 404 = doküman zaten yok; oyuncu için sonuç aynı.
 	var ok: bool = res.ok or res.code == 404
 	if ok:
+		# Doküman gitti ama hesap kaydı (uid + bağlı Google kimliği) hâlâ
+		# duruyordu; gizlilik politikası ikisinin de silindiğini söylüyor.
+		ok = await _auth.delete_account()
 		# Bir sonraki yükleme yeni bir dokümanı sıfırdan yazsın.
 		_rev = 0
 		_dirty = false
+		_last_synced_uid = ""
 		_last_success_unix = 0.0
 		_save_state()
 		status_changed.emit()
