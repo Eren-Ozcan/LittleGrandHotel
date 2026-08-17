@@ -470,6 +470,7 @@ func _ready() -> void:
 	Game.quest_completed.connect(_on_quest_completed)
 	Game.achievement_unlocked.connect(_on_achievement_unlocked)
 	IAP.purchase_result.connect(_on_purchase_restored)
+	IAP.restore_finished.connect(_on_restore_finished)
 	# Mağaza fiyatları bağlantı kurulduktan sonra asenkron geliyor; Elmas popup'ı
 	# o sırada açıksa yedek etiketlerle çizilmiş olur, gelince tazelenir.
 	IAP.prices_updated.connect(_rebuild_popup)
@@ -716,6 +717,27 @@ func _on_purchase_restored(product_id: String, success: bool) -> void:
 			if Game.permanent_income_mult <= 1.0:
 				Game.permanent_income_mult = 2.0
 				Game.save_game()
+		_:
+			# Elmas paketleri (tüketilebilir): ödül tam olarak burada verilir —
+			# hem oyuncunun az önce yaptığı satın almada hem de yarım kalmış bir
+			# satın alma açılışta mağazadan geri geldiğinde aynı yol işler.
+			for pack in GEM_PACKS:
+				if pack.product == product_id:
+					Game.gems += int(pack.gems)
+					Game.save_game()
+					break
+
+
+## Ayarlar ▸ Restore purchases'ın sonucu. Hakların kendisi zaten
+## _on_purchase_restored'da uygulanıyor; buradaki tek iş oyuncuya ne olduğunu
+## söylemek — sessiz kalmak "çalıştı mı?" sorusunu cevapsız bırakırdı.
+func _on_restore_finished(count: int) -> void:
+	if count < 0:
+		_show_toast("The store could not be reached — try again later.")
+	elif count == 0:
+		_show_toast("No earlier purchases found on this account.")
+	else:
+		_show_toast("Your purchases were restored.")
 
 
 func _maybe_show_offline_popup() -> void:
@@ -4908,8 +4930,11 @@ func _build_gems_popup(c: VBoxContainer) -> void:
 		b.pressed.connect(func():
 			IAP.purchase(product, func(ok: bool):
 				if ok:
-					Game.gems += amount
-					Game.save_game()
+					# Elmasları BU callback eklemez — ekleme tek yerde,
+					# _on_purchase_restored'da. Böylece uygulama satın alma ile
+					# ödül arasında öldürülse bile elmaslar bir sonraki açılışta
+					# mağaza sorgusundan gelir (oyuncu parayı ödeyip boşa
+					# düşmez); burada iki kez eklenmesi de imkânsız olur.
 					_play("buy")
 					_show_toast("%s added!" % _count(amount, "gem"))
 					_rebuild_popup()))
@@ -4937,8 +4962,10 @@ func _build_settings_popup(c: VBoxContainer) -> void:
 	_section(c, "Support & legal")
 	var lv := _list_card(c)
 	_list_row(lv, "Restore purchases", "›", true).pressed.connect(func():
-		IAP.restore_purchases()
-		_show_toast("Checking the store for your earlier purchases…"))
+		if IAP.restore_purchases():
+			_show_toast("Checking the store for your earlier purchases…")
+		else:
+			_show_toast("The store is not reachable right now — try again later."))
 	_list_row(lv, "Privacy policy", "↗", true).pressed.connect(func():
 		OS.shell_open(PRIVACY_POLICY_URL))
 	# Reklam onayı bir kez alınıp bir daha değiştirilemiyordu (audit 4) — UMP

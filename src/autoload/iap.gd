@@ -21,6 +21,11 @@ signal purchase_result(product_id: String, success: bool)
 ## Mağaza fiyatları geldi — fiyat gösteren ekranlar kendini tazelemeli.
 signal prices_updated
 
+## Oyuncunun elle başlattığı geri yükleme bitti: `count` mağazada bulunan
+## satın alma sayısı. Yalnızca restore_purchases() çağrıldıktan sonraki ilk
+## yanıtta gelir — bağlantı kurulunca yapılan otomatik sorgu sessizdir.
+signal restore_finished(count: int)
+
 const PRODUCT_REMOVE_ADS := "remove_ads"
 const PRODUCT_INCOME_2X := "income_2x"
 const PRODUCT_GEMS_SMALL := "gems_small"
@@ -43,6 +48,9 @@ var _connected := false
 var _pending: Dictionary = {}  # product_id -> Array[Callable]
 ## product_id -> mağazanın verdiği yerelleştirilmiş fiyat metni ("₺19,99", "$1.99", "€1,99"…)
 var _prices: Dictionary = {}
+## Oyuncu Ayarlar'dan geri yükleme istedi mi — sıradaki sorgu yanıtı
+## restore_finished ile bildirilir.
+var _restore_requested := false
 
 
 func _ready() -> void:
@@ -130,11 +138,16 @@ func purchase(product_id: String, on_result: Callable = Callable()) -> void:
 
 ## Mağaza tarafında saklanan satın almaları geri getirir (bağlantı kurulunca zaten
 ## otomatik çağrılır — cihaz değişimi/yeniden kurulumda hakların geri gelmesi için).
-func restore_purchases() -> void:
-	if not _real_billing_available():
-		return
-	if _connected:
-		_billing.query_purchases(BillingClient.ProductType.INAPP)
+##
+## Sorgu gerçekten başlatıldıysa `true` döner. Mağazaya hiç ulaşılamıyorsa
+## (masaüstü/test, bağlantı yok) `false` döner ki UI "kontrol ediliyor" gibi
+## yanlış bir söz vermek yerine dürüst bir mesaj gösterebilsin.
+func restore_purchases() -> bool:
+	if not _real_billing_available() or not _connected:
+		return false
+	_restore_requested = true
+	_billing.query_purchases(BillingClient.ProductType.INAPP)
+	return true
 
 
 func _on_purchase_updated(response: Dictionary) -> void:
@@ -146,11 +159,18 @@ func _on_purchase_updated(response: Dictionary) -> void:
 
 
 func _on_query_purchases_response(response: Dictionary) -> void:
+	var requested := _restore_requested
+	_restore_requested = false
 	var response_code: int = response.get("response_code", -1)
 	if response_code != BillingClient.BillingResponseCode.OK:
+		if requested:
+			restore_finished.emit(-1)
 		return
-	for p in response.get("purchases", []):
+	var purchases: Array = response.get("purchases", [])
+	for p in purchases:
 		_apply_purchase(p)
+	if requested:
+		restore_finished.emit(purchases.size())
 
 
 func _apply_purchase(p: Dictionary) -> void:
