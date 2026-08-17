@@ -67,14 +67,30 @@ const LOOPBACK_PORT_ANY := 0
 
 ## How long we wait for the player to come back to the game before giving up on
 ## the token exchange (see _await_foreground).
-const FOREGROUND_WAIT_SEC := 120.0
+##
+## The clock keeps running while the app is frozen, so this is really "how long
+## the player may stay in the browser". Two minutes was shorter than the sign-in
+## itself for anyone who had to type a password or pass 2FA, and the
+## authorization code Google issues outlives that anyway — so it matches the
+## browser round's own timeout instead.
+const FOREGROUND_WAIT_SEC := FLOW_TIMEOUT_SEC
 
 ## The exchange is retried because the first request right after a resume can
 ## still time out while the network stack wakes up. Retrying with the same code
 ## is safe: Google only consumes it on a successful exchange, and a consumed
 ## code just fails again, which is the outcome we already had.
-const EXCHANGE_ATTEMPTS := 3
-const EXCHANGE_RETRY_SEC := 1.5
+##
+## The waits grow instead of staying at 1.5 s: a phone that just came back from
+## a long browser round can need tens of seconds before background data flows
+## again, and the authorization code stays valid for minutes. The old fixed
+## budget (3 × 1.5 s ≈ 4.5 s) threw away a perfectly good code while the
+## network was still waking up.
+const EXCHANGE_BACKOFF_SEC := [1.5, 3.0, 6.0, 12.0, 20.0]
+
+## Google errors that mean the code will never work again — retrying only
+## delays telling the player. Everything else (empty body, timeout, 5xx) is
+## treated as a transient network problem and retried.
+const _TERMINAL_TOKEN_ERRORS := ["invalid_grant", "invalid_client", "invalid_request"]
 
 ## Used to bounce the browser back to the game once the round is done. Must match
 ## `package/unique_name` in export_presets.cfg — if it drifts, the auto-return
@@ -90,6 +106,12 @@ var _cancelled := false
 ## moment times out with an empty body and the sign-in fails silently.
 var _foreground := true
 
+## Why the last round ended without a token. Empty means "no failure recorded"
+## (or the player simply cancelled). The UI turns this into a message the player
+## can act on — "sign-in was not completed" alone left them with nothing to do
+## and no way to tell a timeout from a rejected code.
+var _last_error := ""
+
 
 ## Tarayıcıyı açar ve oyuncu girişi tamamlayınca Google OIDC `id_token`'ını
 ## döndürür. Her başarısızlık yolunda BOŞ string döner — çağıran (cloud_save.gd
@@ -100,6 +122,7 @@ func request_id_token() -> String:
 		return ""
 
 	_cancelled = false
+	_last_error = ""
 	_server = TCPServer.new()
 	if _server.listen(LOOPBACK_PORT_ANY, "127.0.0.1") != OK:
 		_stop_server()
@@ -129,17 +152,22 @@ func request_id_token() -> String:
 	var code := await _await_redirect(state)
 	_stop_server()
 	if code.is_empty():
+		if _last_error.is_empty() and not _cancelled:
+			_last_error = "no_code"
 		return ""
-	# Hold the code until the game is in front again — exchanging it from the
-	# background is what used to fail.
-	if not await _await_foreground():
-		return ""
+	# The exchange itself waits for the foreground before every attempt.
 	return await _exchange_code(code, verifier, redirect_uri, client)
 
 
 ## Oyuncu "İptal"e bastığında (ya da popup kapandığında) bekleyen akışı bırakır.
 func cancel() -> void:
 	_cancelled = true
+
+
+## Neden token alınamadı — bkz. _last_error. Boş string: kayda değer bir hata
+## yok (oyuncu vazgeçti ya da akış hiç başlamadı).
+func last_error() -> String:
+	return _last_error
 
 
 func _notification(what: int) -> void:
@@ -192,10 +220,16 @@ func _await_redirect(expected_state: String) -> String:
 				if String(result.get("state", "")) != expected_state:
 					# Sahte/karışmış istek: kodu KULLANMA, beklemeye devam et.
 					continue
+				# Oyuncu Google ekranında reddettiyse (access_denied) sebep
+				# buradan gelir; sessiz "tamamlanmadı" yerine onu gösteririz.
+				if result.has("error"):
+					_last_error = String(result.get("error", ""))
+					return ""
 				return String(result.get("code", ""))
 		if _cancelled:
 			return ""
 		if Time.get_ticks_msec() - started > FLOW_TIMEOUT_SEC * 1000.0:
+			_last_error = "browser_timeout"
 			return ""
 		await get_tree().process_frame
 	return ""
@@ -320,13 +354,29 @@ func _exchange_code(code: String, verifier: String, redirect_uri: String,
 	if not secret.is_empty():
 		form["client_secret"] = secret
 
-	for attempt in EXCHANGE_ATTEMPTS:
+	for attempt in EXCHANGE_BACKOFF_SEC.size():
+		# The player can walk away again between attempts (a notification, a
+		# second browser trip); exchanging from the background is exactly what
+		# fails, so every attempt waits for the foreground first.
+		if not await _await_foreground():
+			_last_error = "no_foreground"
+			return ""
 		var res: Dictionary = await _post_form(TOKEN_ENDPOINT, form)
 		if res.ok:
-			return String(res.body.get("id_token", ""))
-		if _cancelled or attempt == EXCHANGE_ATTEMPTS - 1:
+			var id_token := String(res.body.get("id_token", ""))
+			if id_token.is_empty():
+				_last_error = "no_id_token"
+			return id_token
+		var reason := String(res.body.get("error", ""))
+		print("[GoogleSignIn] token exchange attempt %d failed: %s" % [
+			attempt + 1, reason if not reason.is_empty() else "network"])
+		if reason in _TERMINAL_TOKEN_ERRORS:
+			_last_error = reason
+			return ""
+		_last_error = reason if not reason.is_empty() else "network"
+		if _cancelled or attempt == EXCHANGE_BACKOFF_SEC.size() - 1:
 			break
-		await get_tree().create_timer(EXCHANGE_RETRY_SEC).timeout
+		await get_tree().create_timer(float(EXCHANGE_BACKOFF_SEC[attempt])).timeout
 	return ""
 
 

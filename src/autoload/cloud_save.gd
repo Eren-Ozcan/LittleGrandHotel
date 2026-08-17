@@ -213,7 +213,7 @@ func link_google() -> Dictionary:
 	if typeof(google_token) != TYPE_STRING or String(google_token).is_empty():
 		_linking = false
 		status_changed.emit()
-		return {"ok": false, "msg": "Google sign-in was not completed."}
+		return {"ok": false, "msg": _signin_failure_message()}
 	var res: Dictionary = await _auth.link_with_google(String(google_token))
 	if res.get("ok", false) and res.get("switched", false):
 		# Hesap değişti: rev sayacı ESKİ hesaba aitti (bkz. _adopt_uid).
@@ -222,6 +222,34 @@ func link_google() -> Dictionary:
 	_linking = false
 	status_changed.emit()
 	return res
+
+
+## Giriş turu token'sız bitti — oyuncuya NE olduğunu söyle.
+##
+## Tek bir "Google sign-in was not completed." mesajı, tarayıcıda çok oyalanmakla
+## Google'ın kodu reddetmesini aynı kefeye koyuyordu; oyuncunun tekrar denemesi
+## mi yoksa beklemesi mi gerektiğini anlamasının yolu yoktu. Varsayılan
+## sağlayıcı dışında bir sağlayıcı takılıysa (yerli eklenti) sebep bilinmez ve
+## eski genel mesaj kalır.
+func _signin_failure_message() -> String:
+	var reason := ""
+	if _google_signin != null and _google_id_token_provider.get_object() == _google_signin:
+		reason = _google_signin.last_error()
+	match reason:
+		"access_denied":
+			return "Google sign-in was declined."
+		"browser_timeout":
+			return "Sign-in took too long in the browser — try again from here."
+		"no_foreground":
+			return "Sign-in needs the game open — try again and come straight back."
+		"network":
+			return "Google could not be reached — check your connection and try again."
+		"invalid_grant", "invalid_request":
+			return "That sign-in expired before it finished — please try again."
+		"invalid_client":
+			return "This build's Google sign-in is misconfigured; please contact support."
+		_:
+			return "Google sign-in was not completed."
 
 
 # --- Senkron ------------------------------------------------------------
