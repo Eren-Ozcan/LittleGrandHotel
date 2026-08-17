@@ -79,6 +79,9 @@ func _ready() -> void:
 				elif key == "room":
 					# Oda ekrani secili bir oda ister; ilk oda her kayitta var.
 					main.selected_room = 0
+					# "dirty": kirli oda gorunumunu yakalamak icin.
+					if "dirty" in OS.get_cmdline_user_args():
+						get_node("/root/Game").rooms[0].dirty = true
 				main._open_popup(builders[key][0], builders[key][1])
 	for arg in OS.get_cmdline_user_args():
 		# Popup yiginindan bagimsiz modallar (gunluk odul / cevrimdisi kazanc).
