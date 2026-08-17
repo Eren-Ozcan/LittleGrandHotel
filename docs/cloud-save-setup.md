@@ -81,6 +81,11 @@ adding a native plugin later changes that one call and nothing else.
    Publish, or `firebase deploy --only firestore:rules`). Do this **before** shipping —
    the default "test mode" rules leave every player's save world-readable, and the
    monotonic `rev` guarantee lives in these rules, not in the client.
+
+   Republished on 2026-08-18 so a player can delete their own `saves/{uid}` document —
+   the earlier version answered the in-app "Delete account data" button with
+   `403 PERMISSION_DENIED`, breaking the deletion promise in the privacy policy.
+   Verified end to end afterwards with `tests/store_compliance_check.tscn`.
 7. ⬜ **Create the OAuth client for Google sign-in.** *This is the only step still
    waiting on a human, and until it is done account linking cannot be tried at all.*
    Google Cloud console → APIs & Services → Credentials → Create credentials → OAuth

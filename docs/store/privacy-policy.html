@@ -16,7 +16,7 @@
 <body>
 
 <h1>Little Grand Hotel — Gizlilik Politikası</h1>
-<p class="lang-note">Last updated / Son güncelleme: 24 Temmuz 2026</p>
+<p class="lang-note">Last updated / Son güncelleme: 18 Ağustos 2026</p>
 
 <p>
 Little Grand Hotel ("uygulama"), Yilk Games tarafından geliştirilen ücretsiz bir
@@ -26,30 +26,65 @@ açıklar.
 
 <h2>1. Kendi topladığımız veriler</h2>
 <p>
-Little Grand Hotel'in kendi sunucusu yoktur. Oyun ilerlemeniz (coin, elmas,
-oda/dekorasyon durumu, istatistikler) yalnızca cihazınızda yerel olarak
-saklanır. Uygulamayı kaldırdığınızda bu veriler cihazınızdan silinir.
-Ayarlar menüsünden isteğe bağlı olarak ilerlemenizi bir metin koduna (kayıt
-kodu) dönüştürüp kendiniz saklayabilir/paylaşabilirsiniz; bu kod tarafımızca
-toplanmaz veya herhangi bir sunucuya gönderilmez.
+Oyun ilerlemeniz (coin, elmas, oda/dekorasyon durumu, istatistikler)
+cihazınızda yerel olarak saklanır. Uygulamayı kaldırdığınızda bu
+yerel veriler cihazınızdan silinir. Profil menüsünden isteğe bağlı olarak
+ilerlemenizi bir metin koduna (kayıt kodu) dönüştürüp kendiniz
+saklayabilir/paylaşabilirsiniz; bu kod tarafımızca toplanmaz veya herhangi bir
+sunucuya gönderilmez.
 </p>
-
-<h2>2. Üçüncü taraf hizmetler</h2>
-<p>Uygulama iki Google hizmetini kullanır:</p>
+<p>
+Uygulama ayrıca, cihazınızı kaybederseniz ilerlemeniz yok olmasın diye bu
+ilerlemenin bir bulut yedeğini tutar:
+</p>
 <ul>
   <li>
-    <strong>Google AdMob</strong> — ödüllü reklamları göstermek için kullanılır.
+    İlk açılışta Google'ın Firebase Authentication hizmetiyle sizin için anonim
+    bir hesap oluşturulur. Bu hesap yalnızca bir kimlikten ibarettir; isim,
+    e-posta ya da başka kişisel bir bilgi içermez ve sizden kayıt olmanız
+    istenmez.
+  </li>
+  <li>
+    Bu hesap için Google Cloud Firestore'da tek bir kayıt dokümanı saklanır.
+    İçinde oyun ilerlemeniz ve onun kısa bir özeti (örneğin coin sayınız ve otel
+    seviyeniz) bulunur; böylece aynı ilerleme başka bir cihazda geri
+    yüklenebilir. Satın alınmış haklar bu dokümana hiç yazılmaz.
+  </li>
+  <li>
+    Uygulamada "Google ile giriş yap" derseniz (Profil ▸ bulut kaydı), aynı hesap
+    Google hesabınıza bağlanır ve ilerlemenizi yeni bir cihazda geri
+    alabilirsiniz. Bu giriş üzerinden hesap kimliğinizi ve e-posta adresinizi
+    alırız; parolanızı almayız.
+  </li>
+  <li>
+    Doküman yalnızca o hesabın kendisi tarafından okunabilir/yazılabilir;
+    kimseyle paylaşılmaz ve reklam amacıyla kullanılmaz.
+  </li>
+</ul>
+
+<h2>2. Üçüncü taraf hizmetler</h2>
+<p>Uygulama şu Google hizmetlerini kullanır:</p>
+<ul>
+  <li>
+    <strong>Google AdMob</strong> — ödüllü, geçiş (interstitial) ve uygulama açılış
+    reklamlarını göstermek için kullanılır.
     Reklam kişiselleştirme ve ölçüm amacıyla reklam kimliği (advertising ID),
     cihaz bilgisi ve yaklaşık konum (IP tabanlı) gibi verileri işleyebilir.
     Avrupa Ekonomik Alanı/Birleşik Krallık ve benzeri bölgelerdeki kullanıcılara,
     reklam gösterilmeden önce Google'ın Kullanıcı Mesajlaşma Platformu (UMP)
-    aracılığıyla bir onam (consent) formu gösterilir.
+    aracılığıyla bir onam (consent) formu gösterilir. Bu formu istediğiniz zaman
+    Ayarlar ▸ Ad preferences satırından yeniden açabilirsiniz.
   </li>
   <li>
     <strong>Google Play Billing</strong> — uygulama içi satın almaları
-    (reklamları kaldırma, kazanç çarpanı) işlemek için kullanılır. Ödeme ve
+    (reklamları kaldırma, kazanç çarpanı, elmas paketleri) işlemek için
+    kullanılır. Ödeme ve
     satın alma bilgileri doğrudan Google Play tarafından işlenir; kart/ödeme
     bilgisi tarafımıza hiç ulaşmaz.
+  </li>
+  <li>
+    <strong>Firebase Authentication ve Google Cloud Firestore</strong> — yalnızca
+    1. bölümde anlatılan isteğe bağlı bulut kaydı için kullanılır.
   </li>
 </ul>
 <p>
@@ -67,8 +102,25 @@ yönelik olmayan) modda sunulur.
 
 <h2>4. Verilerin silinmesi</h2>
 <p>
-Cihazınızda tuttuğumuz tüm veriler yerel olduğundan, uygulamayı cihazınızdan
-kaldırmanız verilerinizi tamamen siler. Google hizmetleri üzerinden işlenen
+Uygulamayı kaldırmanız cihazınızdaki verileri siler; bulut yedeğini silmez. Onun
+için şu iki yoldan birini kullanın:
+</p>
+<ul>
+  <li>
+    <strong>Uygulama içinden:</strong> Ayarlar ▸ Delete account data. Bu, hem bu
+    cihazdaki kaydı hem buluttaki kopyasını, sizin için oluşturulan hesap kaydıyla
+    birlikte siler.
+  </li>
+  <li>
+    <strong>E-posta ile:</strong> giriş yaptığınız adresten
+    <a href="mailto:yilkgamesstudio@gmail.com">yilkgamesstudio@gmail.com</a>
+    adresine silme talebi gönderin. Hesabı ve kayıt dokümanını 30 gün içinde
+    sileriz.
+  </li>
+</ul>
+<p>
+Bulut kayıt dokümanını yalnızca hesabınız var olduğu sürece saklarız; silmeden
+sonra tutulan ayrı bir yedek yoktur. Google hizmetleri üzerinden işlenen
 verilerin (reklam kimliği, satın alma geçmişi) silinmesi için Google Hesabı
 ayarlarınızı kullanabilirsiniz.
 </p>
@@ -84,26 +136,59 @@ Sorularınız için: <a href="mailto:yilkgamesstudio@gmail.com">yilkgamesstudio@
 
 <h2>1. Data we collect</h2>
 <p>
-Little Grand Hotel has no backend server of its own. Your game progress
-(coins, gems, room/decoration state, statistics) is stored locally on your
-device only and is deleted when you uninstall the app. From the Settings
-menu you may optionally export your progress as a text save-code to store or
-share yourself; this code is never collected or transmitted by us.
+Your game progress (coins, gems, room/decoration state, statistics)
+is stored locally on your device and is deleted when you uninstall the app.
+From the Profile menu you may optionally export your progress as a text
+save-code to store or share yourself; this code is never collected or
+transmitted by us.
 </p>
+<p>
+The app also keeps a cloud backup of that progress so it is not lost if you lose
+your device:
+</p>
+<ul>
+  <li>
+    On first run the app creates an anonymous account for you with Google's
+    Firebase Authentication. That account is an identifier only — no name,
+    e-mail address or other personal detail — and you are not asked to register.
+  </li>
+  <li>
+    A single save document is stored for that account in Google Cloud Firestore,
+    containing your game progress and a short summary of it (for example your
+    coin count and hotel level), so the same progress can be restored on another
+    device. Purchase entitlements are never written into this document.
+  </li>
+  <li>
+    If you choose "Sign in with Google" in the app (Profile ▸ cloud save), that
+    same account is linked to your Google account so you can recover your
+    progress on a new device. Through that sign-in we receive your account
+    identifier and e-mail address; we do not receive your password.
+  </li>
+  <li>
+    The document can only be read and written by that account itself; it
+    is not shared with anyone and is not used for advertising.
+  </li>
+</ul>
 
 <h2>2. Third-party services</h2>
 <ul>
   <li>
-    <strong>Google AdMob</strong> — used to show rewarded video ads. May
+    <strong>Google AdMob</strong> — used to show rewarded, interstitial and
+    app-open ads. May
     process advertising ID, device information, and approximate
     (IP-based) location for ad personalization and measurement. Users in the
     EEA/UK and similar regions are shown a consent form via Google's User
-    Messaging Platform (UMP) before ads are personalized.
+    Messaging Platform (UMP) before ads are personalized. You can reopen that
+    form at any time from Settings ▸ Ad preferences.
   </li>
   <li>
     <strong>Google Play Billing</strong> — used to process in-app purchases
-    (remove ads, income multiplier). Payment information is handled entirely
-    by Google Play and never reaches us.
+    (remove ads, income multiplier, gem packs). Payment information is handled
+    entirely by Google Play and never reaches us.
+  </li>
+  <li>
+    <strong>Firebase Authentication and Google Cloud Firestore</strong> — used
+    only for the optional cloud save described in section 1.
   </li>
 </ul>
 <p>
@@ -119,9 +204,27 @@ audience; ads are served in standard (non-child-directed) mode.
 
 <h2>4. Data deletion</h2>
 <p>
-Since all data we hold is local to your device, uninstalling the app fully
-deletes it. Data processed by Google services (advertising ID, purchase
-history) can be managed via your Google Account settings.
+Uninstalling the app deletes the data held on your device. It does not delete
+the cloud backup — use one of these:
+</p>
+<ul>
+  <li>
+    <strong>In the app:</strong> Settings ▸ Delete account data — deletes both
+    this device's save and its cloud copy, together with the account record
+    created for you.
+  </li>
+  <li>
+    <strong>By e-mail:</strong> send a deletion request from the address you
+    signed in with to
+    <a href="mailto:yilkgamesstudio@gmail.com">yilkgamesstudio@gmail.com</a>. We
+    delete the account and its save document within 30 days.
+  </li>
+</ul>
+<p>
+The cloud save document is kept only while your account exists; no separate
+backup is retained after deletion. Data processed by Google services
+(advertising ID, purchase history) can be managed via your Google Account
+settings.
 </p>
 
 <h2>5. Contact</h2>
