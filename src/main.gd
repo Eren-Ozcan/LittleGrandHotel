@@ -4755,8 +4755,10 @@ func _add_restore_purchases_row(c: VBoxContainer) -> void:
 	var r_b := _row(c, "", "Restore purchases",
 		"Brings back Remove Ads and ×2 on a new device", "Restore")
 	r_b.pressed.connect(func():
-		IAP.restore_purchases()
-		_show_toast("Checking the store for your earlier purchases…"))
+		if IAP.restore_purchases():
+			_show_toast("Checking the store for your earlier purchases…")
+		else:
+			_show_toast("The store is not reachable right now — try again later."))
 
 
 ## Hazır dekor paketleri (coin fiyatlı, bu yüzden Build'in altında). Oda
@@ -4968,6 +4970,28 @@ func _build_gems_popup(c: VBoxContainer) -> void:
 					_play("buy")
 					_show_toast("%s added!" % _count(amount, "gem"))
 					_rebuild_popup()))
+	_add_premium_teaser(c)
+
+
+## Premium sekmesine köprü. İki kalıcı ürün (Remove Ads, ×2) sekmenin arkasında
+## duruyordu ve Store hep Gems'te açıldığı için çoğu oyuncu tekliflerin
+## VARLIĞINDAN habersiz kalıyordu. Ayrı bir kart yerine tek satırlık bir bağlantı:
+## elmas paketlerinin önüne geçmez, ama teklifler görünür olur. Her ikisi de
+## alınmışsa satır hiç çizilmez.
+func _add_premium_teaser(c: VBoxContainer) -> void:
+	if Game.remove_ads and Game.permanent_income_mult > 1.0:
+		return
+	var missing: Array[String] = []
+	if not Game.remove_ads:
+		missing.append("Remove Ads")
+	if Game.permanent_income_mult <= 1.0:
+		missing.append("Double Your Earnings")
+	var t_b := _row(c, "res://assets/ui/dollar.png", " · ".join(missing),
+		"One-time purchases, no ads or timers involved", "›")
+	t_b.pressed.connect(func():
+		_store_tab = "premium"
+		_rebuild_popup()
+		popup_scroll.scroll_vertical = 0)
 
 
 func _build_settings_popup(c: VBoxContainer) -> void:

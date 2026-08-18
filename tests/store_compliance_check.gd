@@ -6,10 +6,32 @@ extends Node
 ##
 ## Run: tools\Godot_v4.7-stable_win64_console.exe --path . res://tests/store_compliance_check.tscn
 
+## The purchase and deletion paths write to the real save (entitlements persist,
+## and the deletion test resets the game), so the developer's save is stashed
+## first and put back at the end — same discipline as tests/cloud_save_check.gd.
+const SAVE_PATH := "user://save.json"
+const BACKUP_PATH := "user://save.json.storetest.bak"
+
 var _main: Node
 
 
+func _stash_save() -> void:
+	if FileAccess.file_exists(SAVE_PATH):
+		DirAccess.copy_absolute(ProjectSettings.globalize_path(SAVE_PATH),
+			ProjectSettings.globalize_path(BACKUP_PATH))
+
+
+func _restore_save() -> void:
+	if not FileAccess.file_exists(BACKUP_PATH):
+		return
+	DirAccess.copy_absolute(ProjectSettings.globalize_path(BACKUP_PATH),
+		ProjectSettings.globalize_path(SAVE_PATH))
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(BACKUP_PATH))
+	print("  (test oncesi kayit geri yuklendi)")
+
+
 func _ready() -> void:
+	_stash_save()
 	var game := get_node("/root/Game")
 	var iap := get_node("/root/IAP")
 	game.tutorial_seen = true
@@ -49,4 +71,7 @@ func _ready() -> void:
 	var deleted: bool = await cloud.delete_cloud_data()
 	print("B5 cloud_enabled=", cloud.is_enabled(), " delete_cloud_data()=", deleted,
 		" (expected true when not enabled, false when enabled but offline)")
+	_main.queue_free()
+	await get_tree().process_frame
+	_restore_save()
 	get_tree().quit()
