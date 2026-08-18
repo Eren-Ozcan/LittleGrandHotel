@@ -224,6 +224,39 @@ func link_google() -> Dictionary:
 	return res
 
 
+## Bağlı Google hesabını bu cihazdan ayırır.
+##
+## Bağlamanın tek yönlü bir kapı olmaması gerekiyor: paylaşılan bir cihazda,
+## yanlış hesapla girildiğinde ya da telefon el değiştirdiğinde oyuncunun geri
+## dönebilmesi lazım (giriş akışı `prompt=select_account` ile bu ihtimali zaten
+## hesaba katıyor).
+##
+## SİLME DEĞİL: buluttaki doküman ve Google hesabı olduğu gibi kalır, oyuncu
+## aynı hesapla tekrar girerse kaydına döner. Bu cihazdaki YEREL kayıt da
+## silinmez — oyuncu oynamaya kaldığı yerden devam eder; yalnızca kimlik
+## sıfırlanır, yani bir sonraki senkron yeni bir anonim hesap açıp bu kaydı
+## SIFIRDAN yükler. `rev`in sıfırlanması şart: eski hesabın sayacıyla devam
+## etmek yeni dokümanı yanlış sürümle damgalardı (bkz. _adopt_uid).
+func unlink_account() -> Dictionary:
+	if not is_enabled() or _auth == null:
+		return {"ok": false, "msg": "Cloud save is not enabled in this build."}
+	if not is_linked():
+		return {"ok": false, "msg": "No Google account is linked on this device."}
+	if _linking:
+		return {"ok": false, "msg": "Sign-in is still in progress — finish or cancel it first."}
+	_auth.sign_out()
+	_rev = 0
+	_dirty = true
+	_blocked = false
+	_pending_cloud = {}
+	_last_synced_uid = ""
+	_last_success_unix = 0.0
+	_save_state()
+	status_changed.emit()
+	return {"ok": true,
+		"msg": "Account disconnected. Your progress stays on this device."}
+
+
 ## Giriş turu token'sız bitti — oyuncuya NE olduğunu söyle.
 ##
 ## Tek bir "Google sign-in was not completed." mesajı, tarayıcıda çok oyalanmakla

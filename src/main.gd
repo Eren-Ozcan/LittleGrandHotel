@@ -4445,6 +4445,21 @@ func _build_cloud_section(c: VBoxContainer) -> void:
 
 	if CloudSave.is_linked():
 		_inert(v, "Your account is linked")
+		# Bağlama tek yönlü bir kapı olmamalı: paylaşılan cihaz ya da yanlış
+		# hesapla giriş gerçek bir ihtimal (giriş akışı bu yüzden hesap seçtiriyor).
+		# Dolu kırmızı DEĞİL — bu bir silme değil, geri alınabilir bir ayrılma;
+		# "Reset save" satırıyla aynı yumuşak kırmızı ve aynı iki dokunuşlu onay.
+		var unlink_b := _danger(v, "Disconnect account",
+			"Your progress stays on this device")
+		unlink_b.pressed.connect(func():
+			if not unlink_b.get_meta("armed", false):
+				unlink_b.set_meta("armed", true)
+				_row_set(unlink_b, "Tap again to disconnect", "Backups will stop")
+				return
+			var res: Dictionary = CloudSave.unlink_account()
+			_show_toast(String(res.get("msg", "")))
+			_rebuild_popup())
+		v.add_child(_label_wrap("Disconnecting leaves the cloud copy on that Google account — sign in again to get it back. This device keeps playing, but it starts a fresh backup.", 11, PALETTE.muted))
 		return
 
 	if not CloudSave.is_account_linking_available():

@@ -197,6 +197,17 @@ func delete_account() -> bool:
 	return true
 
 
+## Oturumu KAPATIR ama sunucudaki hesabı bırakır (Ayarlar ▸ Disconnect account).
+##
+## delete_account()'tan farkı burada: bağlı Google hesabı ve buluttaki kaydı
+## OLDUĞU GİBİ kalır, yalnızca bu cihaz onu unutur. Oyuncu aynı hesapla tekrar
+## giriş yaparsa kaydına geri döner — bu yüzden "çıkış" geri alınabilir bir
+## işlem, silme ise değil.
+func sign_out() -> void:
+	_load_state()
+	_clear_session()
+
+
 ## Yerel oturumu unutur (diskteki kalıcı durum dahil).
 func _clear_session() -> void:
 	_uid = ""
