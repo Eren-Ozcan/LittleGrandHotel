@@ -168,6 +168,25 @@ func _capture_stills() -> void:
 	await _shot_of_popup("Store", _main._build_store_popup, "07_store")
 	_main._store_tab = "gems"
 
+	# Offline earnings modal — the "it kept earning while you were gone" promise.
+	get_node("/root/Game").offline_seconds = 7.0 * 3600.0 + 900.0
+	_main._show_offline_popup(46_800, 3, 5_400)
+	await _settle(4)
+	await _save("08_offline")
+	await _settle(2)
+	for child in get_tree().root.get_children():
+		if child != self and child is CanvasLayer:
+			child.queue_free()
+	_main._close_popup()
+	await _settle(3)
+
+	# A dirty room, so the cleaning loop has a screenshot of its own.
+	var g := get_node("/root/Game")
+	var idx := _first_guest_room()
+	g.rooms[idx].dirty = true
+	_main.selected_room = idx
+	await _shot_of_popup("Room", _main._build_room_popup, "09_dirty")
+
 
 ## A short scripted tour, one PNG per frame. ffmpeg turns it into mp4/gif.
 func _record_video() -> void:
