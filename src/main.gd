@@ -2643,9 +2643,16 @@ func _rebuild_hotel() -> void:
 	# (döşeme derzleriyle) + bordür şeridi + koyu asfalt yol, bina ile aynı
 	# tuval içinde (aynı zoom/pan'i paylaşır), önceki dar şeritten belirgin geniş.
 	var street_y := lobby_y + LOBBY_H
+	# Zemin şeritleri binadan GENİŞ çizilir: tuval viewport'tan darsa (tablet,
+	# katlanabilir, yatay çevrilmiş ekran) bina ortalanıyor ve kaldırım/yol/çim
+	# bina genişliğinde kesilince otel havada duran bir ada gibi görünüyordu.
+	# Bir bina genişliği kadar taşma her iki yana yetiyor; şeritler düz renk
+	# olduğu için maliyeti yok.
+	var street_w := canvas_w * 3.0
+	var ground_x := -canvas_w
 	var street := Control.new()
-	street.position = Vector2(0, street_y)
-	street.size = Vector2(canvas_w, STREET_H)
+	street.position = Vector2(ground_x, street_y)
+	street.size = Vector2(street_w, STREET_H)
 	street.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	building_canvas.add_child(street)
 	street_node = street
@@ -2655,10 +2662,10 @@ func _rebuild_hotel() -> void:
 	var sidewalk := ColorRect.new()
 	sidewalk.color = PALETTE.sidewalk
 	sidewalk.position = Vector2.ZERO
-	sidewalk.size = Vector2(canvas_w, SIDEWALK_H)
+	sidewalk.size = Vector2(street_w, SIDEWALK_H)
 	sidewalk.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	street.add_child(sidewalk)
-	for seam_x in range(0, int(canvas_w), 64):
+	for seam_x in range(0, int(street_w), 64):
 		var seam := ColorRect.new()
 		seam.color = PALETTE.sidewalk.darkened(0.12)
 		seam.position = Vector2(seam_x, 0)
@@ -2668,16 +2675,16 @@ func _rebuild_hotel() -> void:
 	var curb := ColorRect.new()
 	curb.color = PALETTE.curb
 	curb.position = Vector2(0, SIDEWALK_H)
-	curb.size = Vector2(canvas_w, CURB_H)
+	curb.size = Vector2(street_w, CURB_H)
 	curb.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	street.add_child(curb)
 	var road := ColorRect.new()
 	road.color = PALETTE.asphalt
 	road.position = Vector2(0, SIDEWALK_H + CURB_H)
-	road.size = Vector2(canvas_w, STREET_H - SIDEWALK_H - CURB_H)
+	road.size = Vector2(street_w, STREET_H - SIDEWALK_H - CURB_H)
 	road.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	street.add_child(road)
-	for dash_x in range(10, int(canvas_w), 46):
+	for dash_x in range(10, int(street_w), 46):
 		var dash := ColorRect.new()
 		dash.color = PALETTE.gold_soft
 		# Konum, road'un KENDİ yerel uzayında (road zaten SIDEWALK_H+CURB_H
@@ -2689,7 +2696,8 @@ func _rebuild_hotel() -> void:
 		road.add_child(dash)
 
 	var street_scroll := ScrollContainer.new()
-	street_scroll.position = Vector2(0, 2)
+	# Kuyruk hâlâ BİNANIN önünde durur — şerit sola taştığı için ofset veriliyor.
+	street_scroll.position = Vector2(-ground_x, 2)
 	street_scroll.size = Vector2(canvas_w, SIDEWALK_H - 4)
 	street_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	street.add_child(street_scroll)
@@ -2716,8 +2724,8 @@ func _rebuild_hotel() -> void:
 	gsb.border_color = PALETTE.grass_dark
 	gsb.border_width_bottom = 4
 	grass.add_theme_stylebox_override("panel", gsb)
-	grass.position = Vector2(0, street_y + STREET_H)
-	grass.size = Vector2(canvas_w, GRASS_H)
+	grass.position = Vector2(ground_x, street_y + STREET_H)
+	grass.size = Vector2(street_w, GRASS_H)
 	building_canvas.add_child(grass)
 
 	_clamp_pan()
@@ -2809,8 +2817,15 @@ func _apply_canvas_transform() -> void:
 func _clamp_pan() -> void:
 	var content_size: Vector2 = building_canvas.custom_minimum_size * _zoom
 	var vp_size: Vector2 = zoom_viewport.size
-	var min_x: float = minf(0.0, vp_size.x - content_size.x)
-	_canvas_pan.x = clampf(_canvas_pan.x, min_x, 0.0)
+	if content_size.x >= vp_size.x:
+		_canvas_pan.x = clampf(_canvas_pan.x, vp_size.x - content_size.x, 0.0)
+	else:
+		# Bina viewport'tan darsa ORTALA. Eskiden sola yapışıyordu: telefonda
+		# fark edilmiyordu çünkü bina her zaman genişliği dolduruyor, ama
+		# tablet/katlanabilir cihazda (ve Android 16 büyük ekranda dikey
+		# kısıtlamayı zaten yok saydığı için yatay çevrilen her cihazda) otel
+		# solda, sağda kocaman boş gökyüzü kalıyordu.
+		_canvas_pan.x = (vp_size.x - content_size.x) * 0.5
 	if content_size.y >= vp_size.y:
 		_canvas_pan.y = clampf(_canvas_pan.y, vp_size.y - content_size.y, 0.0)
 	else:
