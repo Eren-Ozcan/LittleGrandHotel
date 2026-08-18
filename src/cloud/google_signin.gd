@@ -392,8 +392,15 @@ func _post_form(url: String, form: Dictionary) -> Dictionary:
 	var res: Array = await req.request_completed
 	req.queue_free()
 	var code := int(res[1])
-	var parsed = JSON.parse_string((res[3] as PackedByteArray).get_string_from_utf8())
-	var doc: Dictionary = parsed if typeof(parsed) == TYPE_DICTIONARY else {}
+	# Arka planda dusen bir istek BOS govde dondurur; onu JSON'a vermek her
+	# denemede "Parse JSON failed" hatasi basiyordu (cihaz logunda goruldu,
+	# 2026-08-18). Bos govde zaten "ag hatasi" demek.
+	var text := (res[3] as PackedByteArray).get_string_from_utf8()
+	var doc: Dictionary = {}
+	if not text.strip_edges().is_empty():
+		var parsed = JSON.parse_string(text)
+		if typeof(parsed) == TYPE_DICTIONARY:
+			doc = parsed
 	if int(res[0]) != HTTPRequest.RESULT_SUCCESS or code < 200 or code >= 300:
 		return {"ok": false, "body": doc}
 	return {"ok": true, "body": doc}
