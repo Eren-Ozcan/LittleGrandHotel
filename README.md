@@ -4,6 +4,24 @@ Mobile hotel management and decoration game (Godot 4.7, GDScript).
 Design document: GDD v1.1 — https://claude.ai/code/artifact/e65d0b6a-c8bd-4f01-ac1e-ea46c4a945cb
 What's done and the roadmap: [TODO.md](TODO.md)
 
+## Demo
+
+![Little Grand Hotel gameplay](docs/media/demo.gif)
+
+| Your hotel | Decorate a room | Build | Quests |
+|---|---|---|---|
+| ![Hotel](docs/media/screen-hotel.png) | ![Room](docs/media/screen-room.png) | ![Build](docs/media/screen-build.png) | ![Quests](docs/media/screen-quests.png) |
+
+The clip and the stills are generated, not hand-recorded: `tests/showcase.tscn`
+builds a showcase hotel in memory and renders it into an offscreen 1080x1920
+viewport, so the material can be regenerated after any UI change and never
+depends on someone's save file.
+
+```
+tools\Godot_v4.7-stable_win64_console.exe --path . res://tests/showcase.tscn -- shots
+tools\Godot_v4.7-stable_win64_console.exe --path . res://tests/showcase.tscn -- video
+```
+
 ## Status: Full release — core + late game + long-term content
 
 Core loop: room → decoration (Style Score → tier) → shift → collect income → reinvest.
