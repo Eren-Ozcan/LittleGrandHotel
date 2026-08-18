@@ -61,8 +61,12 @@ func _ready() -> void:
 ## autoload the running scene reads from, and the process exits after capture.
 func _build_showcase_state() -> void:
 	var g := get_node("/root/Game")
+	var for_video := "video" in OS.get_cmdline_user_args()
 	g.new_game()
-	g.floors = LAYOUT.size()
+	# The clip has to show the hotel GROWING, so it starts smaller and with an
+	# undecorated room; the stills want the finished hotel instead.
+	var layout: Array = LAYOUT.slice(0, 3) if for_video else LAYOUT
+	g.floors = layout.size() + 1 if for_video else layout.size()
 	g.floor_blocks = []
 	for _i in g.floors:
 		g.floor_blocks.append(int(g.eco.building.grid_cols))
@@ -72,11 +76,11 @@ func _build_showcase_state() -> void:
 			decor.append(String(it.id))
 	g.rooms = []
 	var first_guest := true
-	for floor_i in range(1, g.floors + 1):
-		for entry in LAYOUT[floor_i - 1]:
+	for floor_i in range(1, layout.size() + 1):
+		for entry in layout[floor_i - 1]:
 			var room: Dictionary = g.make_room(String(entry[0]), floor_i, int(entry[1]))
 			if String(g.room_def(room.type).get("category", "")) == "guest":
-				if first_guest:
+				if first_guest and not for_video:
 					# The room screenshot needs items left to BUY: a fully
 					# decorated room renders as a page of greyed-out "owned"
 					# rows, which sells nothing.
@@ -86,9 +90,16 @@ func _build_showcase_state() -> void:
 					room["items"] = decor.duplicate()
 					room["base"]["bed"] = "bed_canopy"
 			g.rooms.append(room)
-	# Leave the top floor half empty: with every block used the Build screen
-	# greys out all room tiles ("blocks used: 48/48") and shows nothing to buy.
-	g.rooms.resize(g.rooms.size() - 2)
+	if for_video:
+		# The room the camera pushes into starts bare so it can fill on camera.
+		for r in g.rooms:
+			if String(g.room_def(r.type).get("category", "")) == "guest":
+				r["items"] = []
+				break
+	else:
+		# Leave the top floor half empty: with every block used the Build screen
+		# greys out all room tiles ("blocks used: 48/48") and shows nothing to buy.
+		g.rooms.resize(g.rooms.size() - 2)
 	g.xp = g.xp_for_level(SHOWCASE_LEVEL)
 	g.staff_tier = 2
 	g.tutorial_seen = true
@@ -188,47 +199,57 @@ func _capture_stills() -> void:
 	await _shot_of_popup("Room", _main._build_room_popup, "09_dirty")
 
 
-## A short scripted tour, one PNG per frame. ffmpeg turns it into mp4/gif.
+## The promo clip. Every beat has to CHANGE something on screen — the first cut was
+## a slow zoom over static menus, which reads as a slideshow, not a game. So the room
+## fills item by item, the building grows floor by floor and the coins actually land.
 func _record_video() -> void:
-	var plan := [
-		[45, "idle"],
-		[35, "zoom_out"],
-		[30, "idle"],
-		[35, "zoom_in"],
-		[20, "idle"],
-		[45, "open_room"],
-		[25, "close"],
-		[45, "open_build"],
-		[25, "close"],
-		[45, "open_quests"],
-		[25, "close"],
-		[40, "collect"],
-		[30, "idle"],
-	]
-	for step in plan:
-		var count: int = int(step[0])
-		var action: String = String(step[1])
-		match action:
-			"zoom_out":
-				await _glide(count, -0.9)
-				continue
-			"zoom_in":
-				await _glide(count, 0.9)
-				continue
-			"open_room":
-				_main.selected_room = _first_guest_room()
-				_main._open_popup("Room", _main._build_room_popup)
-			"open_build":
-				_main._open_popup("Build", _main._build_build_popup)
-			"open_quests":
-				_main._quests_tab = "quests"
-				_main._open_popup("Quests", _main._build_quests_popup)
-			"close":
-				_main._close_popup()
-			"collect":
-				get_node("/root/Game").pending_income = 24_800.0
-				_main._on_collect()
-		await _run_frames(count)
+	var g := get_node("/root/Game")
+	var room_i := _first_guest_room()
+
+	# 1. Hook: the hotel, and money landing in the first second.
+	g.pending_income = 32_400.0
+	_main._update_live_labels()
+	await _run_frames(18)
+	_main._on_collect()
+	await _run_frames(34)
+
+	# 2. Decorate: push in on one room and let it fill up, one piece at a time.
+	await _glide(26, 0.85)
+	var decor: Array = []
+	for it in g.eco.items:
+		if it.has("anchor"):
+			decor.append(String(it.id))
+	for item_id in decor:
+		if g.room_has_item(room_i, item_id):
+			continue
+		g.buy_item(room_i, item_id)
+		await _run_frames(7)
+	await _run_frames(14)
+
+	# 3. Build: new rooms appear on the empty blocks.
+	await _glide(20, -0.55)
+	var spots := [[4, 0], [4, 2], [4, 4], [4, 6]]
+	for spot in spots:
+		g.place_room("suite", int(spot[0]), int(spot[1]))
+		g.state_changed.emit()
+		await _run_frames(11)
+
+	# 4. Grow: a whole new floor opens up.
+	g.coins = 5_000_000
+	g.buy_floor()
+	await _run_frames(10)
+	for col in [0, 2, 4, 6]:
+		g.place_room("deluxe", g.floors, col)
+		g.state_changed.emit()
+		await _run_frames(9)
+
+	# 5. Pull back to the finished hotel and let it breathe.
+	await _glide(34, -1.1)
+	g.pending_income = 58_900.0
+	_main._update_live_labels()
+	await _run_frames(16)
+	_main._on_collect()
+	await _run_frames(46)
 	print("FRAMES ", _frame)
 
 
