@@ -1,0 +1,441 @@
+keys,tr
+Welcome!,Hoş geldin!
+"Welcome to Little Grand Hotel! You'll turn one small hotel into a grand empire, step by step. Let's take a quick look.","Little Grand Hotel'e hoş geldin! Küçük bir oteli adım adım koca bir imparatorluğa çevireceksin. Hadi kısa bir tur atalım."
+Next,Devam
+1. Start a Shift,1. Vardiya Başlat
+"Tap the big button above the bar to start a shift — the hotel only runs, and only earns, during a shift.","Vardiya başlatmak için barın üstündeki büyük butona dokun — otel yalnızca vardiya sürerken çalışır ve yalnızca o sırada kazanır."
+2. Welcome Your Guests,2. Misafirlerini Karşıla
+"Once a shift starts, guests come through the door and ride the elevator to their rooms. As rooms fill up, income starts building.","Vardiya başlayınca misafirler kapıdan girer ve asansörle odalarına çıkar. Odalar doldukça gelir birikmeye başlar."
+3. Collect From the Till,3. Kasadan Topla
+"The same button now reads Collect — tap it to take what you have earned. Earnings sit in the till until you collect them.","Aynı buton artık Topla yazıyor — kazandığını almak için ona dokun. Kazanç sen toplayana kadar kasada bekler."
+4. Decorate the Rooms,4. Odaları Dekore Et
+"Tap a room and buy furnishings — as Style Points rise the room moves up a tier and your hotel gains stars.","Bir odaya dokun ve eşya al — Stil Puanı yükseldikçe oda bir üst seviyeye çıkar ve otelin yıldız kazanır."
+5. Follow the Quests,5. Görevleri Takip Et
+"Tap the quest icon — it shows your active quest, which pays out coins and gems.","Görev simgesine dokun — aktif görevini gösterir; görevler altın ve elmas kazandırır."
+You're Ready!,Hazırsın!
+Now open your doors and start building your grand hotel!,Şimdi kapılarını aç ve koca otelini kurmaya başla!
+Start!,Başla!
+Classic Red,Klasik Kırmızı
+Summer Breeze,Yaz Esintisi
+Golden Age,Altın Çağ
+Lavender Break,Lavanta Molası
+Forest Breath,Orman Nefesi
+Coral Sunset,Mercan Günbatımı
+Winter Tale,Kış Masalı
+Cloud save restored,Bulut kaydı geri yüklendi
+"No ad is ready right now, try again shortly.","Şu an hazır reklam yok, birazdan tekrar dene."
+Level up! Level %d (+%s),Seviye atladın! Seviye %d (+%s)
+Skip tutorial,Tanıtımı geç
+The store could not be reached — try again later.,Mağazaya ulaşılamadı — sonra tekrar dene.
+No earlier purchases found on this account.,Bu hesapta daha önceki bir satın alma bulunamadı.
+Your purchases were restored.,Satın almaların geri yüklendi.
+You turned the runaway guest back to the door! +%d coins,Kaçak misafiri kapıdan geri çevirdin! +%d altın
+Profile,Profil
+Me,Ben
+Store,Mağaza
+Shift,Vardiya
+Room Shop — drag and drop onto the building,Oda Dükkânı — binanın üstüne sürükleyip bırak
+✎ Build,✎ İnşa
+🧹 Clean,🧹 Temizle
+Build,İnşa
+Staff,Personel
+Quests,Görevler
+✎ Build: On,✎ İnşa: Açık
+🧹 Clean: On,🧹 Temizle: Açık
+Cleaning mode on — tap the %s to clean.,Temizlik modu açık — %s var; temizlemek için dokun.
+dirty room,kirli oda
+Cleaning mode on — no dirty rooms right now.,Temizlik modu açık — şu an kirli oda yok.
+Level %d,Seviye %d
+%s left in the shift · %.0f coins/hour,Vardiyaya %s kaldı · saatte %.0f altın
+No shift running — the hotel isn't earning.,Vardiya yok — otel kazanmıyor.
+Collect,Topla
+%s coins,%s altın
+Running,Sürüyor
+%s left,%s kaldı
+Start shift,Vardiya başlat
+1-24 h,1-24 sa
+Theme of the week: %s,Haftanın teması: %s
+· · · the street is quiet — start a shift · · ·,· · · sokak sessiz — bir vardiya başlat · · ·
+Unlock block,Bloğu aç
+New block unlocked!,Yeni blok açıldı!
+empty block,boş blok
+INFESTED! %d c,İSTİLA! %d a
+DIRTY!,KİRLİ!
+✦ Decorate!,✦ Süsle!
+Move cancelled,Taşıma iptal edildi
+That spot is taken — tap an empty cell to move there,O yer dolu — taşımak için boş bir hücreye dokun
+This room is already clean.,Bu oda zaten temiz.
+"Infestation cleared! (−%d coins, +2 XP)","İstila temizlendi! (−%d altın, +2 XP)"
+Room cleaned (+2 XP),Oda temizlendi (+2 XP)
+Clearing the infestation costs %d coins!,İstilayı temizlemek %d altın tutar!
+Room Decoration,Oda Dekorasyonu
+Facility,Tesis
+Drag a card from the shop shelf to add a room,Oda eklemek için raftan bir kart sürükle
+Room moved,Oda taşındı
+The room doesn't fit here,Oda buraya sığmıyor
+Unlocks at Lv.%d,Sv.%d'de açılır
+Can't drop that here,Bunu buraya bırakamazsın
+%s placed!,%s yerleştirildi!
+"It doesn't fit here, your level is too low, or you can't afford it","Buraya sığmıyor, seviyen yetmiyor ya da paran yetmiyor"
+You are out of nudges for today — try again tomorrow!,Bugünlük dürtme hakkın bitti — yarın tekrar dene!
+A secret inspector! +%d coins (%s left),Gizli müfettiş! +%d altın (%s kaldı)
+The guest yawned and went back to sleep… (%s left),Misafir esneyip tekrar uyudu… (%s kaldı)
++%s coins collected,+%s altın toplandı
+Rename your hotel,Otelini yeniden adlandır
+"Up to %d characters, so it fits the sign in the lobby.","En fazla %d karakter, lobideki tabelaya sığsın diye."
+Hotel name…,Otel adı…
+Cancel,Vazgeç
+Save,Kaydet
+Shift in progress — %s left.,Vardiya sürüyor — %s kaldı.
+You can collect your earnings whenever you like.,Kazancını istediğin an toplayabilirsin.
+Finish now — %s,Şimdi bitir — %s
+Ends the shift immediately and banks the earnings.,Vardiyayı hemen bitirir ve kazancı kasaya yazar.
+Tap again to finish anyway,Yine de bitirmek için tekrar dokun
+No Housekeeping room — some rooms may not pay full rate.,Kat Hizmetleri odası yok — bazı odalar tam gelir vermeyebilir.
+Shift finished with gems — the earnings are in the till!,Vardiya elmasla bitirildi — kazanç kasada!
+"You have a Housekeeping room — you'll earn full rate to the end of the shift, as if guests never stopped coming.","Kat Hizmetleri odan var — vardiya sonuna kadar, misafir akışı hiç kesilmemiş gibi tam gelir alırsın."
+No Housekeeping room — rooms left dirty earn nothing for this stretch.,Kat Hizmetleri odası yok — kirli kalan odalar bu süre boyunca hiç kazandırmaz.
+Ad bonus active,Reklam bonusu etkin
+Income ×%.1f · %d min left,Gelir ×%.1f · %d dk kaldı
+Watch an ad — ×2 income,Reklam izle — ×2 gelir
+For the next 30 minutes,Önümüzdeki 30 dakika boyunca
+Watch,İzle
+Ad bonus started: ×2 income for 30 min!,Reklam bonusu başladı: 30 dk boyunca ×2 gelir!
+Start a shift,Vardiya başlat
+Pick a length — the hourly cost is the same for all:,Bir süre seç — saatlik maliyet hepsinde aynı:
+cost %s · est. income ~%s,maliyet %s · tahmini gelir ~%s
+A %d-hour shift has started!,%d saatlik vardiya başladı!
+Note: rooms left dirty earn nothing. On a long shift a Housekeeping room is a must!,Not: kirli kalan odalar hiç kazandırmaz. Uzun vardiyada Kat Hizmetleri odası şart!
+Auto-renew · balance %s,Otomatik yenileme · bakiye %s
+"While you have hours banked, a finished shift renews itself for the same length if you can afford it, spending that many hours from your balance — so the hotel keeps earning while you are away.","Bankanda saat varken biten vardiya, paran yetiyorsa aynı süreyle kendini yeniler ve o kadar saati bakiyenden düşer — böylece sen yokken de otel kazanmaya devam eder."
+Buy %s of auto-renew,%s otomatik yenileme al
+Bought %s of auto-renew!,%s otomatik yenileme alındı!
+Housekeeping,Kat Hizmetleri
+gem,elmas
+hour,saat
+minute,dakika
+day,gün
+room,oda
+nudge,dürtme hakkı
+time,kez
+Cleaning mode,Temizlik modu
+Tap dirty rooms one by one to clean them. %s right now.,Temizlemek için kirli odalara tek tek dokun. Şu an %s var.
+Staff tier: %d / %d,Personel kademesi: %d / %d
+Shift cost: %%%.0f cheaper · Income per hour: +%%%.0f,Vardiya maliyeti: %%%.0f daha ucuz · Saatlik gelir: +%%%.0f
+Your staff is at the top tier — no upgrades left.,Personelin en üst kademede — yükseltecek bir şey kalmadı.
+Upgrade tier — %s coins,Kademeyi yükselt — %s altın
+"Next: -%%%.0f cost, +%%%.0f income","Sonraki: -%%%.0f maliyet, +%%%.0f gelir"
+Staff quality upgraded! (Tier %d),Personel kalitesi yükseldi! (Kademe %d)
+This room is dirty — it earns nothing until it's cleaned.,Bu oda kirli — temizlenene kadar hiç kazandırmaz.
+Clean this room,Bu odayı temizle
+ — %s coins, — %s altın
+Or open Cleaning mode in Staff to clear several rooms in a row.,Ya da Personel'den Temizlik modunu açıp birkaç odayı arka arkaya temizle.
+"Infestation cleared! (−%s coins, +2 XP)","İstila temizlendi! (−%s altın, +2 XP)"
+Clearing the infestation costs %s coins!,İstilayı temizlemek %s altın tutar!
+%s — %s · SP %d · %d items,%s — %s · SP %d · %d eşya
+Next tier (%s): SP %d,Sonraki seviye (%s): SP %d
+Ready-made bundles,Hazır setler
+unlocks at level %d,seviye %d'de açılır
+SP +%d · %%%d off,SP +%d · %%%d indirim
+Wallpaper,Duvar kâğıdı
+Floor,Zemin
+Bed,Yatak
+✓ owned,✓ sende
+%s upgraded!,%s yükseltildi!
+Add a decoration,Dekorasyon ekle
+SP +%d,SP +%d
+owned ✓,sende ✓
+%s placed (+%d SP),%s yerleştirildi (+%d SP)
+Cleans dirty rooms by itself — income never stops.,Kirli odaları kendi temizler — gelir hiç durmaz.
++%d coins/hour base income · adds to star variety,Saatte +%d altın temel gelir · yıldız çeşitliliğine katkı
+Manage,Yönet
+Turn on Build Mode first to move or sell.,Taşımak ya da satmak için önce İnşa Modu'nu aç.
+Move room,Odayı taşı
+Pick an empty block for it,Ona boş bir blok seç
+Tap an empty cell — tap your room again to cancel,Boş bir hücreye dokun — vazgeçmek için odana tekrar dokun
+Sell — +%s coins,Sat — +%s altın
+Everything placed in it is gone for good,İçindeki her şey kalıcı olarak gider
+Tap again to sell,Satmak için tekrar dokun
+Are you sure?,Emin misin?
+Room sold — the refund is in the till,Oda satıldı — iade kasada
+You can't sell your last room!,Son odanı satamazsın!
+Total income collected,Toplanan toplam gelir
+Collections,Toplama
+Rooms cleaned,Temizlenen oda
+Shifts started,Başlatılan vardiya
+Rooms,Oda
+%s (%d / %d blocks used),%s (%d / %d blok kullanıldı)
+Facility variety,Tesis çeşitliliği
+Star rating,Yıldız puanı
+Level,Seviye
+%d (XP %s),%d (XP %s)
+Income per hour (now),Saatlik gelir (şu an)
+%.0f coins,%.0f altın
+Prestige multiplier,Prestij çarpanı
+×%.2f (prestige %d),×%.2f (prestij %d)
+Daily login streak,Günlük giriş serisi
+Shift history (last %d),Vardiya geçmişi (son %d)
+No shift has been started yet.,Henüz hiç vardiya başlatılmadı.
+%02d.%02d %02d:%02d — %dh,%02d.%02d %02d:%02d — %d sa
+Account,Hesap
+Prestige,Prestij
+Stats,İstatistik
+⚙ Settings,⚙ Ayarlar
+Move your save,Kaydını taşı
+A shareable code instead of the cloud.,Bulut yerine paylaşılabilir bir kod.
+Hide code,Kodu gizle
+Show code,Kodu göster
+Copy code to clipboard,Kodu panoya kopyala
+Save code copied to the clipboard,Kayıt kodu panoya kopyalandı
+Paste another save code here…,Başka bir kayıt kodunu buraya yapıştır…
+Import a save code,Kayıt kodu içe aktar
+Overwrites your current save,Mevcut kaydının üzerine yazar
+Tap again to overwrite,Üzerine yazmak için tekrar dokun
+Save imported!,Kayıt içe aktarıldı!
+Invalid code — check it and try again,Geçersiz kod — kontrol edip tekrar dene
+Prestige — multiplier ×%.2f (round %d),Prestij — çarpan ×%.2f (%d. tur)
+Prestige requires level %d (you are %d).,Prestij için seviye %d gerekir (sen %d'sin).
+Level %d of %d,Seviye %d / %d
+Prestige the hotel,Oteli prestije gönder
+New multiplier ×%.2f,Yeni çarpan ×%.2f
+Prestiged! New income multiplier: ×%.2f,Prestij yapıldı! Yeni gelir çarpanı: ×%.2f
+Tap again to prestige,Prestij için tekrar dokun
+Progress will be reset,İlerlemen sıfırlanacak
+"Prestige resets your coins, rooms, quests and achievements; the multiplier is permanent.","Prestij altınlarını, odalarını, görevlerini ve başarımlarını sıfırlar; çarpan ise kalıcıdır."
+Cloud save is not enabled in this build — for now you can move your save to another device with the code below.,Bu sürümde bulut kaydı kapalı — şimdilik kaydını aşağıdaki kodla başka bir cihaza taşıyabilirsin.
+Link with Google — unavailable in this build,Google ile bağla — bu sürümde kullanılamıyor
+The cloud holds different progress than this device. You decide which one to keep.,Bulutta bu cihazdakinden farklı bir ilerleme var. Hangisinin kalacağına sen karar ver.
+Choose a save,Bir kayıt seç
+Cloud / This device,Bulut / Bu cihaz
+Linked to this device (anonymous),Bu cihaza bağlı (anonim)
+Linked to a Google account,Bir Google hesabına bağlı
+Last backup: %s,Son yedek: %s
+Back up now,Şimdi yedekle
+Your account is linked,Hesabın bağlı
+Disconnect account,Hesabı ayır
+Your progress stays on this device,İlerlemen bu cihazda kalır
+Tap again to disconnect,Ayırmak için tekrar dokun
+Backups will stop,Yedekleme duracak
+"Disconnecting leaves the cloud copy on that Google account — sign in again to get it back. This device keeps playing, but it starts a fresh backup.","Ayırınca buluttaki kopya o Google hesabında kalır — geri almak için tekrar giriş yap. Bu cihazda oynamaya devam edersin ama yedekleme sıfırdan başlar."
+"Account linking isn't set up in this build. Your save is still backed up to the cloud, but you need a linked account to open it on a new device.","Bu sürümde hesap bağlama kurulu değil. Kaydın yine buluta yedekleniyor ama yeni bir cihazda açmak için bağlı bir hesap gerekiyor."
+Link with Google,Google ile bağla
+Waiting for your browser…,Tarayıcın bekleniyor…
+"Opening your browser — sign in there, then come back to the game.","Tarayıcın açılıyor — orada giriş yap, sonra oyuna geri dön."
+"Linking opens your browser. Sign in with Google there, then switch back to the game — closing this screen cancels it.","Bağlama tarayıcını açar. Orada Google ile giriş yap, sonra oyuna geri geç — bu ekranı kapatmak işlemi iptal eder."
+not yet,henüz yok
+The cloud holds different progress — pick which one to keep,Bulutta farklı bir ilerleme var — hangisinin kalacağını seç
+The cloud save comes from a newer version — update the game first,Bulut kaydı daha yeni bir sürümden — önce oyunu güncelle
+Could not reach the cloud — check your connection and try again,Buluta ulaşılamadı — bağlantını kontrol edip tekrar dene
+Your save is backed up to the cloud,Kaydın buluta yedeklendi
+just now,az önce
+now,şimdi
+%s ago,%s önce
+Which save should continue?,Hangi kayıt devam etsin?
+"There are two different saves, one in the cloud and one on this device. They are never merged automatically — pick one and the other stays as it is.","Biri bulutta biri bu cihazda olmak üzere iki farklı kayıt var. Bunlar asla kendiliğinden birleştirilmez — birini seç, diğeri olduğu gibi kalır."
+Cloud,Bulut
+time unknown,zamanı bilinmiyor
+Use this one,Bunu kullan
+This device,Bu cihaz
+Cloud save loaded,Bulut kaydı yüklendi
+The cloud save could not be read; this device's save was kept,Bulut kaydı okunamadı; bu cihazın kaydı korundu
+Kept this device's save and uploading it to the cloud,Bu cihazın kaydı korundu ve buluta yükleniyor
+Gems,Elmas
+Premium,Premium
+Remove Ads,Reklamları Kaldır
+Owned — thank you!,Sende — teşekkürler!
+One-time purchase,Tek seferlik satın alma
+Ads removed!,Reklamlar kaldırıldı!
+Double Your Earnings,Kazancını İkiye Katla
+Active — income ×%.1f,Etkin — gelir ×%.1f
+"Permanent ×2, offline included","Kalıcı ×2, çevrimdışı dahil"
+Earnings doubled!,Kazanç ikiye katlandı!
+Restore purchases,Satın almaları geri yükle
+Brings back Remove Ads and ×2 on a new device,Yeni bir cihazda Reklamları Kaldır ve ×2'yi geri getirir
+Restore,Geri yükle
+Checking the store for your earlier purchases…,Önceki satın almaların için mağaza kontrol ediliyor…
+The store is not reachable right now — try again later.,Mağazaya şu an ulaşılamıyor — sonra tekrar dene.
+No offers right now — check back later.,Şu an teklif yok — sonra tekrar bak.
+Choose a room,Bir oda seç
+"Pick a set, then pick the room it goes into.","Önce bir set seç, sonra gideceği odayı seç."
+That set is no longer available.,O set artık mevcut değil.
+%s — %s coins,%s — %s altın
+Which room should it decorate?,Hangi odayı dekore etsin?
+You have no rooms yet — build one first.,Henüz odan yok — önce bir tane inşa et.
+Not enough coins for that set,O set için altının yetmiyor
+%s · Lv.%d,%s · Sv.%d
+%s built!,%s inşa edildi!
+"Build Mode is a canvas tool, not a tab: the hotel stays visible, empty blocks light up, and this tray is what you place from.","İnşa Modu bir sekme değil, tuval aracıdır: otel görünür kalır, boş bloklar yanar ve yerleştirmeyi bu raftan yaparsın."
+Blocks used: %d / %d · floors %d,Kullanılan blok: %d / %d · kat %d
+Empty blocks: from %s coins each — widen a floor in Build Mode.,Boş bloklar: tanesi %s altından başlar — İnşa Modu'nda bir katı genişlet.
+Guest rooms,Misafir odaları
+Facilities,Tesisler
+Unlock a new floor — %s coins,Yeni kat aç — %s altın
+New floor unlocked!,Yeni kat açıldı!
+Decor sets,Dekor setleri
+✎ Open Build Mode,✎ İnşa Modu'nu aç
+Place rooms yourself,Odaları kendin yerleştir
+Build Mode is on — drag a room from the shelf onto the building,İnşa Modu açık — raftan bir odayı binanın üstüne sürükle
+Prices are set in the store (Play Console) — the ones below are suggestions.,Fiyatlar mağazada (Play Console) belirlenir — aşağıdakiler örnektir.
+%s added!,%s eklendi!
+"One-time purchases, no ads or timers involved","Tek seferlik satın alma; reklam ya da sayaç yok"
+Sound effects: %s,Ses efektleri: %s
+On,Açık
+Off,Kapalı
+Lobby music: %s,Lobi müziği: %s
+Language: %s,Dil: %s
+System,Sistem
+Support & legal,Destek ve yasal
+Privacy policy,Gizlilik politikası
+Ad preferences,Reklam tercihleri
+Opening your ad preferences…,Reklam tercihlerin açılıyor…
+Contact support,Destekle iletişime geç
+Danger zone,Tehlikeli bölge
+Delete account data,Hesap verilerini sil
+This device's save and the cloud copy,Bu cihazdaki kayıt ve buluttaki kopya
+Tap again to delete everything,Her şeyi silmek için tekrar dokun
+Your data was deleted.,Verilerin silindi.
+Local data deleted — the cloud copy could not be reached.,Yerel veri silindi — buluttaki kopyaya ulaşılamadı.
+Reset save,Kaydı sıfırla
+Erases all progress permanently,Tüm ilerlemeyi kalıcı olarak siler
+Save reset — a new game has begun!,Kayıt sıfırlandı — yeni bir oyun başladı!
+Tap again to reset,Sıfırlamak için tekrar dokun
+Achievements,Başarımlar
+"Every quest is done. Congratulations, hotelier!","Bütün görevler bitti. Tebrikler, otelci!"
+Reward: %s coins,Ödül: %s altın
+Quests completed: %d / %d,Tamamlanan görev: %d / %d
+Next up,Sırada
+Achievements — %d / %d unlocked,Başarımlar — %d / %d açıldı
+Quest complete: %s — +%s coins,Görev tamam: %s — +%s altın
+Achievement unlocked: %s — +%s coins,Başarım açıldı: %s — +%s altın
+Away for %s,%s uzaktaydın
+ · capped at %s of hotel time, · otel zamanının %s kadarıyla sınırlı
+Welcome back!,Tekrar hoş geldin!
+Your hotel didn't sit idle when the shift ended: it auto-renewed %s (staff cost %s coins).,Vardiya bitince otelin boş durmadı: %s otomatik yenilendi (personel maliyeti %s altın).
+%s coins earned,%s altın kazandın
+Watch an ad — double it,Reklam izle — ikiye katla
+Offline earnings doubled — +%s coins!,Çevrimdışı kazanç ikiye katlandı — +%s altın!
+%dd %dh,%dg %dsa
+%dh %dm,%dsa %ddk
+%dm,%ddk
+Daily Reward,Günlük Ödül
+Day %d streak!,%d. gün serisi!
+Your reward: %s,Ödülün: %s
+Claim,Al
+Daily reward claimed — day %d streak!,Günlük ödül alındı — %d. gün serisi!
+Linking with Google is not available in this build.,Bu sürümde Google ile bağlama kullanılamıyor.
+Sign-in is already in progress — finish it in your browser.,Giriş zaten sürüyor — tarayıcında tamamla.
+Cloud save is not enabled in this build.,Bu sürümde bulut kaydı kapalı.
+No Google account is linked on this device.,Bu cihazda bağlı bir Google hesabı yok.
+Sign-in is still in progress — finish or cancel it first.,Giriş hâlâ sürüyor — önce tamamla ya da iptal et.
+Account disconnected. Your progress stays on this device.,Hesap ayrıldı. İlerlemen bu cihazda kalır.
+Google sign-in was declined.,Google girişi reddedildi.
+Sign-in took too long in the browser — try again from here.,Tarayıcıdaki giriş çok uzun sürdü — buradan tekrar dene.
+Sign-in needs the game open — try again and come straight back.,Giriş için oyunun açık olması gerekir — tekrar dene ve hemen geri dön.
+Google could not be reached — check your connection and try again.,Google'a ulaşılamadı — bağlantını kontrol edip tekrar dene.
+That sign-in expired before it finished — please try again.,O giriş tamamlanmadan zaman aşımına uğradı — lütfen tekrar dene.
+This build's Google sign-in is misconfigured; please contact support.,Bu sürümün Google girişi hatalı yapılandırılmış; lütfen destekle iletişime geç.
+Google sign-in was not completed.,Google girişi tamamlanmadı.
+You're signed in,Giriş yaptın
+Sign-in cancelled,Giriş iptal edildi
+You can close this tab and return to Little Grand Hotel.,Bu sekmeyi kapatıp Little Grand Hotel'e dönebilirsin.
+Nothing was changed. You can close this tab and try again from the game.,Hiçbir şey değişmedi. Bu sekmeyi kapatıp oyundan tekrar deneyebilirsin.
+Open the Doors,Kapıları Aç
+Start your first shift.,İlk vardiyanı başlat.
+First Harvest,İlk Hasat
+Collect income from the till.,Kasadan gelir topla.
+Spotless,Tertemiz
+Clean 3 rooms.,3 oda temizle.
+Cozy Corner,Rahat Köşe
+Raise a room to the Cozy tier (SP 60+).,Bir odayı Rahat seviyesine çıkar (SP 60+).
+Growing Fast,Hızlı Büyüme
+Reach 3 rooms.,3 odaya ulaş.
+Coffee Break,Kahve Molası
+Open a Cafe.,Bir Kafe aç.
+Invisible Hand,Görünmez El
+Build Housekeeping — let rooms clean themselves.,Kat Hizmetleri kur — odalar kendi kendini temizlesin.
+Three Stars,Üç Yıldız
+Reach a 3-star rating.,3 yıldız puanına ulaş.
+Chic Touch,Şık Dokunuş
+Raise a room to the Chic tier (SP 150+).,Bir odayı Şık seviyesine çıkar (SP 150+).
+Cash Flow,Nakit Akışı
+"Collect 10,000 coins in total.",Toplamda 10.000 altın topla.
+Going Up,Yukarı Doğru
+Open the 3rd floor.,3. katı aç.
+Workout Time,Spor Zamanı
+Open a Gym.,Bir Spor Salonu aç.
+Four Stars,Dört Yıldız
+Reach a 4-star rating.,4 yıldız puanına ulaş.
+The Luxe Life,Lüks Hayat
+Raise a room to the Luxe tier (SP 300+).,Bir odayı Lüks seviyesine çıkar (SP 300+).
+Poolside,Havuz Başı
+Open a Pool.,Bir Havuz aç.
+Empire,İmparatorluk
+Reach 10 rooms.,10 odaya ulaş.
+Five Stars,Beş Yıldız
+5 stars — the best hotel in town!,5 yıldız — şehrin en iyi oteli!
+Dinner Service,Akşam Servisi
+Open a Restaurant — let the kitchen scent fill the lobby.,Bir Restoran aç — mutfağın kokusu lobiyi sarsın.
+Sky Garden,Gökyüzü Bahçesi
+Open a Roof Garden — quiet with a city view.,Bir Çatı Bahçesi aç — şehir manzaralı ve sessiz.
+Full House,Dolu Otel
+Reach 16 rooms — a proper empire.,16 odaya ulaş — tam bir imparatorluk.
+Try the Duster,Tozluğu Dene
+Clean your first room.,İlk odanı temizle.
+Fifty Cleanups,Elli Temizlik
+Clean 50 rooms.,50 oda temizle.
+Hundred Collections,Yüz Toplama
+Collect from the till 100 times.,Kasadan 100 kez topla.
+Hundred Thousand Coins,Yüz Bin Altın
+"Collect 100,000 coins in total.",Toplamda 100.000 altın topla.
+Millionaire Hotelier,Milyoner Otelci
+"Collect 1,000,000 coins in total.",Toplamda 1.000.000 altın topla.
+Fifty Shifts,Elli Vardiya
+Start 50 shifts.,50 vardiya başlat.
+Hundred Shifts,Yüz Vardiya
+Start 100 shifts.,100 vardiya başlat.
+Eight Rooms,Sekiz Oda
+Reach 8 rooms.,8 odaya ulaş.
+Twenty Rooms,Yirmi Oda
+Reach 20 rooms.,20 odaya ulaş.
+All the Way Up,En Tepeye
+Unlock every floor.,Bütün katları aç.
+Five-Star Legend,Beş Yıldızlı Efsane
+Reach a 5-star rating.,5 yıldız puanına ulaş.
+Level 20,Seviye 20
+Reach level 20.,20. seviyeye ulaş.
+Level 30,Seviye 30
+Reach level 30.,30. seviyeye ulaş.
+Standard Room,Standart Oda
+Deluxe Room,Deluxe Oda
+Suite,Süit
+Cafe,Kafe
+Gym,Spor Salonu
+Pool,Havuz
+Cinema,Sinema
+Spa,Spa
+Restaurant,Restoran
+Roof Garden,Çatı Bahçesi
+Basic,Sade
+Cozy,Rahat
+Chic,Şık
+Luxe,Lüks
+Iconic,İkonik
+Plain Wallpaper,Düz Duvar Kâğıdı
+Plain Floor,Düz Zemin
+Simple Bed,Basit Yatak
+Wooden Bed,Ahşap Yatak
+Canopy Bed,Cibinlikli Yatak
+Desk Lamp,Masa Lambası
+Potted Fern,Saksı Eğreltisi
+Wall Art,Duvar Tablosu
+Armchair,Koltuk
+Wool Rug,Yün Halı
+Oak Wardrobe,Meşe Gardırop
+Gilded Mirror,Yaldızlı Ayna
+Velvet Sofa,Kadife Kanepe
+Crystal Chandelier,Kristal Avize
+Golden Statue,Altın Heykel
+Royal Aquarium,Kraliyet Akvaryumu
+Comfort Set,Konfor Seti
+Wooden Set,Ahşap Set
+Royal Set,Kraliyet Seti
