@@ -520,6 +520,19 @@ device. Setup, reasoning and the remaining manual step: `docs/cloud-save-setup.m
       nightly backup run, uninstall, reinstall from Play. Reasoning and the two emulator
       traps are written up in `docs/cloud-save-setup.md`.
 
+### Playable web demo + Turkish screenshots (2026-08-19)
+- [x] Web export preset (`Web` in `export_presets.cfg`): single-threaded, so no
+      cross-origin isolation headers are needed and GitHub Pages can serve it. Carries
+      the custom feature `demo`; `Game._ready()` starts such a build in English whatever
+      the browser locale says, and the player can still change it in Settings.
+- [x] Published to the `gh-pages` branch (49 MB: 39 MB wasm + 11 MB pck).
+- [x] `tests/showcase.tscn` takes `lang=tr`, and `scripts/make_store_shots.py tr` builds
+      the caption bands in Turkish (captions are hand-upper-cased — `str.upper()` is
+      locale-independent and breaks Turkish "i").
+- [x] Two popup titles the showcase invented were fixed to the ones the game actually
+      shows ("Profile", "Room Decoration"); the made-up ones had no translation and
+      stayed English in the localised set.
+
 ### Turkish localisation (2026-08-19)
 - [x] The whole interface goes through `tr()`. `Label.text` / `Button.text` keep the
       **English string as the key** and Godot auto-translates them on display, so a
@@ -543,6 +556,26 @@ device. Setup, reasoning and the remaining manual step: `docs/cloud-save-setup.m
       work, not code.
 
 ## To do
+
+### Next session (agreed 2026-08-19)
+- [ ] **Play store listing page** — the tr-TR/en-US text is live, what is left is the
+      listing *page* work: upload the Turkish screenshot set (rendered and stored in
+      `docs/store-assets-originals/play-tr/`, backed up in the private pictures repo as
+      `LittleGrandHotel/store-tr-2026-08-19/`), and re-check the graphics against the
+      current build. Deliberately not uploaded yet — an upload sends the listing back
+      through review.
+- [ ] **Promo video** — two edits were rejected; the plan is in
+      [[store-listing-and-media-state]]. Frames come from `tests/showcase.tscn -- video`.
+- [ ] **Put that promo video in the GitHub repo** — README currently shows `docs/media/demo.gif`.
+      Decide what the repo may carry (the `docs/media/` exception in CLAUDE.md) and what
+      stays out.
+- [ ] **Refresh the GitHub repo itself** — README, description, topics, the release badge.
+- [ ] **Describe the playable demo in the README** — the web build is published on the
+      `gh-pages` branch (commit `424f2fd`); GitHub Pages still has to be switched on in
+      repo Settings ▸ Pages (source: `gh-pages`, root). The URL will then be
+      https://eren-ozcan.github.io/LittleGrandHotel/. The README needs a "Play in your
+      browser" link plus one line on what the demo is: the full game, English-forced,
+      no install, progress kept in the browser only.
 
 ### Medium term
 - [ ] **Drop the manual save-transfer UI** — remove the "Backup now" button and both halves of "Move your save" (export *and* import). Google account linking now covers this end to end (proven across two real devices, 2026-08-08), so the save-code path is redundant surface that can only confuse players.
