@@ -4,12 +4,19 @@ extends Node
 ## ve çıkar.
 ## Çalıştırma (pencere açar, headless DEĞİL):
 ##   tools\Godot_v4.7-stable_win64_console.exe --path . res://tests/shot.tscn
-## Argümanlar (-- ile ayrılır): demo, zoomin, zoomout, out=isim.png,
+## Argümanlar (-- ile ayrılır): demo, zoomin, zoomout, out=isim.png, lang=tr,
 ## popup=shift|settings|staff|quests|stats|profile|gems|build|store|room
 ##   (ilgili popup'ı açık yakalar; store_*/profile_* ile sekme de seçilir)
 
 
 func _ready() -> void:
+	# "lang=tr" gibi bir argumanla arayuz dilini zorla — ceviri turlarinda
+	# Ayarlar'a girmeden Turkce ekran goruntusu alinabilsin diye.
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("lang="):
+			var game_node := get_node("/root/Game")
+			game_node.language = arg.substr(5)
+			game_node.apply_language()
 	var demo := "demo" in OS.get_cmdline_user_args()
 	if demo:
 		# main.tscn eklenmeden once talep edilir, yoksa main._ready() icindeki
