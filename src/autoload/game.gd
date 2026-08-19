@@ -173,6 +173,11 @@ func _ready() -> void:
 	achievements = load_json(ACHIEVEMENTS_PATH).get("achievements", [])
 	if not load_game():
 		new_game()
+	# The web demo build (custom feature "demo") starts in English whatever the
+	# browser reports, so a shared link reads the same for everyone. The player
+	# can still switch language in Settings; that choice is stored and wins.
+	if language == "" and OS.has_feature("demo"):
+		language = "en"
 	# Yeni oyunda da (load_game içinde çağrılmadığı için) dil uygulanmalı;
 	# ayrıca cihaz dilinin bir kez saklanmasını garanti eder.
 	apply_language()
