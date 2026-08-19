@@ -181,18 +181,6 @@ Account,Hesap
 Prestige,Prestij
 Stats,İstatistik
 ⚙ Settings,⚙ Ayarlar
-Move your save,Kaydını taşı
-A shareable code instead of the cloud.,Bulut yerine paylaşılabilir bir kod.
-Hide code,Kodu gizle
-Show code,Kodu göster
-Copy code to clipboard,Kodu panoya kopyala
-Save code copied to the clipboard,Kayıt kodu panoya kopyalandı
-Paste another save code here…,Başka bir kayıt kodunu buraya yapıştır…
-Import a save code,Kayıt kodu içe aktar
-Overwrites your current save,Mevcut kaydının üzerine yazar
-Tap again to overwrite,Üzerine yazmak için tekrar dokun
-Save imported!,Kayıt içe aktarıldı!
-Invalid code — check it and try again,Geçersiz kod — kontrol edip tekrar dene
 Prestige — multiplier ×%.2f (round %d),Prestij — çarpan ×%.2f (%d. tur)
 Prestige requires level %d (you are %d).,Prestij için seviye %d gerekir (sen %d'sin).
 Level %d of %d,Seviye %d / %d
@@ -202,7 +190,8 @@ Prestiged! New income multiplier: ×%.2f,Prestij yapıldı! Yeni gelir çarpanı
 Tap again to prestige,Prestij için tekrar dokun
 Progress will be reset,İlerlemen sıfırlanacak
 "Prestige resets your coins, rooms, quests and achievements; the multiplier is permanent.","Prestij altınlarını, odalarını, görevlerini ve başarımlarını sıfırlar; çarpan ise kalıcıdır."
-Cloud save is not enabled in this build — for now you can move your save to another device with the code below.,Bu sürümde bulut kaydı kapalı — şimdilik kaydını aşağıdaki kodla başka bir cihaza taşıyabilirsin.
+Cloud save is not enabled in this build — your hotel is saved on this device only.,Bu sürümde bulut kaydı kapalı — otelin yalnızca bu cihazda saklanıyor.
+"This is the browser demo — your hotel is saved in this browser only, and it does not carry over to the phone version.","Bu tarayıcı demosu — otelin yalnızca bu tarayıcıda saklanıyor ve telefon sürümüne taşınmıyor."
 Link with Google — unavailable in this build,Google ile bağla — bu sürümde kullanılamıyor
 The cloud holds different progress than this device. You decide which one to keep.,Bulutta bu cihazdakinden farklı bir ilerleme var. Hangisinin kalacağına sen karar ver.
 Choose a save,Bir kayıt seç
@@ -210,7 +199,6 @@ Cloud / This device,Bulut / Bu cihaz
 Linked to this device (anonymous),Bu cihaza bağlı (anonim)
 Linked to a Google account,Bir Google hesabına bağlı
 Last backup: %s,Son yedek: %s
-Back up now,Şimdi yedekle
 Your account is linked,Hesabın bağlı
 Disconnect account,Hesabı ayır
 Your progress stays on this device,İlerlemen bu cihazda kalır
