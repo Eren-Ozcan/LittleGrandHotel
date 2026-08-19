@@ -520,6 +520,28 @@ device. Setup, reasoning and the remaining manual step: `docs/cloud-save-setup.m
       nightly backup run, uninstall, reinstall from Play. Reasoning and the two emulator
       traps are written up in `docs/cloud-save-setup.md`.
 
+### Turkish localisation (2026-08-19)
+- [x] The whole interface goes through `tr()`. `Label.text` / `Button.text` keep the
+      **English string as the key** and Godot auto-translates them on display, so a
+      language switch re-translates the standing UI for free; only strings built with
+      `%` (and a handful measured before display) are wrapped explicitly at their call
+      site. `data/i18n/strings.csv` holds 440 rows — every UI string plus the quest,
+      achievement, room, tier, item and bundle names out of `data/*.json`.
+- [x] Settings ▸ **Language** cycles System → English → Türkçe, persisted in the save
+      (`language`, save v15; migrating players default to the device language, which is
+      what they had before).
+- [x] Two traps that only show up in another language, both fixed: room plaques were
+      measured with `_fit_font_size` *before* translation, so longer Turkish names spilled
+      out of the plaque; and `String.to_upper()` is locale-agnostic, so section headings
+      read "TEHLIKELI BÖLGE" instead of "TEHLİKELİ BÖLGE" (`_to_upper()` now handles the
+      dotted/dotless pair).
+- [x] Regression: `tests/i18n_check.tscn` — every CSV key still exists in the source or
+      the data files, the `%` conversions match between English and Turkish (a mismatch
+      is a runtime crash, not a typo), every row actually resolves, and English still
+      falls back to the key. `tests/shot.gd` takes a `lang=tr` argument for screenshots.
+- [ ] The Play Store listing itself still needs a Turkish translation — that is console
+      work, not code.
+
 ## To do
 
 ### Medium term
@@ -535,7 +557,7 @@ device. Setup, reasoning and the remaining manual step: `docs/cloud-save-setup.m
   - **The real cost is what it drags back in.** The plugin needs an Android OAuth client, a Web client *and* the signing SHA-1 — which means `google-services.json` returns, and so does the Play app-signing fingerprint trap ("fails only in store builds, silently") that `docs/cloud-save-setup.md` explains we designed *out*. It is also Android-only, so it forfeits the single-code-path property; iOS would need [godot-firebase-ios](https://github.com/SomniGameStudios/godot-firebase-ios) (mirrors GodotFirebaseAndroid's API, also does Sign in with Apple — but Godot 4.4+, iOS 17+, and **requires macOS/Xcode to build**).
   - **Verdict: do not migrate now.** The urgency was a misreading, the player-facing pain was already fixed (`afe359d`, foreground wait + retry), and `set_google_id_token_provider()` keeps the switch a one-call change whenever it is actually warranted. Revisit if Google announces an Android/iOS client requirement, or when the iOS port starts — at which point evaluate the Android+iOS plugin pair together rather than Android alone.
 - [ ] **Consider Block Store for silent durability** — researched 2026-08-08, not started. [Block Store](https://developer.android.com/identity/block-store) stores up to 16 entries of 4 KB each and is built precisely for re-authenticating on a new device with no sign-in screen; the docs are explicit that "the user has already agreed to restore your app data as a part of the restore flow, so no additional consents are required". Storing the anonymous refresh token there would carry the identity across a reinstall *and* a device transfer with zero UI, and unlike the sign-in migration it needs **no console setup at all** — no SHA-1, no OAuth client, no consent screen, no `google-services.json`. Caveats: needs a native plugin, Android/GMS only, device-to-device transfer only fires during the factory-reset restore flow, and cloud restore targets need Android 12+ (Pixel 9+). Auto Backup (now enabled) already covers the reinstall case more broadly — it restores on *any* APK install — so Block Store is the fresher-but-narrower complement, not a prerequisite.
-- [ ] **Large-screen orientation warning (Play Console, seen 2026-08-18)** — Play flags `android:screenOrientation="PORTRAIT"` as a resizeability/orientation restriction. Decision (2026-08-18, with the user): **keep the portrait lock**. It is advisory, not a release blocker, and unlocking rotation would drag the top bar, popups and build mode through a landscape design pass for a phone-first idle game. What was fixed instead is the part that actually broke: when the canvas is narrower than the viewport the hotel used to stick to the left edge with the ground strips cut off at the building's width, which is what a tablet — or any Android 16 large screen, since those ignore the lock outright — would have shown. The canvas now centres and the pavement/road/grass run edge to edge.
+- [x] **Large-screen orientation warning (Play Console, seen 2026-08-18)** — Play flags `android:screenOrientation="PORTRAIT"` as a resizeability/orientation restriction. Decision (2026-08-18, with the user): **keep the portrait lock**. It is advisory, not a release blocker, and unlocking rotation would drag the top bar, popups and build mode through a landscape design pass for a phone-first idle game. What was fixed instead is the part that actually broke: when the canvas is narrower than the viewport the hotel used to stick to the left edge with the ground strips cut off at the building's width, which is what a tablet — or any Android 16 large screen, since those ignore the lock outright — would have shown. The canvas now centres and the pavement/road/grass run edge to edge. Re-checked 2026-08-19: the release manifest already carries `android:resizeableActivity="true"`, so nothing further can be turned off short of unlocking rotation. Closing this as accepted-by-decision; reopen only if Play turns the advisory into a policy requirement.
 - [ ] Touch testing on a real Android device/emulator (so far only the headless export has been verified) — no device/emulator was connected in this session (`adb` not found), manual testing is required
 - [ ] A second building (a differently themed building after prestige) — currently limited to the single building + multiplier model, the economy/theme design needs to be settled first
 
