@@ -4,6 +4,17 @@ Mobile hotel management and decoration game (Godot 4.7, GDScript).
 Design document: GDD v1.1 — https://claude.ai/code/artifact/e65d0b6a-c8bd-4f01-ac1e-ea46c4a945cb
 What's done and the roadmap: [TODO.md](TODO.md)
 
+## Play in your browser
+
+**https://eren-ozcan.github.io/LittleGrandHotel/**
+
+The web build is the full game, not a cut-down teaser: every room, quest and
+achievement is there. Three differences from the phone build — it always starts in
+English (the language can still be changed in Settings), there are no ads and no
+in-app purchases (both are Android-only paths), and the save lives in the browser's
+own storage, so clearing the site data clears the progress and nothing carries over
+to the phone build. No install, no account.
+
 ## Demo
 
 ![Little Grand Hotel gameplay](docs/media/demo.gif)
@@ -90,6 +101,22 @@ Once setup is complete, APK generation:
 ```
 tools\Godot_v4.7-stable_win64_console.exe --headless --path . --export-debug "Android" build/android/little-grand-hotel.apk
 ```
+
+## Web export (the playable demo)
+
+The `Web` preset is single-threaded on purpose: a threaded Godot web build needs the
+cross-origin isolation headers (`COOP`/`COEP`), and GitHub Pages cannot send them. The
+preset also carries the custom feature `demo`, which is what makes the build start in
+English regardless of the browser locale.
+
+```
+tools\Godot_v4.7-stable_win64_console.exe --headless --path . --export-release "Web" build/web/index.html
+```
+
+Publishing is a plain branch push — the `gh-pages` branch holds the exported files at
+its root plus an empty `.nojekyll`, and repo Settings ▸ Pages serves that branch from
+`/`. The result is roughly 50 MB (39 MB `.wasm` + 11 MB `.pck`), which is why the build
+output stays out of `master`.
 
 ## Structure
 
