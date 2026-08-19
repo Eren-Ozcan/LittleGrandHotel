@@ -9,7 +9,7 @@ signal achievement_unlocked(achievement: Dictionary)
 signal leveled_up(new_level: int)
 
 const SAVE_PATH := "user://save.json"
-const SAVE_VERSION := 14
+const SAVE_VERSION := 15
 ## Göçle yükseltilebilen en eski kayıt sürümü
 const MIN_SAVE_VERSION := 2
 ## v11 öncesi (sabit "N kat × 4 slot" ızgarası) her katın açık genişliği —
@@ -112,6 +112,23 @@ var time_scale: float = 1.0
 var sound_on: bool = true
 var music_on: bool = true
 
+## Arayüz dili. Boş dize = cihazın dilini kullan (Godot'un varsayılan
+## davranışı); "en"/"tr" gibi bir değer oyuncunun Ayarlar'dan yaptığı açık
+## seçimdir ve cihaz dilini ezer. `apply_language()` uygular.
+var language: String = ""
+
+## `apply_language()` cihaz dilini bir kez buraya saklar: set_locale çağrıldıktan
+## sonra motordan geri okunamıyor, ama "Sistem" seçeneğine dönebilmek gerekiyor.
+var _system_locale: String = ""
+
+## Oyunun sunduğu diller: kod + o dildeki kendi adı (dil seçicide bir oyuncu
+## yanlış dile düşse bile kendi dilini tanıyabilsin diye yerel adlar).
+const LANGUAGES := [
+	{"code": "", "name": "System"},
+	{"code": "en", "name": "English"},
+	{"code": "tr", "name": "Türkçe"},
+]
+
 ## Otomatik vardiya yenileme: satın alınan tüketilebilir bir "saat hakkı"
 ## (bkz. buy_auto_renew). Bir vardiya bitince, hakkı > 0 ve coin yetiyorsa
 ## oyuncu geri dönmeden aynı süreyle otomatik olarak yeni bir vardiya başlar
@@ -156,6 +173,9 @@ func _ready() -> void:
 	achievements = load_json(ACHIEVEMENTS_PATH).get("achievements", [])
 	if not load_game():
 		new_game()
+	# Yeni oyunda da (load_game içinde çağrılmadığı için) dil uygulanmalı;
+	# ayrıca cihaz dilinin bir kez saklanmasını garanti eder.
+	apply_language()
 
 
 func _process(delta: float) -> void:
@@ -1248,6 +1268,35 @@ func reset_game() -> void:
 	save_game()
 
 
+# --- Arayüz dili -------------------------------------------------------
+
+## Kaydedilmiş dil tercihini TranslationServer'a uygular. Boş tercihte motorun
+## açılışta cihazdan aldığı diline geri dönülür — bu yüzden o değer bir kez
+## saklanır (set_locale çağrıldıktan sonra artık okunamaz).
+func apply_language() -> void:
+	if _system_locale == "":
+		_system_locale = TranslationServer.get_locale()
+	TranslationServer.set_locale(language if language != "" else _system_locale)
+
+
+## Ayarlar'daki seçicinin sırayla dolaştığı yardımcı.
+func cycle_language() -> void:
+	var codes: Array = []
+	for l in LANGUAGES:
+		codes.append(String(l.code))
+	var i := codes.find(language)
+	language = String(codes[(i + 1) % codes.size()]) if i >= 0 else ""
+	apply_language()
+	save_game()
+
+
+func language_name() -> String:
+	for l in LANGUAGES:
+		if String(l.code) == language:
+			return String(l.name)
+	return String(LANGUAGES[0].name)
+
+
 # --- Kayıt (GDD §10.1–10.2) --------------------------------------------
 
 func _save_dict() -> Dictionary:
@@ -1287,6 +1336,7 @@ func _save_dict() -> Dictionary:
 		"floor_blocks": floor_blocks,
 		"next_room_id": _next_room_id,
 		"hotel_name": hotel_name,
+		"language": language,
 	}
 
 
@@ -1420,6 +1470,11 @@ func _migrate_save(data: Dictionary) -> Dictionary:
 				# v14: otel adı özelleştirilebilir oldu.
 				if not data.has("hotel_name"):
 					data["hotel_name"] = "Little Grand Hotel"
+			14:
+				# v15: arayüz dili seçilebilir oldu. Boş dize = cihaz dili,
+				# yani göçen oyuncular bugüne kadarki davranışı korur.
+				if not data.has("language"):
+					data["language"] = ""
 		v += 1
 		data["save_version"] = v
 	return data
@@ -1567,6 +1622,8 @@ func _load_from_dict(parsed) -> bool:
 	time_scale = 60.0
 	sound_on = bool(parsed.get("sound_on", true))
 	music_on = bool(parsed.get("music_on", true))
+	language = String(parsed.get("language", ""))
+	apply_language()
 	auto_renew_hours_left = float(parsed.get("auto_renew_hours_left", 0.0))
 	last_shift_hours = int(parsed.get("last_shift_hours", 0))
 	daily_streak = int(parsed.get("daily_streak", 0))
