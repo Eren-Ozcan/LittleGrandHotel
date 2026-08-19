@@ -1492,15 +1492,21 @@ func load_game(path: String = SAVE_PATH) -> bool:
 	return _load_from_dict(parsed)
 
 
-## Kaydı bulut yerine paylaşılabilir bir metin koduna dönüştürür (Ayarlar →
-## Kaydı dışa aktar). Diske yazmadan aynı alan kümesini base64'e sarar.
+## Kaydı paylaşılabilir bir metin koduna dönüştürür. Diske yazmadan aynı alan
+## kümesini base64'e sarar.
+##
+## 2026-08-20'den beri OYUNCU ARAYÜZÜNDEN ERİŞİLEMEZ: elle taşıma yolu kaldırıldı,
+## kayıt taşımayı hesap bağlama yapıyor. İkili burada duruyor çünkü
+## _load_from_dict()'in doğrulama katmanı asıl güvenlik yüzeyi ve
+## tests/fuzz_attack.gd bu iki fonksiyon üzerinden onu dövüyor — silmek testi
+## değil, korumayı körleştirirdi.
 func export_save_code() -> String:
 	simulate_to(now())
 	return Marshalls.utf8_to_base64(JSON.stringify(_save_dict()))
 
 
-## Dışa aktarılan bir kodu geçerli oyun durumuna geri yükler (Ayarlar →
-## Kaydı içe aktar). Bozuk/geçersiz kodlarda dokunmadan false döner.
+## Dışa aktarılan bir kodu geçerli oyun durumuna geri yükler. Bozuk/geçersiz
+## kodlarda dokunmadan false döner. Arayüzden çağrılmıyor — bkz. yukarıdaki not.
 func import_save_code(code: String) -> bool:
 	var json_text := Marshalls.base64_to_utf8(code.strip_edges())
 	if json_text.is_empty():

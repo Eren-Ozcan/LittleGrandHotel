@@ -338,8 +338,6 @@ var _quests_tab := "quests"
 var _skip_shift_armed := false
 ## Bundle waiting for the player to pick a room in the Store -> Offers flow.
 var _pending_bundle_id := ""
-## Save code stays masked until the player asks for it (audit item 13).
-var _save_code_visible := false
 
 var selected_room := -1
 ## Taşıma modunda seçili odanın kararlı kimliği ("" = taşıma modu kapalı).
@@ -481,7 +479,11 @@ func _ready() -> void:
 	CloudSave.sync_finished.connect(func(result: String):
 		if result == CloudPayload.RESULT_RESTORE:
 			_refresh()
-			_show_toast("Cloud save restored"))
+			# Metin tek yerde dursun (bkz. _cloud_result_toast) — burada yalnızca
+			# HANGİ sonucun duyurulacağına karar veriliyor: her senkron için toast
+			# çıkarmak gürültü olurdu, geri yükleme ise oyuncunun görmesi gereken
+			# tek durum.
+			_show_toast(_cloud_result_toast(result)))
 	# Hesap bölümü ("son yedekleme", bağlama durumu) oyuncu dokunmadan da
 	# değişebilir: arka plandaki yükleme biter ya da tarayıcıdan dönen bağlama
 	# akışı sonuçlanır. Açık popup varsa tazelenir (kapalıysa no-op).
@@ -3985,7 +3987,6 @@ func _close_popup() -> void:
 	popup_builder = Callable()
 	selected_room = -1
 	_pending_bundle_id = ""
-	_save_code_visible = false
 	# Hesap bağlama tarayıcıyı bekliyorken bu ekranı kapatmak "vazgeçtim"
 	# demektir: bekleyen turu bırak, yoksa await zaman aşımına (dakikalar) kadar
 	# asılı kalır ve oyuncu yeniden deneyemez.
@@ -4365,56 +4366,6 @@ func _build_profile_popup(c: VBoxContainer) -> void:
 func _add_account_rows(c: VBoxContainer) -> void:
 	_build_cloud_section(c)
 
-	var v := _card(c)
-	v.add_child(_label("Move your save", 13, PALETTE.text))
-	v.add_child(_label_wrap("A shareable code instead of the cloud.", 11, PALETTE.muted))
-	var export_code := Game.export_save_code()
-	var export_field := LineEdit.new()
-	export_field.text = export_code
-	export_field.editable = false
-	# Ham base64 kod açıkta durmasın (audit 13) — istenince gösterilir.
-	export_field.secret = not _save_code_visible
-	_style_field(export_field)
-	v.add_child(export_field)
-	var show_b := _action(v, "Hide code" if _save_code_visible else "Show code", "", true, PALETTE.wood_dark)
-	show_b.pressed.connect(func():
-		_save_code_visible = not _save_code_visible
-		_rebuild_popup())
-	var copy_b := _action(v, "Copy code to clipboard")
-	copy_b.pressed.connect(func():
-		DisplayServer.clipboard_set(export_code)
-		_show_toast("Save code copied to the clipboard"))
-	var import_field := LineEdit.new()
-	import_field.placeholder_text = "Paste another save code here…"
-	_style_field(import_field)
-	v.add_child(import_field)
-	var import_b := _danger(v, "Import a save code", "Overwrites your current save", true)
-	import_b.pressed.connect(func():
-		if not import_b.get_meta("armed", false):
-			import_b.set_meta("armed", true)
-			_row_set(import_b, "Tap again to overwrite", "Are you sure?")
-			return
-		if Game.import_save_code(import_field.text):
-			Game.save_game()
-			_close_popup()
-			_show_toast("Save imported!")
-		else:
-			_show_toast("Invalid code — check it and try again"))
-
-
-## Prototipteki inert alan görünümü (`background:#f7f1e2`, yuvarlak köşe) —
-## kayıt kodu ve içe aktarma kutuları.
-func _style_field(f: LineEdit) -> void:
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = PALETTE.field
-	sb.set_corner_radius_all(9)
-	sb.set_content_margin_all(10)
-	for state in ["normal", "focus", "read_only"]:
-		f.add_theme_stylebox_override(state, sb)
-	f.add_theme_color_override("font_color", PALETTE.wood_dark)
-	f.add_theme_color_override("font_placeholder_color", PALETTE.muted)
-	f.add_theme_font_size_override("font_size", roundi(12 * UI_TEXT_SCALE))
-
 
 func _add_prestige_rows(c: VBoxContainer) -> void:
 	var v := _card(c)
@@ -4441,18 +4392,24 @@ func _add_prestige_rows(c: VBoxContainer) -> void:
 
 ## Profil popup'ının "Hesap / Bulut kaydı" bölümü.
 ##
-## Firebase yapılandırılmamışken (placeholder'lar dururken, bkz.
-## src/cloud/firebase_config.gd) bölüm bugünkü davranışını korur: bulut yok,
-## kayıt yalnızca aşağıdaki paylaşılabilir kodla taşınır. Yapılandırma
-## geldiğinde aynı bölüm kendiliğinden durum + yedekleme + hesap bağlamaya
-## dönüşür — UI'da ayrıca bir bayrak açmak gerekmez.
+## Bulut kapalıyken (yapılandırma placeholder'da ya da web demosunda, bkz.
+## CloudSave.is_enabled()) bölüm yalnızca durumu söyler: kayıt bu cihazda
+## duruyor. Elle taşıma yolu artık YOK — paylaşılabilir kayıt kodu arayüzü
+## kaldırıldı, çünkü hesap bağlama aynı işi iki gerçek cihazda kanıtlanmış
+## şekilde yapıyor ve iki ayrı taşıma yolu yalnızca kafa karıştırıyordu.
 func _build_cloud_section(c: VBoxContainer) -> void:
 	var v := _card(c)
 	# Not: prototipteki bulut ikonu burada KULLANILAMAZ — `cloud.svg` beyaz
 	# gövdeli bir gökyüzü bulutu, beyaz kartın üstünde görünmüyor.
 	v.add_child(_label("Account", 13, PALETTE.text))
 	if not CloudSave.is_enabled():
-		v.add_child(_label_wrap("Cloud save is not enabled in this build — for now you can move your save to another device with the code below.", 11, PALETTE.muted))
+		# İki ayrı durum, tek dal: web demosunda bulut BİLEREK kapalı, masaüstü
+		# derlemesinde ise yapılandırma eksik olabilir. Oyuncunun bilmesi gereken
+		# ikisinde de aynı: kayıt nerede duruyor.
+		if OS.has_feature("demo"):
+			v.add_child(_label_wrap("This is the browser demo — your hotel is saved in this browser only, and it does not carry over to the phone version.", 11, PALETTE.muted))
+		else:
+			v.add_child(_label_wrap("Cloud save is not enabled in this build — your hotel is saved on this device only.", 11, PALETTE.muted))
 		# Bulut tamamen kapalıyken bağlamanın anlamı yok: bağlanacak bir kayıt
 		# yok. "Coming soon" DEMEZ — kod hazır, eksik olan bu derlemenin
 		# yapılandırması; oyuncuya söz vermek yerine durumu söylüyoruz.
@@ -4467,13 +4424,6 @@ func _build_cloud_section(c: VBoxContainer) -> void:
 	var who := "Linked to this device (anonymous)" if not CloudSave.is_linked() else "Linked to a Google account"
 	v.add_child(_label_wrap(who, 12, PALETTE.text))
 	v.add_child(_label(tr("Last backup: %s") % _cloud_sync_text(), 11, PALETTE.muted))
-
-	var backup_b := _action(v, "Back up now")
-	backup_b.pressed.connect(func():
-		backup_b.disabled = true
-		var result: String = await CloudSave.sync_now()
-		_show_toast(_cloud_result_toast(result))
-		_rebuild_popup())
 
 	if CloudSave.is_linked():
 		_inert(v, "Your account is linked")
