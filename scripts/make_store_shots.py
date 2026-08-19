@@ -5,17 +5,23 @@ promise and a character cut-out, never a bare screenshot. This script builds our
 from the renders produced by `tests/showcase.tscn` plus the receptionist cut-outs,
 so the whole set can be rebuilt (or re-worded, or localised) with one command:
 
-    python scripts/make_store_shots.py
+    python scripts/make_store_shots.py            # en-US, from */.png
+    python scripts/make_store_shots.py tr         # tr-TR, from tr/*.png
+
+The localised run reads the renders produced by `showcase.tscn -- shots lang=tr`
+from docs/store-assets-originals/tr/ and writes to docs/store-assets-originals/
+play-tr/. Anything the localised render does not provide (the hand-painted
+before/after art) falls back to the shared file in the parent folder.
 
 Inputs and outputs both live in docs/store-assets-originals/, which is gitignored;
 the finished files are copied into the private pictures repo by hand.
 """
 
+import sys
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 
 ASSETS = Path(__file__).resolve().parent.parent / "docs" / "store-assets-originals"
-OUT = ASSETS / "play"
 
 W, H = 1080, 1920
 BAND_H = 330
@@ -25,18 +31,22 @@ CREAM = (253, 246, 227)
 
 TITLE_FONT = r"C:\Windows\Fonts\seguibl.ttf"
 
-# (source image, caption, character cut-out or None, keep-top fraction)
-# Menu screens are cropped to their top portion: the popups are short, so the full
-# 1080x1920 frame would be mostly empty cream.
+# (source image, English caption, Turkish caption, character cut-out or None,
+# keep-top fraction). Menu screens are cropped to their top portion: the popups
+# are short, so the full 1080x1920 frame would be mostly empty cream.
+#
+# The Turkish captions are written already upper-cased by hand — Python's
+# str.upper() is locale-independent and turns "i" into "I", which is wrong in
+# Turkish (the same trap the game hit in `_to_upper()`).
 SHOTS = [
-    ("01_hotel.png", "BUILD YOUR GRAND HOTEL", "pose_point.png", 1.0),
-    ("03_room.png", "DECORATE EVERY ROOM", None, 0.62),
-    ("before_after_art.jpg", "TURN EMPTY ROOMS INTO SUITES", None, 1.0),
-    ("02_full_building.png", "POOL, CINEMA, SPA & MORE", "pose_point.png", 1.0),
-    ("08_offline.png", "EARN WHILE YOU'RE AWAY", "pose_coins.png", 1.0),
-    ("05_quests.png", "20 QUESTS TO CHASE", None, 0.45),
-    ("04_build.png", "BUILD, UNLOCK, EXPAND", "pose_broom.png", 0.62),
-    ("06_stats.png", "GROW INTO AN EMPIRE", "pose_coins.png", 0.45),
+    ("01_hotel.png", "BUILD YOUR GRAND HOTEL", "BÜYÜK OTELİNİ KUR", "pose_point.png", 1.0),
+    ("03_room.png", "DECORATE EVERY ROOM", "HER ODAYI DÖŞE", None, 0.62),
+    ("before_after_art.jpg", "TURN EMPTY ROOMS INTO SUITES", "BOŞ ODALARI SÜİTE ÇEVİR", None, 1.0),
+    ("02_full_building.png", "POOL, CINEMA, SPA & MORE", "HAVUZ, SİNEMA, SPA VE DAHASI", "pose_point.png", 1.0),
+    ("08_offline.png", "EARN WHILE YOU'RE AWAY", "SEN YOKKEN DE KAZAN", "pose_coins.png", 1.0),
+    ("05_quests.png", "20 QUESTS TO CHASE", "PEŞİNDEN KOŞULACAK 20 GÖREV", None, 0.45),
+    ("04_build.png", "BUILD, UNLOCK, EXPAND", "İNŞA ET, AÇ, BÜYÜT", "pose_broom.png", 0.62),
+    ("06_stats.png", "GROW INTO AN EMPIRE", "BİR İMPARATORLUĞA DÖNÜŞTÜR", "pose_coins.png", 0.45),
 ]
 
 
@@ -70,8 +80,18 @@ def wrap(draw, text, font, max_w):
     return lines
 
 
-def build(source: str, caption: str, pose: str | None, keep_top: float, index: int) -> Path:
-    raw = Image.open(ASSETS / source).convert("RGB")
+def source_path(source: str, lang: str) -> Path:
+    """Prefer the localised render; fall back to the shared file for hand art."""
+    if lang != "en":
+        localised = ASSETS / lang / source
+        if localised.exists():
+            return localised
+    return ASSETS / source
+
+
+def build(source: str, caption: str, slug: str, pose: str | None, keep_top: float,
+          index: int, lang: str) -> Path:
+    raw = Image.open(source_path(source, lang)).convert("RGB")
     if keep_top < 1.0:
         raw = raw.crop((0, 0, raw.width, round(raw.height * keep_top)))
     shot = fit(raw, W, H - BAND_H)
@@ -103,15 +123,21 @@ def build(source: str, caption: str, pose: str | None, keep_top: float, index: i
         draw.text((text_left, y), line, font=font, fill=CREAM)
         y += line_h
 
-    OUT.mkdir(parents=True, exist_ok=True)
-    path = OUT / f"{index:02d}_{caption.lower().replace(' ', '_').replace(',', '').replace("'", '')[:28]}.png"
+    out = ASSETS / ("play" if lang == "en" else f"play-{lang}")
+    out.mkdir(parents=True, exist_ok=True)
+    path = out / f"{index:02d}_{slug}.png"
     canvas.save(path)
     return path
 
 
 def main() -> None:
-    for i, (source, caption, pose, keep_top) in enumerate(SHOTS, start=1):
-        print("wrote", build(source, caption, pose, keep_top, i).name)
+    lang = sys.argv[1] if len(sys.argv) > 1 else "en"
+    for i, (source, en, tr, pose, keep_top) in enumerate(SHOTS, start=1):
+        # The file name always comes from the English caption, so the two sets
+        # line up row by row when they are uploaded side by side.
+        slug = en.lower().replace(" ", "_").replace(",", "").replace("'", "")[:28]
+        caption = en if lang == "en" else tr
+        print("wrote", build(source, caption, slug, pose, keep_top, i, lang).name)
 
 
 if __name__ == "__main__":
