@@ -9,6 +9,7 @@ extends Node
 ##
 ## Run (stills):  tools\Godot_v4.7-stable_win64_console.exe --path . res://tests/showcase.tscn -- shots
 ## Run (frames):  ... res://tests/showcase.tscn -- video
+## Localised:     ... res://tests/showcase.tscn -- shots lang=tr
 ## Output: user://media/*.png
 ##
 ## The developer's save is never touched: the showcase hotel is built in memory.
@@ -39,6 +40,14 @@ var _frame := 0
 func _ready() -> void:
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(OUT_DIR))
 	_build_showcase_state()
+	# "lang=tr" forces the UI language so a localised screenshot set can be
+	# rendered from the same showcase hotel. It is applied after the state is
+	# built because new_game() resets Game back to its defaults.
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("lang="):
+			var g := get_node("/root/Game")
+			g.language = arg.substr(5)
+			g.apply_language()
 	_view = SubViewport.new()
 	_view.size = Vector2i(SHOT_W, SHOT_H)
 	_view.transparent_bg = false
@@ -170,11 +179,14 @@ func _capture_stills() -> void:
 	await _settle(3)
 
 	_main.selected_room = _first_guest_room()
-	await _shot_of_popup("Room", _main._build_room_popup, "03_room")
+	await _shot_of_popup("Room Decoration", _main._build_room_popup, "03_room")
 	await _shot_of_popup("Build", _main._build_build_popup, "04_build")
 	_main._quests_tab = "quests"
 	await _shot_of_popup("Quests", _main._build_quests_popup, "05_quests")
-	await _shot_of_popup("Statistics", _main._build_stats_popup, "06_stats")
+	# "Statistics" is not a title the game ever shows: the stats live under the
+	# Profile popup, and a made-up title also has no translation, so it stayed
+	# English in the localised set.
+	await _shot_of_popup("Profile", _main._build_stats_popup, "06_stats")
 	_main._store_tab = "premium"
 	await _shot_of_popup("Store", _main._build_store_popup, "07_store")
 	_main._store_tab = "gems"
@@ -196,7 +208,7 @@ func _capture_stills() -> void:
 	var idx := _first_guest_room()
 	g.rooms[idx].dirty = true
 	_main.selected_room = idx
-	await _shot_of_popup("Room", _main._build_room_popup, "09_dirty")
+	await _shot_of_popup("Room Decoration", _main._build_room_popup, "09_dirty")
 
 
 ## The promo clip. Every beat has to CHANGE something on screen — the first cut was
