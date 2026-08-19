@@ -491,7 +491,7 @@ func _ready() -> void:
 			_show_toast("No ad is ready right now, try again shortly."))
 	Game.leveled_up.connect(func(lv):
 		_play("level")
-		_show_toast("Level up! Level %d (+%s)" % [lv, _count(int(Game.eco.levelup_gems), "gem")]))
+		_show_toast(tr("Level up! Level %d (+%s)") % [lv, _count(int(Game.eco.levelup_gems), "gem")]))
 	_refresh()
 	# Tutorial/günlük ödül/çevrimdışı zinciri artık yükleme ekranı kendiliğinden
 	# kapanınca başlar (bkz. _finish_loading_screen) — arkasında görünmez
@@ -582,7 +582,7 @@ func _tutorial_target_control(name: String) -> Control:
 ## _process) — layout, ekran döndürme ya da bina kaydırmasıyla kaymasın.
 func _show_tutorial_spotlight(s: Dictionary) -> void:
 	tutorial_layer.visible = true
-	_tutorial_bubble_label.text = "%s\n%s" % [String(s.title), String(s.text)]
+	_tutorial_bubble_label.text = "%s\n%s" % [tr(String(s.title)), tr(String(s.text))]
 	_tutorial_reposition_spotlight()
 	_start_tutorial_pulse()
 
@@ -958,7 +958,7 @@ func _on_walker_caught(b: Control) -> void:
 	if bonus <= 0:
 		return
 	_play("collect")
-	_show_toast("You turned the runaway guest back to the door! +%d coins" % bonus)
+	_show_toast(tr("You turned the runaway guest back to the door! +%d coins") % bonus)
 	var old_tw: Tween = b.get_meta("walk_tween")
 	if old_tw:
 		old_tw.kill()
@@ -1822,7 +1822,7 @@ func _set_build_mode(on: bool) -> void:
 		_set_clean_mode(false)
 	build_mode = on
 	build_mode_button.button_pressed = on
-	build_mode_button.text = "✎ Build: On" if on else "✎ Build"
+	build_mode_button.text = tr("✎ Build: On") if on else tr("✎ Build")
 	_rebuild_hotel()
 
 
@@ -1833,12 +1833,12 @@ func _set_clean_mode(on: bool) -> void:
 		_set_build_mode(false)
 	clean_mode = on
 	clean_mode_button.button_pressed = on
-	clean_mode_button.text = "🧹 Clean: On" if on else "🧹 Clean"
+	clean_mode_button.text = tr("🧹 Clean: On") if on else tr("🧹 Clean")
 	_rebuild_hotel()
 	if on:
 		var dirty := _dirty_room_count()
 		if dirty > 0:
-			_show_toast("Cleaning mode on — tap the %s to clean." % _count(dirty, "dirty room"))
+			_show_toast(tr("Cleaning mode on — tap the %s to clean.") % _count(dirty, "dirty room"))
 		else:
 			_show_toast("Cleaning mode on — no dirty rooms right now.")
 
@@ -1883,7 +1883,17 @@ func _card(c: VBoxContainer, border: Color = PALETTE.facade_line) -> VBoxContain
 ## Bölüm etiketi: prototipte başlık kartın İÇİNDE değil, satır grubunun
 ## ÜSTÜNDE duran küçük büyük harf metin (`text-transform:uppercase`).
 func _section(c: VBoxContainer, title: String, tint: Color = PALETTE.muted) -> void:
-	c.add_child(_label(title.to_upper(), 11, tint))
+	# tr() first, upper-case after: the key is the untouched English string.
+	c.add_child(_label(_to_upper(tr(title)), 11, tint))
+
+
+## String.to_upper() is locale-agnostic, so Turkish loses its dotted capital:
+## "tehlikeli" would become "TEHLIKELI" instead of "TEHLİKELİ", which reads as
+## a typo to a Turkish player. Only the two dotted/dotless pairs differ.
+func _to_upper(s: String) -> String:
+	if TranslationServer.get_locale().begins_with("tr"):
+		return s.replace("i", "İ").replace("ı", "I").to_upper()
+	return s.to_upper()
 
 
 ## Prototipin satır primitifi. Beyaz liste satırı, kahverengi birincil buton ve
@@ -2150,6 +2160,10 @@ func _fit_font_size(text: String, max_w: float, base_size: int, min_size: int) -
 
 func _label(text: String, size: int, color: Color) -> Label:
 	var l := Label.new()
+	# Deliberately NOT tr(): Godot auto-translates Label.text on display and
+	# re-translates it when the locale changes, so the node must keep the
+	# English key. Strings already built with `%` are not keys and are wrapped
+	# with tr() at their own call site instead.
 	l.text = text
 	l.add_theme_font_size_override("font_size", roundi(size * UI_TEXT_SCALE))
 	l.add_theme_color_override("font_color", color)
@@ -2293,6 +2307,7 @@ func _spacer_y(px: int) -> Control:
 
 func _button(text: String, size: int, bg: Color, fg: Color) -> Button:
 	var b := Button.new()
+	# See _label(): the key is stored raw, Godot translates on display.
 	b.text = text
 	# Not: autowrap burada KASITLI OLARAK yok — bir HBoxContainer satırında
 	# (ör. zoom +/- butonları) sarma açık bir buton, genişliği ~0'a sarkıtıp
@@ -2350,7 +2365,7 @@ func _update_live_labels() -> void:
 	for i in 5:
 		star_icons[i].texture = _tex("res://assets/ui/star_full.svg" if i < stars else "res://assets/ui/star_empty.svg")
 	var lv := Game.level()
-	level_label.text = "Level %d" % lv
+	level_label.text = tr("Level %d") % lv
 	var cur_xp := Game.xp - Game.xp_for_level(lv)
 	var need := Game.xp_for_level(lv + 1) - Game.xp_for_level(lv)
 	xp_bar.max_value = need
@@ -2360,25 +2375,25 @@ func _update_live_labels() -> void:
 	_update_bar_active()
 	var has_income := int(Game.pending_income) > 0
 	if Game.shift_active():
-		shift_label.text = "%s left in the shift · %.0f coins/hour" % [
+		shift_label.text = tr("%s left in the shift · %.0f coins/hour") % [
 			_fmt_hms(Game.shift_remaining_game_hours()), Game.hourly_income()]
 	else:
-		shift_label.text = "No shift running — the hotel isn't earning."
+		shift_label.text = tr("No shift running — the hotel isn't earning.")
 	# Tek durum makinesi: biriken para varsa (vardiya bitmiş olsa da) "Collect",
 	# yoksa vardiya sürüyorsa kalan süre, hiçbiri yoksa "Start shift".
 	if has_income:
-		primary_label.text = "Collect"
+		primary_label.text = tr("Collect")
 		# Alt satırda YALNIZCA tutar durur: kalan süre zaten gökyüzü çipinde
 		# yazıyor ve ikisi birlikte 120 piksellik daireye sığmıyor.
-		shift_bar_label.text = "%s coins" % _fmt(int(Game.pending_income))
+		shift_bar_label.text = tr("%s coins") % _fmt(int(Game.pending_income))
 		collect_button.disabled = false
 	elif Game.shift_active():
-		primary_label.text = "Running"
-		shift_bar_label.text = "%s left" % _fmt_hms(Game.shift_remaining_game_hours())
+		primary_label.text = tr("Running")
+		shift_bar_label.text = tr("%s left") % _fmt_hms(Game.shift_remaining_game_hours())
 		collect_button.disabled = true
 	else:
-		primary_label.text = "Start shift"
-		shift_bar_label.text = "1-24 h"
+		primary_label.text = tr("Start shift")
+		shift_bar_label.text = tr("1-24 h")
 		collect_button.disabled = false
 	if has_income and not _collect_pulse_on:
 		_collect_pulse_on = true
@@ -2474,7 +2489,7 @@ func _rebuild_hotel() -> void:
 	# Hap rengi haftalık temaya göre DEĞİŞMİYOR: prototipte sabit
 	# rgba(224,85,74,.9). Bazı tema accent'leri (Golden Age, Winter Tale)
 	# gökyüzünün üstünde soluk kalıyordu; tema adı zaten metinde yazıyor.
-	roof_theme_label.text = "Theme of the week: %s" % String(theme.name)
+	roof_theme_label.text = tr("Theme of the week: %s") % tr(String(theme.name))
 
 	var grid_cols := int(Game.eco.building.grid_cols)
 	var canvas_w := grid_cols * CELL_W
@@ -2791,7 +2806,7 @@ func _make_block_cell_button(floor_i: int, col: int) -> Control:
 	curt.set_anchors_preset(Control.PRESET_FULL_RECT)
 	curt.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	b.add_child(curt)
-	var l := _label("Unlock block\n%s coins" % _fmt(Game.block_price(floor_i)), 11, Color("f0dfc4"))
+	var l := _label("%s\n%s" % [tr("Unlock block"), tr("%s coins") % _fmt(Game.block_price(floor_i))], 11, Color("f0dfc4"))
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	l.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -3045,7 +3060,7 @@ func _make_room_button(idx: int) -> Button:
 	if cat == "guest":
 		if room.items.size() == 0 and not is_dirty:
 			# Oda görseli zaten döşenmiş görünüyor; sadece küçük bir ipucu.
-			var hint := _label("empty room", 12, PALETTE.muted)
+			var hint := _label("empty block", 12, PALETTE.muted)
 			hint.anchor_left = 0.0
 			hint.anchor_right = 1.0
 			hint.anchor_top = 1.0
@@ -3192,13 +3207,13 @@ func _make_room_button(idx: int) -> Button:
 		plate.offset_top = 4
 		plate.offset_right = -4
 		plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		var plate_text: String = d.name
+		var plate_text: String = tr(String(d.name))
 		if is_infested:
-			plate_text = "INFESTED! %d c" % int(Game.eco.infest.clean_cost)
+			plate_text = tr("INFESTED! %d c") % int(Game.eco.infest.clean_cost)
 		elif is_dirty:
-			plate_text = "DIRTY!"
+			plate_text = tr("DIRTY!")
 		elif cat == "guest":
-			plate_text = "%s · SP %d" % [Game.tier_name(Game.room_tier(room)), Game.room_score(room)]
+			plate_text = "%s · SP %d" % [tr(Game.tier_name(Game.room_tier(room))), Game.room_score(room)]
 		# Oda genişliğine göre sığana kadar font küçültülür — metin hiç
 		# kesilmeden tamamı görünür kalır.
 		var plate_w: float = int(room.get("w", 1)) * CELL_W - CELL_GAP - 8.0 - 12.0
@@ -3291,14 +3306,14 @@ func _on_room_tapped(idx: int, btn: Control) -> void:
 			_play("clean")
 			_spawn_clean_anim(center)
 			if cost > 0:
-				_show_toast("Infestation cleared! (−%d coins, +2 XP)" % cost)
+				_show_toast(tr("Infestation cleared! (−%d coins, +2 XP)") % cost)
 			else:
 				_show_toast("Room cleaned (+2 XP)")
 			# Son kirli oda da temizlendiyse modda kalmanın anlamı kalmıyor.
 			if _dirty_room_count() == 0:
 				_set_clean_mode(false)
 		elif cost > 0:
-			_show_toast("Clearing the infestation costs %d coins!" % cost)
+			_show_toast(tr("Clearing the infestation costs %d coins!") % cost)
 		return
 	selected_room = idx
 	_tutorial_advance_on("room_tap")
@@ -3358,7 +3373,7 @@ func _make_shop_tray_card(type: String) -> Control:
 	name_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	name_l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	col.add_child(name_l)
-	var price_text := ("Unlocks at Lv.%d" % int(d.unlock_level)) if locked else "%s coins" % _fmt(int(d.price))
+	var price_text := (tr("Unlocks at Lv.%d") % int(d.unlock_level)) if locked else tr("%s coins") % _fmt(int(d.price))
 	var price_l := _label(price_text, 10, PALETTE.muted if locked else PALETTE.gold_soft)
 	price_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	price_l.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -3466,7 +3481,7 @@ func _finish_drag() -> void:
 	else:
 		if Game.place_room(new_type, cell.x, cell.y):
 			_play("buy")
-			_show_toast("%s placed!" % Game.room_def(new_type).name)
+			_show_toast(tr("%s placed!") % tr(String(Game.room_def(new_type).name)))
 			_maybe_show_upgrade_ad()
 		else:
 			_show_toast("It doesn't fit here, your level is too low, or you can't afford it")
@@ -3498,10 +3513,10 @@ func _on_guest_poked(btn: Control) -> void:
 	if bonus > 0:
 		_play("collect")
 		_spawn_sparkles(center)
-		_show_toast("A secret inspector! +%d coins (%s left)" % [bonus, _count(Game.pokes_left(), "nudge")])
+		_show_toast(tr("A secret inspector! +%d coins (%s left)") % [bonus, _count(Game.pokes_left(), "nudge")])
 	else:
 		_play("tap")
-		_show_toast("The guest yawned and went back to sleep… (%s left)" % _count(Game.pokes_left(), "nudge"))
+		_show_toast(tr("The guest yawned and went back to sleep… (%s left)") % _count(Game.pokes_left(), "nudge"))
 
 
 ## Merkez butonun tek giriş noktası: biriken para varsa toplar, yoksa vardiya
@@ -3521,7 +3536,7 @@ func _on_collect() -> void:
 	if got > 0:
 		_play("collect")
 		_fly_coins(from, got)
-		_show_toast("+%s coins collected" % _fmt(got))
+		_show_toast(tr("+%s coins collected") % _fmt(got))
 
 
 ## Misafir canlandırması: kuyruktakiler paytak yürür, odadakiler kıpırdanır.
@@ -3868,7 +3883,7 @@ func _show_rename_hotel_modal() -> void:
 	pv.add_theme_constant_override("separation", 14)
 	panel.add_child(pv)
 	pv.add_child(_label("Rename your hotel", 20, PALETTE.wood_dark))
-	pv.add_child(_label("Up to %d characters, so it fits the sign in the lobby." % HOTEL_NAME_MAX_LEN, 12, PALETTE.muted))
+	pv.add_child(_label(tr("Up to %d characters, so it fits the sign in the lobby.") % HOTEL_NAME_MAX_LEN, 12, PALETTE.muted))
 	var field := LineEdit.new()
 	field.text = Game.hotel_name
 	field.max_length = HOTEL_NAME_MAX_LEN
@@ -3957,6 +3972,8 @@ func _sync_popup_head() -> void:
 		popup_title.text = ""
 		return
 	var top: Dictionary = _popup_stack.back()
+	# The title doubles as the tab identifier (`_active_tab`), so the stack
+	# keeps the English string; the Label translates it on display.
 	popup_title.text = String(top.title)
 	popup_builder = top.builder
 
@@ -3998,11 +4015,11 @@ func _rebuild_popup() -> void:
 func _build_shift_popup(c: VBoxContainer) -> void:
 	if Game.shift_active():
 		var head := _card(c)
-		head.add_child(_label("Shift in progress — %s left." % _fmt_hms(Game.shift_remaining_game_hours()), 15, PALETTE.text))
+		head.add_child(_label(tr("Shift in progress — %s left.") % _fmt_hms(Game.shift_remaining_game_hours()), 15, PALETTE.text))
 		head.add_child(_label("You can collect your earnings whenever you like.", 12, PALETTE.muted))
 		var gem_cost := Game.skip_shift_gem_cost()
 		var hk_active := Game.housekeeping_active()
-		var skip_b := _action(c, "Finish now — %s" % _count(gem_cost, "gem"),
+		var skip_b := _action(c, tr("Finish now — %s") % _count(gem_cost, "gem"),
 			"Ends the shift immediately and banks the earnings.",
 			Game.gems >= gem_cost, PALETTE.green_deep)
 		# "Emin misin?" durumu butonun META'sında DEĞİL, üye değişkende durur:
@@ -4030,7 +4047,7 @@ func _build_shift_popup(c: VBoxContainer) -> void:
 		if Game.now() < Game.boost_end_unix:
 			var left_min := int((Game.boost_end_unix - Game.now()) / 60.0)
 			_row(c, "res://assets/ui/ad_video.png", "Ad bonus active",
-				"Income ×%.1f · %d min left" % [Game.boost_mult, maxi(0, left_min)],
+				tr("Income ×%.1f · %d min left") % [Game.boost_mult, maxi(0, left_min)],
 				"", false)
 		else:
 			var boost_b := _row(c, "res://assets/ui/ad_video.png",
@@ -4049,13 +4066,13 @@ func _build_shift_popup(c: VBoxContainer) -> void:
 		var cost := Game.shift_cost(hours)
 		var est: float = Game.hourly_income() * hours
 		var b := _row(c, "res://assets/ui/icon_clock.svg", _count(hours, "hour"),
-			"cost %s · est. income ~%s" % [_fmt(cost), _fmt(int(est))],
+			tr("cost %s · est. income ~%s") % [_fmt(cost), _fmt(int(est))],
 			"", Game.coins >= cost)
 		b.pressed.connect(func():
 			if Game.start_shift(hours):
 				_play("shift")
 				_guest_walk_in()
-				_show_toast("A %d-hour shift has started!" % hours)
+				_show_toast(tr("A %d-hour shift has started!") % hours)
 				_close_popup())
 	_notice(c, "Note: rooms left dirty earn nothing. On a long shift a Housekeeping room is a must!", "warn")
 	_add_auto_renew_shop(c)
@@ -4064,17 +4081,17 @@ func _build_shift_popup(c: VBoxContainer) -> void:
 ## Vardiya popup'ının iki kolundan da (aktif/pasif) çağrılır — bu satın alma
 ## önceden Ayarlar'daydı, kullanıcı isteğiyle Vardiya'ya taşındı.
 func _add_auto_renew_shop(c: VBoxContainer) -> void:
-	_section(c, "Auto-renew · balance %s" % _fmt_hms(Game.auto_renew_hours_left))
+	_section(c, tr("Auto-renew · balance %s") % _fmt_hms(Game.auto_renew_hours_left))
 	c.add_child(_label_wrap("While you have hours banked, a finished shift renews itself for the same length if you can afford it, spending that many hours from your balance — so the hotel keeps earning while you are away.", 11, PALETTE.muted))
 	for hours: int in [1, 4, 8, 24]:
 		var ar_cost := Game.auto_renew_buy_cost(hours)
-		var ar_b := _row(c, "", "Buy %s of auto-renew" % _count(hours, "hour"), "",
-			"%s coins" % _fmt(ar_cost), Game.coins >= ar_cost)
+		var ar_b := _row(c, "", tr("Buy %s of auto-renew") % _count(hours, "hour"), "",
+			tr("%s coins") % _fmt(ar_cost), Game.coins >= ar_cost)
 		ar_b.pressed.connect(func():
 			if Game.buy_auto_renew(hours):
 				Game.save_game()
 				_play("buy")
-				_show_toast("Bought %s of auto-renew!" % _count(hours, "hour"))
+				_show_toast(tr("Bought %s of auto-renew!") % _count(hours, "hour"))
 				_rebuild_popup())
 
 
@@ -4085,7 +4102,7 @@ func _build_staff_popup(c: VBoxContainer) -> void:
 	_section(c, "Housekeeping")
 	var dirty := _dirty_room_count()
 	var clean_b := _action(c, "Cleaning mode",
-		"Tap dirty rooms one by one to clean them. %s right now." % _count(dirty, "dirty room"),
+		tr("Tap dirty rooms one by one to clean them. %s right now.") % _count(dirty, "dirty room"),
 		dirty > 0)
 	clean_b.pressed.connect(func():
 		_close_popup()
@@ -4098,8 +4115,8 @@ func _build_staff_popup(c: VBoxContainer) -> void:
 	# ikonundan belirgin biçimde büyük duruyor (kullanıcı geri bildirimi).
 	_sheet_row(c, {
 		"icon": "res://assets/guests/maid.png", "icon_px": 96,
-		"title": "Staff tier: %d / %d" % [tier, max_tier], "title_size": 15,
-		"meta": "Shift cost: %%%.0f cheaper · Income per hour: +%%%.0f" % [
+		"title": tr("Staff tier: %d / %d") % [tier, max_tier], "title_size": 15,
+		"meta": tr("Shift cost: %%%.0f cheaper · Income per hour: +%%%.0f") % [
 			(1.0 - Game.staff_cost_mult()) * 100.0, (Game.staff_income_mult() - 1.0) * 100.0],
 	}).disabled = true
 	if tier >= max_tier:
@@ -4108,13 +4125,13 @@ func _build_staff_popup(c: VBoxContainer) -> void:
 	var cost := Game.staff_upgrade_cost()
 	var next_cost_mult := 1.0 - pow(1.0 - float(Game.eco.staff_upgrade.cost_reduction_pct), tier + 1)
 	var next_income_mult := pow(1.0 + float(Game.eco.staff_upgrade.income_boost_pct), tier + 1) - 1.0
-	var b := _action(c, "Upgrade tier — %s coins" % _fmt(cost),
-		"Next: -%%%.0f cost, +%%%.0f income" % [next_cost_mult * 100.0, next_income_mult * 100.0],
+	var b := _action(c, tr("Upgrade tier — %s coins") % _fmt(cost),
+		tr("Next: -%%%.0f cost, +%%%.0f income") % [next_cost_mult * 100.0, next_income_mult * 100.0],
 		Game.can_buy_staff_upgrade())
 	b.pressed.connect(func():
 		if Game.buy_staff_upgrade():
 			_play("buy")
-			_show_toast("Staff quality upgraded! (Tier %d)" % Game.staff_tier)
+			_show_toast(tr("Staff quality upgraded! (Tier %d)") % Game.staff_tier)
 			_maybe_show_upgrade_ad())
 
 
@@ -4139,26 +4156,26 @@ func _build_room_popup(c: VBoxContainer) -> void:
 		var clean_cost := Game.clean_cost(selected_room)
 		_notice(c, "This room is dirty — it earns nothing until it's cleaned.", "warn")
 		var clean_b := _action(c,
-			"Clean this room" + ("" if clean_cost <= 0 else " — %s coins" % _fmt(clean_cost)),
+			tr("Clean this room") + ("" if clean_cost <= 0 else tr(" — %s coins") % _fmt(clean_cost)),
 			"Or open Cleaning mode in Staff to clear several rooms in a row.",
 			clean_cost <= 0 or Game.coins >= clean_cost, PALETTE.green_deep)
 		clean_b.pressed.connect(func():
 			if Game.clean_room(selected_room):
 				_play("clean")
 				_show_toast("Room cleaned (+2 XP)" if clean_cost <= 0
-					else "Infestation cleared! (−%s coins, +2 XP)" % _fmt(clean_cost))
+					else tr("Infestation cleared! (−%s coins, +2 XP)") % _fmt(clean_cost))
 			else:
-				_show_toast("Clearing the infestation costs %s coins!" % _fmt(clean_cost)))
+				_show_toast(tr("Clearing the infestation costs %s coins!") % _fmt(clean_cost)))
 	# Oda başlığı kartı: ad + tier, altında bir sonraki tier'a SP ilerlemesi
 	# (prototipteki ince yeşil çubuk).
 	var head := _card(c)
-	head.add_child(_label("%s — %s · SP %d · %d items" % [
-		Game.room_def(room.type).name, Game.tier_name(tier),
+	head.add_child(_label(tr("%s — %s · SP %d · %d items") % [
+		tr(String(Game.room_def(room.type).name)), tr(Game.tier_name(tier)),
 		Game.room_score(room), room.items.size()], 15, PALETTE.text))
 	if tier < Game.eco.tier_names.size() - 1:
 		var next_th := int(Game.eco.tier_thresholds[tier + 1])
 		_bar(head, float(Game.room_score(room)) / maxf(1.0, float(next_th)), PALETTE.green_deep)
-		head.add_child(_label("Next tier (%s): SP %d" % [Game.tier_name(tier + 1), next_th], 11, PALETTE.wood_dark))
+		head.add_child(_label(tr("Next tier (%s): SP %d") % [tr(Game.tier_name(tier + 1)), next_th], 11, PALETTE.wood_dark))
 
 	# Hazır dekor paketleri: tek dokunuşla, tek tek almaktan ucuz
 	var bundles: Array = Game.eco.get("bundles", [])
@@ -4171,15 +4188,15 @@ func _build_room_popup(c: VBoxContainer) -> void:
 			var need_lv := Game.bundle_unlock_level(bd)
 			var locked := Game.level() < need_lv
 			var pb := _row(c, "", String(bd.name),
-				"unlocks at level %d" % need_lv if locked else "SP +%d · %%%d off" % [sp_total, int(float(bd.discount) * 100.0)],
-				"" if locked else "%s coins" % _fmt(Game.bundle_price(bd)),
+				tr("unlocks at level %d") % need_lv if locked else tr("SP +%d · %%%d off") % [sp_total, int(float(bd.discount) * 100.0)],
+				"" if locked else tr("%s coins") % _fmt(Game.bundle_price(bd)),
 				not locked and Game.can_buy_bundle(bd))
 			if not locked:
 				var bid: String = bd.id
 				pb.pressed.connect(func():
 					if Game.buy_bundle(selected_room, bid):
 						_play("buy")
-						_show_toast("%s placed!" % Game.bundle_def(bid).name)
+						_show_toast(tr("%s placed!") % tr(String(Game.bundle_def(bid).name)))
 						_maybe_show_upgrade_ad())
 
 	# Taban eşyalar: duvar kağıdı / zemin / yatak — odayla birlikte ücretsiz
@@ -4201,16 +4218,16 @@ func _build_room_popup(c: VBoxContainer) -> void:
 			var owned: bool = current == String(it.id)
 			var locked2: bool = lv < int(it.get("unlock_level", 1))
 			var meta2 := "✓ owned" if owned else (
-				"unlocks at level %d" % int(it.unlock_level) if locked2 else "")
+				tr("unlocks at level %d") % int(it.unlock_level) if locked2 else "")
 			var b2 := _row(c, "res://assets/items/%s.svg" % it.id, String(it.name), meta2,
-				"" if owned or locked2 else "%s coins" % _fmt(int(it.price)),
+				"" if owned or locked2 else tr("%s coins") % _fmt(int(it.price)),
 				not owned and not locked2 and Game.can_afford_item(it))
 			if not owned and not locked2:
 				var iid2: String = it.id
 				b2.pressed.connect(func():
 					if Game.upgrade_base(selected_room, iid2):
 						_play("buy")
-						_show_toast("%s upgraded!" % Game.item_def(iid2).name)
+						_show_toast(tr("%s upgraded!") % tr(String(Game.item_def(iid2).name)))
 						_maybe_show_upgrade_ad())
 
 	_section(c, "Add a decoration")
@@ -4222,12 +4239,12 @@ func _build_room_popup(c: VBoxContainer) -> void:
 		var owned3: bool = Game.room_has_item(selected_room, it.id)
 		var meta := "SP +%d" % int(it.sp)
 		if locked:
-			meta = "unlocks at level %d" % int(it.unlock_level)
+			meta = tr("unlocks at level %d") % int(it.unlock_level)
 		elif owned3:
 			meta = "owned ✓"
 		var price_text := ""
 		if not locked and not owned3:
-			price_text = "%d ◆" % int(it.get("gem_price", 0)) if premium else "%s coins" % _fmt(int(it.price))
+			price_text = "%d ◆" % int(it.get("gem_price", 0)) if premium else tr("%s coins") % _fmt(int(it.price))
 		var b := _row(c, "res://assets/items/%s.svg" % it.id, String(it.name), meta, price_text,
 			not locked and not owned3 and Game.can_afford_item(it),
 			PALETTE.green_deep if premium else PALETTE.wood)
@@ -4236,7 +4253,7 @@ func _build_room_popup(c: VBoxContainer) -> void:
 			b.pressed.connect(func():
 				if Game.buy_item(selected_room, iid):
 					_play("buy")
-					_show_toast("%s placed (+%d SP)" % [Game.item_def(iid).name, int(Game.item_def(iid).sp)])
+					_show_toast(tr("%s placed (+%d SP)") % [tr(String(Game.item_def(iid).name)), int(Game.item_def(iid).sp)])
 					_maybe_show_upgrade_ad())
 	_add_manage_buttons(c)
 
@@ -4248,7 +4265,7 @@ func _build_facility_popup(c: VBoxContainer) -> void:
 	var d: Dictionary = Game.room_def(room.type)
 	var meta := "Cleans dirty rooms by itself — income never stops."
 	if d.category == "facility":
-		meta = "+%d coins/hour base income · adds to star variety" % int(d.base_income)
+		meta = tr("+%d coins/hour base income · adds to star variety") % int(d.base_income)
 	_row(c, "res://assets/rooms/%s.svg" % room.type, String(d.name), meta, "", true).disabled = true
 	_add_manage_buttons(c)
 
@@ -4265,7 +4282,7 @@ func _add_manage_buttons(c: VBoxContainer) -> void:
 		move_from = String(Game.rooms[ridx].id)
 		_close_popup()
 		_show_toast("Tap an empty cell — tap your room again to cancel"))
-	var sell_text := "Sell — +%s coins" % _fmt(Game.room_sell_value(ridx))
+	var sell_text := tr("Sell — +%s coins") % _fmt(Game.room_sell_value(ridx))
 	var sell_gems := Game.room_sell_gem_value(ridx)
 	if sell_gems > 0:
 		sell_text += " +%s" % _count(sell_gems, "gem")
@@ -4288,23 +4305,23 @@ func _add_manage_buttons(c: VBoxContainer) -> void:
 ## İstatistik ikonu kaldırıldı, artık yalnızca Profil üzerinden erişilir.
 func _add_stats_rows(c: VBoxContainer) -> void:
 	var rows := [
-		["Total income collected", "%s coins" % _fmt(Game.stat_collected_total)],
+		["Total income collected", tr("%s coins") % _fmt(Game.stat_collected_total)],
 		["Collections", str(Game.stat_collects)],
 		["Rooms cleaned", str(Game.stat_cleans)],
 		["Shifts started", str(Game.stat_shifts)],
-		["Rooms", "%s (%d / %d blocks used)" % [_count(Game.rooms.size(), "room"), _blocks_used(), Game.max_slots()]],
+		["Rooms", tr("%s (%d / %d blocks used)") % [_count(Game.rooms.size(), "room"), _blocks_used(), Game.max_slots()]],
 		["Facility variety", "%d / 5" % Game.facility_diversity()],
 		["Star rating", "%d / 5" % Game.star_rating()],
 		["Level", "%d (XP %s)" % [Game.level(), _fmt(Game.xp)]],
-		["Income per hour (now)", "%.0f coins" % Game.hourly_income()],
-		["Prestige multiplier", "×%.2f (prestige %d)" % [Game.prestige_mult(), Game.prestige_level]],
+		["Income per hour (now)", tr("%.0f coins") % Game.hourly_income()],
+		["Prestige multiplier", tr("×%.2f (prestige %d)") % [Game.prestige_mult(), Game.prestige_level]],
 		["Daily login streak", _count(Game.daily_streak, "day")],
 	]
 	# Prototipteki gruplu tablo: tek beyaz kutu, satırlar ince çizgiyle ayrık.
 	var sv := _list_card(c)
 	for r in rows:
 		_list_row(sv, String(r[0]), String(r[1]))
-	_section(c, "Shift history (last %d)" % Game.shift_history.size())
+	_section(c, tr("Shift history (last %d)") % Game.shift_history.size())
 	if Game.shift_history.is_empty():
 		c.add_child(_label("No shift has been started yet.", 12, PALETTE.muted))
 		return
@@ -4313,8 +4330,8 @@ func _add_stats_rows(c: VBoxContainer) -> void:
 	for i in range(Game.shift_history.size() - 1, -1, -1):
 		var h: Dictionary = Game.shift_history[i]
 		var dt := Time.get_datetime_dict_from_unix_time(int(float(h.at)) + bias)
-		_list_row(hv, "%02d.%02d %02d:%02d — %dh" % [dt.day, dt.month, dt.hour, dt.minute, int(h.hours)],
-			"%s coins" % _fmt(int(h.cost)))
+		_list_row(hv, tr("%02d.%02d %02d:%02d — %dh") % [dt.day, dt.month, dt.hour, dt.minute, int(h.hours)],
+			tr("%s coins") % _fmt(int(h.cost)))
 
 
 func _build_stats_popup(c: VBoxContainer) -> void:
@@ -4401,21 +4418,21 @@ func _style_field(f: LineEdit) -> void:
 
 func _add_prestige_rows(c: VBoxContainer) -> void:
 	var v := _card(c)
-	v.add_child(_label("Prestige — multiplier ×%.2f (round %d)" % [
+	v.add_child(_label(tr("Prestige — multiplier ×%.2f (round %d)") % [
 		Game.prestige_mult(), Game.prestige_level], 14, PALETTE.wood_dark))
 	var min_lv := int(Game.eco.prestige.min_level)
 	if not Game.can_prestige():
-		v.add_child(_label("Prestige requires level %d (you are %d)." % [min_lv, Game.level()], 11, PALETTE.muted))
+		v.add_child(_label(tr("Prestige requires level %d (you are %d).") % [min_lv, Game.level()], 11, PALETTE.muted))
 		_bar(c, float(Game.level()) / maxf(1.0, float(min_lv)))
-		c.add_child(_label("Level %d of %d" % [Game.level(), min_lv], 11, PALETTE.muted))
+		c.add_child(_label(tr("Level %d of %d") % [Game.level(), min_lv], 11, PALETTE.muted))
 		return
 	var next_mult: float = Game.prestige_mult() + float(Game.eco.prestige.mult_gain)
-	var p_b := _action(c, "Prestige the hotel", "New multiplier ×%.2f" % next_mult, true, PALETTE.green_deep)
+	var p_b := _action(c, "Prestige the hotel", tr("New multiplier ×%.2f") % next_mult, true, PALETTE.green_deep)
 	p_b.pressed.connect(func():
 		if p_b.get_meta("armed", false):
 			Game.do_prestige()
 			_close_popup()
-			_show_toast("Prestiged! New income multiplier: ×%.2f" % Game.prestige_mult())
+			_show_toast(tr("Prestiged! New income multiplier: ×%.2f") % Game.prestige_mult())
 		else:
 			p_b.set_meta("armed", true)
 			_row_set(p_b, "Tap again to prestige", "Progress will be reset"))
@@ -4449,7 +4466,7 @@ func _build_cloud_section(c: VBoxContainer) -> void:
 
 	var who := "Linked to this device (anonymous)" if not CloudSave.is_linked() else "Linked to a Google account"
 	v.add_child(_label_wrap(who, 12, PALETTE.text))
-	v.add_child(_label("Last backup: %s" % _cloud_sync_text(), 11, PALETTE.muted))
+	v.add_child(_label(tr("Last backup: %s") % _cloud_sync_text(), 11, PALETTE.muted))
 
 	var backup_b := _action(v, "Back up now")
 	backup_b.pressed.connect(func():
@@ -4528,7 +4545,7 @@ func _inert(c: VBoxContainer, text: String) -> void:
 func _cloud_sync_text() -> String:
 	var at: float = CloudSave.last_success_unix()
 	if at <= 0.0:
-		return "not yet"
+		return tr("not yet")
 	return _fmt_relative(at)
 
 
@@ -4550,12 +4567,12 @@ func _cloud_result_toast(result: String) -> String:
 func _fmt_relative(unix: float) -> String:
 	var diff := Time.get_unix_time_from_system() - unix
 	if diff < 60.0:
-		return "just now"
+		return tr("just now")
 	if diff < 3600.0:
-		return "%s ago" % _count(int(diff / 60.0), "minute")
+		return tr("%s ago") % _count(int(diff / 60.0), "minute")
 	if diff < 86400.0:
-		return "%s ago" % _count(int(diff / 3600.0), "hour")
-	return "%s ago" % _count(int(diff / 86400.0), "day")
+		return tr("%s ago") % _count(int(diff / 3600.0), "hour")
+	return tr("%s ago") % _count(int(diff / 86400.0), "day")
 
 
 ## Çakışma seçici: "Bulut / Bu cihaz". KOD KENDİ KARAR VERMEZ ve iki ilerlemeyi
@@ -4596,7 +4613,7 @@ func _show_cloud_conflict_modal(on_closed: Callable = Callable()) -> void:
 	var cloud_card := _cloud_side_card("Cloud",
 		int(cloud.get("level", 0)), int(cloud.get("coins", 0)),
 		int(cloud.get("gems", 0)), int(cloud.get("rooms", 0)),
-		_fmt_relative(cloud_at) if cloud_at > 0.0 else "time unknown",
+		_fmt_relative(cloud_at) if cloud_at > 0.0 else tr("time unknown"),
 		"Use this one", PALETTE.green_deep)
 	cols.add_child(cloud_card)
 	var local_card := _cloud_side_card("This device",
@@ -4653,8 +4670,8 @@ func _cloud_side_card(title: String, lv: int, coins: int, gems: int,
 	p.add_child(box)
 	box.add_child(_label(title, 16, PALETTE.wood_dark))
 	box.add_child(_label(when, 11, PALETTE.muted))
-	box.add_child(_label("Level %d" % lv, 13, PALETTE.text))
-	box.add_child(_label("%s coins" % _fmt(coins), 13, PALETTE.text))
+	box.add_child(_label(tr("Level %d") % lv, 13, PALETTE.text))
+	box.add_child(_label(tr("%s coins") % _fmt(coins), 13, PALETTE.text))
 	box.add_child(_label(_count(gems, "gem"), 13, PALETTE.text))
 	box.add_child(_label(_count(rooms, "room"), 13, PALETTE.text))
 	box.add_child(_spacer_y(2))
@@ -4726,7 +4743,7 @@ func _add_premium_rows(c: VBoxContainer) -> void:
 					_rebuild_popup()))
 	if Game.permanent_income_mult > 1.0:
 		_row(c, "res://assets/ui/dollar.png", "Double Your Earnings",
-			"Active — income ×%.1f" % Game.permanent_income_mult, "✓", false, PALETTE.green_deep)
+			tr("Active — income ×%.1f") % Game.permanent_income_mult, "✓", false, PALETTE.green_deep)
 	else:
 		var x2_b := _buy_row(c, "res://assets/ui/dollar.png", "Double Your Earnings",
 			"Permanent ×2, offline included", IAP.price_for(IAP.PRODUCT_INCOME_2X, "$9.99"))
@@ -4781,8 +4798,8 @@ func _add_offer_rows(c: VBoxContainer) -> void:
 		var b := _sheet_row(c, {
 			"bg": Color("f2faf5"), "border": PALETTE.green_deep, "radius": 13,
 			"title": String(bd.name),
-			"meta": "unlocks at level %d" % need_lv if locked else "SP +%d · %%%d off" % [sp_total, int(float(bd.discount) * 100.0)],
-			"right": "" if locked else "%s coins" % _fmt(Game.bundle_price(bd)),
+			"meta": tr("unlocks at level %d") % need_lv if locked else tr("SP +%d · %%%d off") % [sp_total, int(float(bd.discount) * 100.0)],
+			"right": "" if locked else tr("%s coins") % _fmt(Game.bundle_price(bd)),
 			"right_color": PALETTE.green_deep,
 			"enabled": not locked and Game.can_buy_bundle(bd),
 		})
@@ -4800,7 +4817,7 @@ func _build_bundle_room_picker(c: VBoxContainer) -> void:
 		c.add_child(_label("That set is no longer available.", 12, PALETTE.muted))
 		return
 	var head := _card(c)
-	head.add_child(_label("%s — %s coins" % [bd.name, _fmt(Game.bundle_price(bd))], 14, PALETTE.wood_dark))
+	head.add_child(_label(tr("%s — %s coins") % [tr(String(bd.name)), _fmt(Game.bundle_price(bd))], 14, PALETTE.wood_dark))
 	head.add_child(_label("Which room should it decorate?", 11, PALETTE.muted))
 	if Game.rooms.is_empty():
 		c.add_child(_label("You have no rooms yet — build one first.", 12, PALETTE.muted))
@@ -4811,11 +4828,11 @@ func _build_bundle_room_picker(c: VBoxContainer) -> void:
 		var idx := i
 		var b := _row(c, _room_icon_path(String(room.type)),
 			String(Game.room_def(room.type).name),
-			"%s · SP %d" % [Game.tier_name(Game.room_tier(room)), Game.room_score(room)])
+			"%s · SP %d" % [tr(Game.tier_name(Game.room_tier(room))), Game.room_score(room)])
 		b.pressed.connect(func():
 			if Game.buy_bundle(idx, bid):
 				_play("buy")
-				_show_toast("%s placed!" % Game.bundle_def(bid).name)
+				_show_toast(tr("%s placed!") % tr(String(Game.bundle_def(bid).name)))
 				_pop_popup()
 				_maybe_show_upgrade_ad()
 			else:
@@ -4897,13 +4914,13 @@ func _add_room_tiles(c: VBoxContainer, title: String, category: String) -> void:
 		var locked := Game.level() < need_lv
 		var t: String = type
 		var tile := _tile(grid, _room_icon_path(type), String(d.name),
-			"%s · Lv.%d" % [_fmt(int(d.price)), need_lv] if locked else _fmt(int(d.price)),
+			tr("%s · Lv.%d") % [_fmt(int(d.price)), need_lv] if locked else _fmt(int(d.price)),
 			not locked and Game.can_buy_room(type))
 		if not locked:
 			tile.pressed.connect(func():
 				if Game.buy_room(t):
 					_play("buy")
-					_show_toast("%s built!" % String(Game.room_def(t).name))
+					_show_toast(tr("%s built!") % tr(String(Game.room_def(t).name)))
 					_maybe_show_upgrade_ad())
 
 
@@ -4911,7 +4928,7 @@ func _add_room_tiles(c: VBoxContainer, title: String, category: String) -> void:
 ## (otomatik yerleşir), sürükle-bırak için İnşa Modu açılır.
 func _build_build_popup(c: VBoxContainer) -> void:
 	_notice(c, "Build Mode is a canvas tool, not a tab: the hotel stays visible, empty blocks light up, and this tray is what you place from.", "gold")
-	c.add_child(_label("Blocks used: %d / %d · floors %d" % [
+	c.add_child(_label(tr("Blocks used: %d / %d · floors %d") % [
 		_blocks_used(), Game.max_slots(), Game.floors], 11, PALETTE.muted))
 	# Prototip 349'daki blok fiyatı satırı. Fiyat kata göre değişiyor (kat ne
 	# kadar genişlediyse o kadar pahalı), bu yüzden tek bir sayı yerine hâlâ
@@ -4934,7 +4951,7 @@ func _build_build_popup(c: VBoxContainer) -> void:
 	_add_room_tiles(c, "Facilities", "")
 
 	if Game.floors < int(Game.eco.building.max_floors):
-		var f_b := _action(c, "Unlock a new floor — %s coins" % _fmt(Game.floor_price()),
+		var f_b := _action(c, tr("Unlock a new floor — %s coins") % _fmt(Game.floor_price()),
 			"", Game.can_buy_floor(), PALETTE.wood_dark)
 		f_b.pressed.connect(func():
 			if Game.buy_floor():
@@ -4968,7 +4985,7 @@ func _build_gems_popup(c: VBoxContainer) -> void:
 					# mağaza sorgusundan gelir (oyuncu parayı ödeyip boşa
 					# düşmez); burada iki kez eklenmesi de imkânsız olur.
 					_play("buy")
-					_show_toast("%s added!" % _count(amount, "gem"))
+					_show_toast(tr("%s added!") % _count(amount, "gem"))
 					_rebuild_popup()))
 	_add_premium_teaser(c)
 
@@ -4982,10 +4999,12 @@ func _add_premium_teaser(c: VBoxContainer) -> void:
 	if Game.remove_ads and Game.permanent_income_mult > 1.0:
 		return
 	var missing: Array[String] = []
+	# Ürün adları burada BİRLEŞTİRİLDİĞİ için tek tek çevrilmeli — birleşmiş
+	# dize artık bir çeviri anahtarı değil.
 	if not Game.remove_ads:
-		missing.append("Remove Ads")
+		missing.append(tr("Remove Ads"))
 	if Game.permanent_income_mult <= 1.0:
-		missing.append("Double Your Earnings")
+		missing.append(tr("Double Your Earnings"))
 	var t_b := _row(c, "res://assets/ui/dollar.png", " · ".join(missing),
 		"One-time purchases, no ads or timers involved", "›")
 	t_b.pressed.connect(func():
@@ -4995,7 +5014,7 @@ func _add_premium_teaser(c: VBoxContainer) -> void:
 
 
 func _build_settings_popup(c: VBoxContainer) -> void:
-	var s_b := _action(c, "Sound effects: %s" % ("On" if Game.sound_on else "Off"), "",
+	var s_b := _action(c, tr("Sound effects: %s") % (tr("On") if Game.sound_on else tr("Off")), "",
 		true, PALETTE.wood if Game.sound_on else PALETTE.wood_dark)
 	s_b.pressed.connect(func():
 		Game.sound_on = not Game.sound_on
@@ -5003,12 +5022,25 @@ func _build_settings_popup(c: VBoxContainer) -> void:
 		_play("tap")
 		_rebuild_popup())
 
-	var m_b := _action(c, "Lobby music: %s" % ("On" if Game.music_on else "Off"), "",
+	var m_b := _action(c, tr("Lobby music: %s") % (tr("On") if Game.music_on else tr("Off")), "",
 		true, PALETTE.wood if Game.music_on else PALETTE.wood_dark)
 	m_b.pressed.connect(func():
 		Game.music_on = not Game.music_on
 		music_player.playing = Game.music_on
 		Game.save_game()
+		_rebuild_popup())
+
+	# Dil seçici. Üç seçenek olduğu için ayrı bir liste ekranı yerine aynı
+	# ses/müzik satırlarındaki gibi dokundukça sırayla dolaşan tek bir satır —
+	# seçili dilin adı KENDİ dilinde yazılır, yanlış dile düşen oyuncu da
+	# kendi dilini tanıyıp geri dönebilsin diye.
+	var l_b := _action(c, tr("Language: %s") % tr(Game.language_name()), "", true)
+	l_b.pressed.connect(func():
+		Game.cycle_language()
+		_play("tap")
+		# Sabit metinleri Godot kendisi yeniden çevirir (auto_translate);
+		# elle `%` ile kurulanlar için canlı etiketleri ve popup'ı tazele.
+		_update_live_labels()
 		_rebuild_popup())
 
 	# Prototipteki bağlantı listesi: tek beyaz kutu, satırlar çizgiyle ayrık,
@@ -5058,7 +5090,7 @@ func _build_settings_popup(c: VBoxContainer) -> void:
 			r_b.set_meta("armed", true)
 			_row_set(r_b, "Tap again to reset", "Are you sure?"))
 
-	var ver := _label("Little Grand Hotel · v%s" % GAME_VERSION, 10, PALETTE.muted)
+	var ver := _label(tr("Little Grand Hotel · v%s") % GAME_VERSION, 10, PALETTE.muted)
 	ver.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	c.add_child(ver)
 
@@ -5097,12 +5129,12 @@ func _add_quest_rows(c: VBoxContainer) -> void:
 		hero.add_child(_label_wrap(String(q.desc), 12, PALETTE.text))
 		_bar(hero, float(mini(p[0], p[1])) / maxf(1.0, float(p[1])))
 		hero.add_child(_label("%d / %d" % [mini(p[0], p[1]), p[1]], 11, PALETTE.muted))
-		var reward := "Reward: %s coins" % _fmt(int(q.get("reward_coins", 0)))
+		var reward := tr("Reward: %s coins") % _fmt(int(q.get("reward_coins", 0)))
 		if int(q.get("reward_gems", 0)) > 0:
 			reward += " + %s" % _count(int(q.reward_gems), "gem")
 		hero.add_child(_label(reward, 12, PALETTE.green_deep))
 
-	c.add_child(_label("Quests completed: %d / %d" % [Game.quest_index, Game.quests.size()], 11, PALETTE.muted))
+	c.add_child(_label(tr("Quests completed: %d / %d") % [Game.quest_index, Game.quests.size()], 11, PALETTE.muted))
 
 	# "NEXT UP" (prototip 222-249): sıradaki görevler bugüne kadar hiç
 	# görünmüyordu — oyuncu neyin peşinde olduğunu ancak güncel görev bitince
@@ -5115,7 +5147,7 @@ func _add_quest_rows(c: VBoxContainer) -> void:
 	if not upcoming.is_empty():
 		_section(c, "Next up")
 		for nq: Dictionary in upcoming:
-			var nreward := "%s coins" % _fmt(int(nq.get("reward_coins", 0)))
+			var nreward := tr("%s coins") % _fmt(int(nq.get("reward_coins", 0)))
 			if int(nq.get("reward_gems", 0)) > 0:
 				nreward += " + %s" % _count(int(nq.reward_gems), "gem")
 			_row(c, "res://assets/ui/icon_quest.svg", String(nq.name), String(nq.desc),
@@ -5123,7 +5155,7 @@ func _add_quest_rows(c: VBoxContainer) -> void:
 
 
 func _add_achievement_rows(c: VBoxContainer) -> void:
-	_section(c, "Achievements — %d / %d unlocked" % [
+	_section(c, tr("Achievements — %d / %d unlocked") % [
 		Game.unlocked_achievements.size(), Game.achievements.size()])
 	# Tek uzun çizgili liste yerine her başarım kendi kartında (kullanıcı
 	# geri bildirimi: "görevleri de ayır birbirinden"). Açılmış olan yeşil
@@ -5145,7 +5177,7 @@ func _add_achievement_rows(c: VBoxContainer) -> void:
 
 func _on_quest_completed(q: Dictionary) -> void:
 	_play("quest")
-	var msg := "Quest complete: %s — +%s coins" % [q.name, _fmt(int(q.get("reward_coins", 0)))]
+	var msg := tr("Quest complete: %s — +%s coins") % [tr(String(q.name)), _fmt(int(q.get("reward_coins", 0)))]
 	if int(q.get("reward_gems", 0)) > 0:
 		msg += ", +%s" % _count(int(q.reward_gems), "gem")
 	_show_toast(msg)
@@ -5153,13 +5185,14 @@ func _on_quest_completed(q: Dictionary) -> void:
 
 func _on_achievement_unlocked(a: Dictionary) -> void:
 	_play("quest")
-	var msg := "Achievement unlocked: %s — +%s coins" % [a.name, _fmt(int(a.get("reward_coins", 0)))]
+	var msg := tr("Achievement unlocked: %s — +%s coins") % [tr(String(a.name)), _fmt(int(a.get("reward_coins", 0)))]
 	if int(a.get("reward_gems", 0)) > 0:
 		msg += ", +%s" % _count(int(a.reward_gems), "gem")
 	_show_toast(msg)
 
 
 func _show_toast(msg: String) -> void:
+	msg = tr(msg)
 	toast_label.text = msg
 	# Hap içeriğe göre daralsın: autowrap açık bir Label'ın minimum genişliği en
 	# uzun KELİME kadardır, o yüzden ortalanmış kapta metnin gerçek genişliği
@@ -5180,12 +5213,12 @@ func _show_offline_popup(amount: int, renew_count: int = 0, renew_spent: int = 0
 	var cap_hours := float(Game.eco.get("offline_cap_hours", 24))
 	var cap_real := cap_hours * 3600.0 / Game.time_scale
 	var capped := away > cap_real
-	var meta := "Away for %s" % _fmt_duration(away)
+	var meta := tr("Away for %s") % _fmt_duration(away)
 	if capped:
-		meta += " · capped at %s of hotel time" % _count(int(cap_hours), "hour")
+		meta += tr(" · capped at %s of hotel time") % _count(int(cap_hours), "hour")
 	var lines: Array[String] = []
 	if renew_count > 0:
-		lines.append("Your hotel didn't sit idle when the shift ended: it auto-renewed %s (staff cost %s coins)."
+		lines.append(tr("Your hotel didn't sit idle when the shift ended: it auto-renewed %s (staff cost %s coins).")
 			% [_count(renew_count, "time"), _fmt(renew_spent)])
 	var cfg := {
 		"title": "Welcome back!",
@@ -5197,7 +5230,7 @@ func _show_offline_popup(amount: int, renew_count: int = 0, renew_spent: int = 0
 			if amount > 0:
 				_sheet_row(pv, {
 					"icon": "res://assets/ui/coin.svg",
-					"title": "%s coins earned" % _fmt(amount), "title_size": 15,
+					"title": tr("%s coins earned") % _fmt(amount), "title_size": 15,
 					"meta": meta,
 				}).disabled = true,
 		"action_text": "Collect",
@@ -5210,7 +5243,7 @@ func _show_offline_popup(amount: int, renew_count: int = 0, renew_spent: int = 0
 			Ads.show_rewarded(func():
 				Game.add_pending_income(amount)
 				_play("buy")
-				_show_toast("Offline earnings doubled — +%s coins!" % _fmt(amount))
+				_show_toast(tr("Offline earnings doubled — +%s coins!") % _fmt(amount))
 				_on_collect())
 	_show_modal(cfg)
 
@@ -5222,10 +5255,10 @@ func _fmt_duration(seconds: float) -> String:
 	var hours := (total % 86400) / 3600
 	var minutes := (total % 3600) / 60
 	if days > 0:
-		return "%dd %dh" % [days, hours]
+		return tr("%dd %dh") % [days, hours]
 	if hours > 0:
-		return "%dh %dm" % [hours, minutes]
-	return "%dm" % maxi(1, minutes)
+		return tr("%dh %dm") % [hours, minutes]
+	return tr("%dm") % maxi(1, minutes)
 
 
 ## Uygulama açılışında (bugün henüz alınmadıysa) otomatik gösterilen günlük
@@ -5241,20 +5274,20 @@ func _show_daily_reward_popup(on_closed: Callable = Callable()) -> void:
 		return
 	var index := (streak - 1) % cycle.size()
 	var reward: Dictionary = cycle[index]
-	var reward_text := "%s coins" % _fmt(int(reward.get("coins", 0)))
+	var reward_text := tr("%s coins") % _fmt(int(reward.get("coins", 0)))
 	if int(reward.get("gems", 0)) > 0:
 		reward_text += " + %s" % _count(int(reward.gems), "gem")
 	_show_modal({
 		"title": "Daily Reward",
 		"title_icon": "res://assets/ui/sparkle.svg",
-		"text": "Day %d streak!\nYour reward: %s" % [streak, reward_text],
+		"text": "%s\n%s" % [tr("Day %d streak!") % streak, tr("Your reward: %s") % reward_text],
 		"body": func(pv: VBoxContainer): _daily_strip(pv, cycle, index),
 		"action_text": "Claim",
 		"on_action": func():
 			var granted := Game.claim_daily_reward()
 			if not granted.is_empty():
 				_play("quest")
-				_show_toast("Daily reward claimed — day %d streak!" % Game.daily_streak)
+				_show_toast(tr("Daily reward claimed — day %d streak!") % Game.daily_streak)
 			if on_closed.is_valid():
 				on_closed.call(),
 		"on_dismiss": on_closed,
@@ -5323,7 +5356,14 @@ func _fmt_hms(game_hours: float) -> String:
 ## metinlerde bu ayrım yoktu; doğrudan çeviri "1 hours" gibi bozuk ifadeler
 ## üretiyordu. Düzensiz çoğullar için ikinci biçim açıkça verilir.
 func _count(n: int, one: String, many: String = "") -> String:
-	var word: String = one if n == 1 else (many if many != "" else one + "s")
+	# Turkish (and most locales we may add) keeps the noun singular after a
+	# number, so the -s is an English-only step. Deciding on the locale name
+	# would be wrong: a German device shows the English UI, and that UI still
+	# has to say "3 gems". The honest test is whether this noun was translated
+	# at all — if it was not, English is what is on screen.
+	var word := tr(one)
+	if word == one:
+		word = one if n == 1 else (many if many != "" else one + "s")
 	return "%d %s" % [n, word]
 
 

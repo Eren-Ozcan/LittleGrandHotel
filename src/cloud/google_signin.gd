@@ -289,9 +289,9 @@ static func _parse_request_line(line: String) -> Dictionary:
 ## olabilir.
 func _write_page(peer: StreamPeerTCP, params: Dictionary) -> void:
 	var ok := params.has("code")
-	var title := "You're signed in" if ok else "Sign-in cancelled"
-	var body := "You can close this tab and return to Little Grand Hotel." if ok \
-		else "Nothing was changed. You can close this tab and try again from the game."
+	var title := tr("You're signed in") if ok else tr("Sign-in cancelled")
+	var body := tr("You can close this tab and return to Little Grand Hotel.") if ok \
+		else tr("Nothing was changed. You can close this tab and try again from the game.")
 	var html := """<!doctype html><html><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>%s</title></head>
 <body style="margin:0;display:flex;align-items:center;justify-content:center;height:100vh;
