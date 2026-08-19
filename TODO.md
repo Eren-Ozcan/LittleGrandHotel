@@ -557,6 +557,33 @@ device. Setup, reasoning and the remaining manual step: `docs/cloud-save-setup.m
 
 ## To do
 
+### Blockers — both now closed
+
+- [x] **The Android 13+ crash was already fixed** — `09941a7` (2026-08-08), and this entry
+      only existed because a note written five hours *before* that commit was never updated.
+      Root cause: `Sfx.lobby_music()` set `loop_end` to the frame **count** (176400) when
+      `loop_end` is an inclusive index, so the resampler's `pos + 1` interpolation read one
+      sample past the end of a 352800-byte buffer every time the loop wrapped. Android 9
+      (jemalloc) absorbed it; Android 11+ (Scudo) backs allocations of that size onto a
+      guard page and turns it into `SIGSEGV`, 10–16 s after launch. The tombstones agreed
+      exactly: `fault_addr - x22` came out 0x56220 = 352800 = the buffer size, in two
+      separate crashes. Verified on both devices at the time (TECNO Spark 20 Pro / Android
+      13, 180 s; Mi 9T / Android 9, 60 s). Nothing to reopen — the audio backtrace was the
+      real story after all, and the `VkThread` variant was the same overflow corrupting a
+      neighbouring allocation.
+
+- [x] **Upload keystore password recovered** (2026-08-20) — release builds were blocked
+      because the password for `android/upload-keystore.jks` was not written down anywhere
+      after the keystore was regenerated on 2026-07-26. It was recovered from the transcript
+      of the session that generated it, and verified two ways: `keytool` opens the keystore,
+      and the `upload` alias certificate is
+      `B1:00:9A:…:89:AF`, matching Play Console's upload certificate. A signed release AAB
+      was then built end to end (62 MB, `build/android/little-grand-hotel.aab`) and its
+      signer checked with `keytool -printcert -jarfile`. **No upload-key reset, and no new
+      SHA-1 to register with Firebase.** The password is in
+      `android/RELEASE_KEYSTORE_SECRETS.txt` (gitignored) — it belongs in a password manager,
+      because one gitignored file is exactly how it went missing the first time.
+
 ### Next session (agreed 2026-08-19)
 - [ ] **Play store listing page** — the tr-TR/en-US text is live, what is left is the
       listing *page* work: upload the Turkish screenshot set (rendered and stored in
@@ -564,21 +591,61 @@ device. Setup, reasoning and the remaining manual step: `docs/cloud-save-setup.m
       `LittleGrandHotel/store-tr-2026-08-19/`), and re-check the graphics against the
       current build. Deliberately not uploaded yet — an upload sends the listing back
       through review.
-- [ ] **Promo video** — two edits were rejected; the plan is in
-      [[store-listing-and-media-state]]. Frames come from `tests/showcase.tscn -- video`.
-- [ ] **Put that promo video in the GitHub repo** — README currently shows `docs/media/demo.gif`.
-      Decide what the repo may carry (the `docs/media/` exception in CLAUDE.md) and what
-      stays out.
-- [ ] **Refresh the GitHub repo itself** — README, description, topics, the release badge.
-- [ ] **Describe the playable demo in the README** — the web build is published on the
-      `gh-pages` branch (commit `424f2fd`); GitHub Pages still has to be switched on in
-      repo Settings ▸ Pages (source: `gh-pages`, root). The URL will then be
-      https://eren-ozcan.github.io/LittleGrandHotel/. The README needs a "Play in your
-      browser" link plus one line on what the demo is: the full game, English-forced,
-      no install, progress kept in the browser only.
+- [ ] **Promo video — deferred by decision (2026-08-20).** Two edits were rejected and
+      the reasons were never written down (the `[[store-listing-and-media-state]]` link
+      this entry used to point at does not exist), so a third blind edit would most likely
+      be rejected as well. A Play listing publishes fine without a video. Picked back up
+      after the store launch, and only with a stated criterion — tempo, which screens,
+      music/captions. The raw material is ready either way: frames from
+      `tests/showcase.tscn -- video`, and the current cut is
+      `docs/store-assets-originals/demo.mp4` (1.9 MB, 2026-08-18).
+- [x] **What the repo may carry is already settled** — CLAUDE.md's `docs/media/` exception
+      answers it: the README set (`demo.gif` plus the 540x960 stills, a couple of MB) lives
+      in the repo, and `demo.mp4`, the 1080x1920 originals, the feature graphic and the icon
+      stay out, under `docs/store-assets-originals/` and the private pictures repo. Nothing
+      to decide; the video question above is about the *edit*, not about where it lives.
+- [~] **Refresh the GitHub repo itself** — description and topics were already in good
+      shape; the repo **Website** field was empty and now points at the demo
+      (https://eren-ozcan.github.io/LittleGrandHotel/). The release badge is deliberately
+      not done: there is no tag or GitHub release at all, and a `v1.0.0` only means
+      something once the game is actually on Play — decided 2026-08-20 to wait. The repo
+      also carries no licence, which is the intended state for a commercial game: no
+      licence means all rights reserved, whereas MIT/Apache would let anyone ship this
+      code as their own game.
+- [x] **Describe the playable demo in the README** (2026-08-20) — GitHub Pages turned out
+      to be on already (`gh-pages`, root, status `built`) and
+      https://eren-ozcan.github.io/LittleGrandHotel/ serves the game; verified with a
+      request rather than assumed. The README now opens with a **Play in your browser**
+      section and gained a **Web export** section describing why the preset is
+      single-threaded and how the `gh-pages` branch is published. One claim was corrected
+      while writing it: ads and IAP really are absent on the web (both gate on
+      `OS.get_name() == "Android"`), but **cloud save is not** — `FirebaseConfig` has the
+      API key compiled in and `is_enabled()` has no platform gate, so the public web demo
+      signs in anonymously and writes to Firestore like any phone install. The README no
+      longer implies otherwise. Whether to gate cloud save off behind the `demo` feature
+      is an open question — see the entry in *Medium term*.
 
 ### Medium term
-- [ ] **Drop the manual save-transfer UI** — remove the "Backup now" button and both halves of "Move your save" (export *and* import). Google account linking now covers this end to end (proven across two real devices, 2026-08-08), so the save-code path is redundant surface that can only confuse players.
+- [x] **The web demo no longer talks to Firebase** (2026-08-20) — `CloudSave.is_enabled()`
+      was `FirebaseConfig.is_configured()` with no platform check, so every visitor to the
+      public Pages build created an anonymous Firebase account and a Firestore document:
+      unbounded write traffic from an unauthenticated public page, with the accounts piling
+      up. It now also requires the build *not* to carry the `demo` feature. The Account
+      panel says what is true for that build instead of offering a transfer path ("saved in
+      this browser only, does not carry over to the phone version"), in both languages. The
+      demo was re-exported and pushed to `gh-pages` (`650819c`), so the live page is the
+      fixed one, not just the source tree.
+
+- [x] **Manual save-transfer UI dropped** (2026-08-20) — the "Back up now" button and the
+      whole "Move your save" card (show/copy the code, paste-and-import) are gone from
+      Profile ▸ Account. Account linking covers the same job and has been proven across two
+      real devices, and syncing is automatic, so the second path was redundant surface that
+      could only confuse. `Game.export_save_code()` / `import_save_code()` stay in the model
+      deliberately, now unreachable from the UI: `_load_from_dict()`'s validation is the real
+      security surface and `tests/fuzz_attack.gd` exercises it through exactly those two
+      functions — deleting them would blind the fuzzer, not tidy the code. 14 rows left
+      `data/i18n/strings.csv`; `sim_check`, `cloud_save_check`, `i18n_check`, `unlink_check`
+      and `fuzz_attack` all pass.
 - [x] **Surface the Remove ads / Double your earnings offers** — both products live behind the Store popup's *Premium* tab, but the Store always opens on *Gems*, so most players never learned the offers existed. The Gems tab now ends with a one-line bridge row naming whichever products are still unowned, and the row disappears once both are bought (2026-08-18). Check the same promotion gap in cengeBulmaca and reefy.
 - [x] **Add an unlink button and the logic behind it** — done 2026-08-18. Profile ▸ Account now has a "Disconnect account" row (soft red, two-tap confirm, same pattern as *Reset save*). It signs the Firebase session out without deleting anything server-side, keeps the local save exactly as it is, and resets `rev`/uid so the next sync starts a fresh document under a new anonymous account. Regression: `tests/unlink_check.tscn`.
 - [ ] **Consider a native Credential Manager plugin — but there is no urgency, and the earlier entry here was wrong on both counts.** Re-researched 2026-08-08 against the primary docs:
@@ -595,5 +662,5 @@ device. Setup, reasoning and the remaining manual step: `docs/cloud-save-setup.m
 - [ ] A second building (a differently themed building after prestige) — currently limited to the single building + multiplier model, the economy/theme design needs to be settled first
 
 ### Long term
-- [ ] **Prove cross-device restore end to end** — cloud save and Google account linking are implemented (see Done, 2026-08-07), but nobody has ever signed in with a real Google account or moved a save between two devices, because the OAuth Desktop app client has not been created yet (`docs/cloud-save-setup.md` step 7). Until that is done the shareable save code remains the only transfer path known to work. Play Games / Game Center are *not* wanted here: they hand out a platform-specific identity and would break the "one player, one save on Android and iOS" model — that decision is argued out at the top of `src/autoload/cloud_save.gd` and should not be reopened casually.
+- [x] **Cross-device restore proven** (2026-08-08) — this entry claimed "nobody has ever signed in with a real Google account" long after that stopped being true; the Done section above ("Superseded 2026-08-08") records the OAuth Desktop client being created, linking run against a real account, and a save moved between two real devices. What is genuinely still open is narrower and lives there: whether Google demands a verification review before the consent screen can be published to all players. The Play Games / Game Center decision is unchanged — a platform-specific identity would break the "one player, one save on Android and iOS" model, argued at the top of `src/autoload/cloud_save.gd`.
 - [ ] Visual variation for the weekly theme (not just color, but decor/asset changes)
