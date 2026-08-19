@@ -143,8 +143,14 @@ func _notification(what: int) -> void:
 
 # --- Dışa açık durum (UI için) ------------------------------------------
 
+## Ağ yapan HER yolun baktığı tek kapı. Yapılandırmaya ek olarak web demosunu
+## da dışarıda tutar: demo GitHub Pages'te herkese açık duruyor ve buluta açık
+## bırakıldığında sayfayı açan her ziyaretçi anonim bir Firebase hesabı ile bir
+## Firestore dokümanı üretiyordu — kimliksiz, sınırsız yazma trafiği. Demoda
+## kayıt zaten tarayıcının kendi deposunda tutuluyor ve telefon derlemesine
+## taşınmıyor, yani kaybedilen bir yetenek yok.
 func is_enabled() -> bool:
-	return FirebaseConfig.is_configured()
+	return FirebaseConfig.is_configured() and not OS.has_feature("demo")
 
 
 func has_conflict() -> bool:
