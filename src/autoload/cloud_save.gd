@@ -182,7 +182,11 @@ func is_linked() -> bool:
 ## Hesap bağlama yalnızca bir Google kimlik sağlayıcısı bağlandığında anlamlı —
 ## bkz. _google_id_token_provider notu.
 func is_account_linking_available() -> bool:
-	return FirebaseConfig.is_google_configured() and _google_id_token_provider.is_valid()
+	# is_enabled() de şart: bulut kapalıyken (ör. web demosu) bağlanacak bir
+	# yedek yok, bağlama akışı oyuncuyu tarayıcıya çıkarıp hiçbir şey
+	# kazandırmazdı. UI zaten kapalı durumda erken dönüyor; bu kapı API'yi de
+	# tutarlı tutuyor — link_google() tek başına çağrılırsa da reddediyor.
+	return is_enabled() and FirebaseConfig.is_google_configured() 		and _google_id_token_provider.is_valid()
 
 
 func set_google_id_token_provider(provider: Callable) -> void:
