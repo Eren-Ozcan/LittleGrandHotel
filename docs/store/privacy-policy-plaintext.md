@@ -15,9 +15,7 @@ Yilk Games. This document explains what data the app processes.
 
 Your game progress (coins, gems, room/decoration state, statistics) is stored
 locally on your device. When you uninstall the app, this local data is deleted from
-your device. From the Profile menu you can optionally turn your progress into a
-text code (save code) and store/share it yourself; this code is not collected by us
-and is not sent to any server.
+your device.
 
 The app also keeps a cloud backup of that progress so it is not lost if you lose
 your device:

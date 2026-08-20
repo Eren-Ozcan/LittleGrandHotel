@@ -46,9 +46,10 @@ moving/selling, statistics screen, settings (sound/music, save reset) and late-g
 content (Restaurant, Rooftop Garden, level 28 balance test).
 
 Long-term additions: 13 permanent achievements, prestige system (hand over the hotel at
-level 20 to earn a permanent income multiplier), serverless weekly decoration theme, a
-shareable save code (export/import), and Android export (export preset + signed debug
-APK). The save format is compatible with step-by-step migration from v2 onward.
+level 20 to earn a permanent income multiplier), serverless weekly decoration theme, and Android
+export (export preset + signed debug APK). A shareable save code used to be the
+transfer path; it was retired in favour of cloud save + Google account linking, which
+cover the same ground without a second mechanism to explain. The save format is compatible with step-by-step migration from v2 onward.
 
 Saves are also backed up to Firebase (anonymous sign-in + a single Firestore document,
 over REST — Godot has no Firebase SDK). The backup is restored on every launch of the
