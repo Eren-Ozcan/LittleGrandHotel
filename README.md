@@ -74,11 +74,31 @@ The Godot 4.7 binary is expected under `tools/` (not in the repo):
 tools\Godot_v4.7-stable_win64.exe --path .
 ```
 
-## Tests (headless economy verification)
+## Tests
+
+The whole suite — 16 tests, ~2200 assertions — runs from one script:
+
+```powershell
+pwsh tests/run_all.ps1            # everything
+pwsh tests/run_all.ps1 -Headless  # skips the two that need a window (CI)
+pwsh tests/run_all.ps1 -Filter cloud
+```
+
+The runner does not trust exit codes alone: it also greps the output for
+`SCRIPT ERROR` / `FAIL`, checks that each test printed its own completion line,
+and gives every test a timeout. That is deliberate — a GDScript runtime error
+kills a `_ready()` coroutine silently while the process still exits 0, which is
+exactly how `tests/tutorial_check` stayed broken and green for eight days.
+
+A single test still runs on its own, for example:
 
 ```
 tools\Godot_v4.7-stable_win64_console.exe --headless --path . --script res://tests/sim_check.gd
+tools\Godot_v4.7-stable_win64_console.exe --headless --path . res://tests/data_check.tscn
 ```
+
+What each test covers, what is deliberately **not** covered, and the per-file
+API coverage table live in [`docs/test-coverage.md`](docs/test-coverage.md).
 
 ## Android export
 
@@ -129,5 +149,5 @@ output stays out of `master`.
 - `src/main.gd` — Hotel City-inspired dollhouse interface
 - `src/sfx.gd` — procedural sound synthesis (no external audio files required)
 - `assets/` — SVG art (rooms, items, guests, UI icons)
-- `tests/sim_check.gd` — economy/save unit tests
+- `tests/` — the test suite; `run_all.ps1` runs all of it, `docs/test-coverage.md` maps it
 - `export_presets.cfg` — Android export preset (see above)
