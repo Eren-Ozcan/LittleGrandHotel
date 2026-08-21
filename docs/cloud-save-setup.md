@@ -288,17 +288,51 @@ sequence both times, only the flag differing:
 | `lgh-return.apk` (2026-08-08 06:11) | `allowBackup=false` | `Backup is not allowed` |
 | current | `allowBackup=true` | `Success`, 919 KB transferred |
 
-**Not verified: the restore leg.** `bmgr restore` failed with `PM agent has no metadata,
-so not restoring`, and `adb install` did not trigger an automatic restore. Both are
-limitations of the local transport, which does not faithfully reproduce the real path
-(Play install against a Google account). So "the backup is taken" is proven; "it comes
-back" is not. Closing that needs a physical device: play, let the nightly backup run,
-uninstall, reinstall from Play.
+**The restore leg is now verified too** (2026-08-21, same Android 14 emulator). Full
+cycle: seed `user://` with a marked save (`coins: 777777`, hotel name `BACKUP RESTORE
+PROBE`) plus a `restore_probe.txt` sentinel → `bmgr backupnow` → `adb uninstall` →
+`adb install` → `bmgr restore 1 com.littlegrandhotel.app`. Result `restoreFinished: 0`,
+and all three files came back **byte-identical** (md5 compared before and after):
+`save.json`, `firebase_auth.json`, `restore_probe.txt`.
 
-Also unverified: that the game itself adopts a *restored* `firebase_auth.json` and
-resumes the same UID. The mechanism is sound and the code path is the ordinary startup
-sync, but it was never watched end to end, because the game could not be made to render
-on the emulator at all (see below).
+**And the game adopts the restored identity.** Launching after the restore, the anonymous
+UID was still `LnZRNgyts2e2zrRNHkBeAwonDKk2` — the pre-uninstall one, read back out of the
+restored `firebase_auth.json` — and the restored save survived startup untouched (`coins`
+still 777777). That is the whole premise of this section demonstrated end to end rather
+than reasoned about. Rendering never mattered: the black-screen bug below is a
+presentation bug, the scene tree runs and writes `user://` normally.
+
+**Why the previous attempt failed — it was never our bug.** `bmgr restore` used to die on
+`PM agent has no metadata, so not restoring`. The real cause is one stale file in the
+local transport's own dataset:
+
+```
+/data/data/com.android.localtransport/files/1/_delta/@pm@/QG1ldGFA   # base64 "@meta@"
+```
+
+It was **0 bytes**, left over from the first backup pass, and `PackageManagerBackupAgent`
+throws `EOFException` in `AncestralVersion1RestoreDataConsumer.consumeRestoreData` when it
+tries to `readInt()` from it — which the service then reports as the misleading "no
+metadata" line. It stays 0 bytes because every later pass is *incremental*: with a state
+file present, `@pm@` writes nothing. **`bmgr wipe <transport> @pm@` does not fix it** —
+that was tried, and the files kept their original timestamps.
+
+What does fix it (needs `adb root`, emulator only):
+
+```bash
+adb shell rm -f /data/backup/com.android.localtransport.LocalTransport/@pm@ \
+                /data/backup/com.android.localtransport.LocalTransport/backing-up/@pm@
+adb shell rm -rf /data/data/com.android.localtransport/files/1/_delta/@pm@
+adb shell bmgr backupnow @pm@        # @meta@ is rewritten, 14 bytes instead of 0
+```
+
+One catch: that `@pm@`-only pass **drops the app's own `_full` dataset**, so re-seed and
+re-run `bmgr backupnow <package>` afterwards, then uninstall/install/restore.
+
+Still genuinely untested, and only a real device can close it: the **Play/GMS transport**
+rather than `com.android.localtransport`, the nightly ~24 h idle+wifi schedule, and a
+player who has device backup switched off. The mechanism is proven; the production
+transport is taken on faith.
 
 ### Two emulator traps that cost a session
 
