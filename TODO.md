@@ -589,12 +589,23 @@ device. Setup, reasoning and the remaining manual step: `docs/cloud-save-setup.m
       sayı olursa `_load_state()` çalışma zamanı hatasıyla yarıda ölüyordu;
       (3) oda `base` alanının tipi doğrulanmıyordu, bozuk bir kayıt
       `_load_from_dict`'in SONUNDA patlayıp atomikliği bozuyordu.
-- [ ] **Kalan sertleştirme işi — artık görünür.** `fuzz_attack` "bulgu yok"
-      diyor ama motor bozuk kayıtlarda hâlâ hata basıyor: `shift_cost` (19),
-      `guest_rooms` lambda'sı (12), `facility_diversity` (6), `room_score` (7),
-      `hourly_income` (2), `room_sell_gem_value` (1) ve en dikkat çekeni
-      `_validate_save_dict`'in kendisi (1). Her biri kendi tip kapısını istiyor.
-      Yerleri ve sayıları `docs/test-coverage.md` sonunda.
+- [x] **Sertleştirme turu bitti: `fuzz_attack` artık SIFIR çalışma zamanı hatası
+      basıyor** (önce 48). En büyük kalem tek bir değişiklikle kapandı:
+      `room_def()` bilinmeyen tip için boş sözlük yerine `UNKNOWN_ROOM_DEF`
+      döndürüyor — okuyucuların yarısı alanlara nokta ile eriştiği için
+      (`room_def(r.type).category`) bozuk bir kayıt yirmi ayrı yerde
+      patlıyordu. "Bu tip gerçekten var mı" sorusu artık `is_empty()` değil
+      `has_room_type()`. Kalanlar: `shift_cost` tanımsız süre için 0 döner,
+      `room_score`/satış fonksiyonları eşya kimliklerini tipe göre okur,
+      satış fonksiyonları sınır kontrolü yapar ve `_validate_save_dict` artık
+      kendi `id` okumasında patlamıyor — bozuk girdide çöken bir doğrulama
+      kapısı, kapı görevini yapamıyordu.
+- [x] **Yan bulgu: bir de bedava vardiya açığı vardı.** `shift_cost` tanımsız
+      süre için 0 döndüğü an, bozuk bir kayıttaki `last_shift_hours = 999`
+      bedava ve 999 saatlik bir vardiya başlatabilirdi. `start_shift` ve
+      `_try_auto_renew` süreyi ayrıca doğruluyor, doğrulama kapısı da
+      `last_shift_hours`'un tabloda tanımlı bir süre (ya da 0) olmasını şart
+      koşuyor.
 - [ ] **`store_compliance_check` ve `unlink_check`'e karar satırı ekle** — şu an
       yalnızca gözlem basıyorlar, yani başarısız OLAMIYORLAR.
 

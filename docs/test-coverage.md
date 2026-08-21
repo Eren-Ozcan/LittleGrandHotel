@@ -107,22 +107,28 @@ Paket yazılırken üç gerçek kusur çıktı (üçü de düzeltildi):
    durumu çoktan değişmiş oluyordu. Tip kapısı eklendi, `fuzz_attack`'a dört
    varyant kondu. (`fuzz_attack` + koşucu)
 
-## Bilinen açık: kötü niyetli kayıtlarda kalan hata noktaları
+## Sertleştirme turu: bozuk kayıtlarda kalan hata noktaları kapandı
 
-`fuzz_attack` "bulgu yok" diyor (denetlediği değişmezler tutuyor) ama motor
-hâlâ bozuk kayıtlarda çalışma zamanı hatası basıyor. Yukarıdaki 3 numaralı
-madde bu ailenin ilk üyesiydi; kalanların yerleri:
+Paket ilk yazıldığında `fuzz_attack` "bulgu yok" diyordu (denetlediği
+değişmezler tutuyordu) ama motor bozuk kayıtlarda hâlâ **48 çalışma zamanı
+hatası** basıyordu. Hepsi kapatıldı; `fuzz_attack` artık **sıfır** hatayla
+çalışıyor. Tek tek neydiler:
 
-| Yer | Sayı |
-|---|---:|
-| `game.gd:577` `shift_cost` | 19 |
-| `game.gd:502` (`guest_rooms` lambda'sı) | 12 |
-| `game.gd:519` `facility_diversity` | 6 |
-| `game.gd:480-481` `room_score` | 7 |
-| `game.gd:560` `hourly_income` | 2 |
-| `game.gd:1112` `room_sell_gem_value` | 1 |
-| `game.gd:1553` `_validate_save_dict` (doğrulamanın kendisi) | 1 |
+| Yer | Sayı | Sebep | Çözüm |
+|---|---:|---|---|
+| `guest_rooms` lambda'sı, `facility_diversity`, `hourly_income`, `simulate_to`, `quest_progress` | 20 | `room_def()` bilinmeyen tip için `{}` dönüyor, okuyucular alana NOKTA ile eriştiği için (`.category`, `.base_income`) patlıyordu | `room_def()` artık `UNKNOWN_ROOM_DEF` döner: gelirsiz, kategorisiz, bedava, 1 hücrelik |
+| `shift_cost` | 19 | `eco.shift_rates[str(hours)]` — `hours` kayıttaki `last_shift_hours`'tan geliyor, 0/-5/999 olabiliyordu | Tanımsız süre için 0 döner; `start_shift` ve `_try_auto_renew` tanımsız süreyi reddeder |
+| `room_score` | 7 | eşya kimliği dize değilse `item_def`'e dönüşüm patlıyordu; `room.items` anahtarı yoksa erişim patlıyordu | Kimlikler tipe göre okunur, `items` `.get()` ile alınır |
+| `room_sell_gem_value` | 1 | indeks sınır dışı | Sınır kontrolü; iki satış fonksiyonu ortak `_item_price_sum` kullanır |
+| `_validate_save_dict` | 1 | `String(r.get("id"))` — kimlik sayıysa kapının KENDİSİ patlıyordu | Tip önce denetlenir |
 
-Sonuncusu en dikkat çekeni: doğrulama kapısının kendisi bozuk girdide hata
-verirse kapı görevini yapamaz. Bunların her biri kendi tip kapısını istiyor;
-bunu bir sonraki sertleştirme turuna bırakmak makul, ama artık **görünür**.
+Bir de yalnızca çökmeyle kalmayacak bir açık çıktı: `shift_cost` tanımsız süre
+için artık 0 döndüğü için, kapı konmasaydı bozuk bir kayıttan gelen 999 saatlik
+vardiya **bedava** başlayabilirdi. `start_shift` ve `_try_auto_renew` bu yüzden
+süreyi ayrıca doğruluyor.
+
+İki katmanlı yaklaşım bilinçli: **kapı** (`_validate_save_dict`) bozuk kaydı
+içeri almaz — artık eşya kimliklerinin ve taban yuva değerlerinin dize olmasını,
+`last_shift_hours`'un tanımlı bir süre olmasını da şart koşar — **okuyucular**
+ise yine de savunmalı yazılır, çünkü kapıdan geçmeyen yollar da var (göç, bulut
+payload'ı, gelecekte eklenecek alanlar).
