@@ -649,9 +649,20 @@ func _load_state() -> void:
 	var parsed = JSON.parse_string(FileAccess.get_file_as_string(STATE_PATH))
 	if typeof(parsed) != TYPE_DICTIONARY:
 		return
-	_rev = maxi(0, int(parsed.get("rev", 0)))
-	_dirty = bool(parsed.get("dirty", false))
-	_last_synced_uid = String(parsed.get("uid", ""))
+	# Alanların TİPİ tek tek doğrulanır. Bu dosya diskte duruyor ve bozulabilir;
+	# beklenmedik bir tip `int()`/`String()` dönüşümünde çalışma zamanı hatası
+	# verip fonksiyonu YARIM bırakırdı — o noktadan sonrası hiç atanmaz ve açılış
+	# hatalı bir durumla devam ederdi. (save.json'daki aynı sınıf hatalar için
+	# bkz. _validate_save_dict / tests/fuzz_attack.gd.)
+	var rev_value: Variant = parsed.get("rev", 0)
+	if typeof(rev_value) == TYPE_INT or typeof(rev_value) == TYPE_FLOAT:
+		_rev = maxi(0, int(rev_value))
+	else:
+		_rev = 0
+	var dirty_value: Variant = parsed.get("dirty", false)
+	_dirty = typeof(dirty_value) == TYPE_BOOL and bool(dirty_value)
+	var uid_value: Variant = parsed.get("uid", "")
+	_last_synced_uid = String(uid_value) if typeof(uid_value) == TYPE_STRING else ""
 
 
 func _save_state() -> void:
