@@ -514,11 +514,19 @@ device. Setup, reasoning and the remaining manual step: `docs/cloud-save-setup.m
       from Firestore — the backup carries the identity, the cloud carries the data.
 - [x] Verified by A/B on an Android 14 emulator, same sequence, only the flag differing:
       the previous build reports `Backup is not allowed`, this one `Success` (919 KB).
-- [ ] **The restore leg is still unproven.** `bmgr restore` died on
-      `PM agent has no metadata` and `adb install` did not auto-restore — both local
-      transport limitations, not product findings. Needs a physical device: play, let the
-      nightly backup run, uninstall, reinstall from Play. Reasoning and the two emulator
-      traps are written up in `docs/cloud-save-setup.md`.
+- [x] **The restore leg is proven** (2026-08-21). The blocker was never ours: the local
+      transport's `@pm@` `@meta@` entity was a **0-byte leftover**, so
+      `PackageManagerBackupAgent` hit `EOFException` and the service reported it as the
+      misleading `PM agent has no metadata`. `bmgr wipe … @pm@` does *not* clear it —
+      deleting `/data/backup/com.android.localtransport.LocalTransport/@pm@` and the
+      `_delta/@pm@` dataset does. After that the full cycle runs clean: seed a marked save
+      → `bmgr backupnow` → uninstall → install → `bmgr restore` returns
+      `restoreFinished: 0` and `save.json` / `firebase_auth.json` / a sentinel file come
+      back **byte-identical**. Launching then showed the game adopting the restored
+      identity — same anonymous UID as before the uninstall, restored save untouched —
+      which also closes the second "unverified" note. Commands and the exact stale-file
+      path are in `docs/cloud-save-setup.md`. What a device would still add: the Play/GMS
+      transport instead of `com.android.localtransport`, and the ~24 h idle+wifi schedule.
 
 ### Playable web demo + Turkish screenshots (2026-08-19)
 - [x] Web export preset (`Web` in `export_presets.cfg`): single-threaded, so no
@@ -552,8 +560,78 @@ device. Setup, reasoning and the remaining manual step: `docs/cloud-save-setup.m
       the data files, the `%` conversions match between English and Turkish (a mismatch
       is a runtime crash, not a typo), every row actually resolves, and English still
       falls back to the key. `tests/shot.gd` takes a `lang=tr` argument for screenshots.
-- [ ] The Play Store listing itself still needs a Turkish translation — that is console
-      work, not code.
+- [x] The Play Store listing's Turkish text is live — confirmed in the console on
+      2026-08-21: **tr-TR is the default listing** (title, short and full description all
+      Turkish, status *Canlı*) and en-US is the translation beside it. This entry was
+      already stale when it was written down.
+
+### Full test suite (2026-08-21)
+- [x] **Sistem sistem test paketi + tek koşucu.** Altı yeni test yazıldı ve
+      hepsi `tests/run_all.ps1` altında toplandı: **16 test, 2179 kontrol,
+      hepsi geçiyor.** Yeniler: `economy_api_check` (game.gd'nin test edilmeyen
+      17 genel fonksiyonu, sınır ve hatalı girdilerle), `data_check`
+      (`data/*.json` şeması + çapraz referanslar + "verideki her `type` değerini
+      kod gerçekten işliyor mu"), `sfx_check` (ses sentezi ve Android 11+
+      çökmesinin regresyon kapanı), `migration_check` (kayıt göçünün her halkası,
+      koruma, v11 yeniden yapılandırma), `ads_check` (reklam politikası),
+      `iap_check` (Play Billing yanıtlarında consume/acknowledge ayrımı),
+      `cloud_api_check` (CloudSave durum makinesi, ağa çıkmadan), `ui_check`
+      (main.gd'nin her popup/sekme/modalı, iki dilde).
+- [x] **Koşucu çıkış koduna güvenmiyor.** Çıktıda `SCRIPT ERROR`/`FAIL` arıyor,
+      her testin kendi bitiş satırının basıldığını doğruluyor ve her teste zaman
+      aşımı veriyor — `tutorial_check`'in sekiz gün boyunca 0 ile çıkarak bozuk
+      kalması tam olarak bu üçünün yokluğundandı. Kendi kararını basmayan iki
+      eski test (`store_compliance`, `unlink_check`) `PASS` değil **`REPORT`**
+      olarak işaretleniyor.
+- [x] **Paket üç gerçek hata buldu, üçü de düzeltildi:** (1) varsayılan otel adı
+      18 karakterken `HOTEL_NAME_MAX_LEN` 16'ydı — yeniden adlandırma ekranı adı
+      sessizce "Little Grand Hot"a kırpıyordu; (2) `cloud_state.json`'daki `uid`
+      sayı olursa `_load_state()` çalışma zamanı hatasıyla yarıda ölüyordu;
+      (3) oda `base` alanının tipi doğrulanmıyordu, bozuk bir kayıt
+      `_load_from_dict`'in SONUNDA patlayıp atomikliği bozuyordu.
+- [ ] **Kalan sertleştirme işi — artık görünür.** `fuzz_attack` "bulgu yok"
+      diyor ama motor bozuk kayıtlarda hâlâ hata basıyor: `shift_cost` (19),
+      `guest_rooms` lambda'sı (12), `facility_diversity` (6), `room_score` (7),
+      `hourly_income` (2), `room_sell_gem_value` (1) ve en dikkat çekeni
+      `_validate_save_dict`'in kendisi (1). Her biri kendi tip kapısını istiyor.
+      Yerleri ve sayıları `docs/test-coverage.md` sonunda.
+- [ ] **`store_compliance_check` ve `unlink_check`'e karar satırı ekle** — şu an
+      yalnızca gözlem basıyorlar, yani başarısız OLAMIYORLAR.
+
+### Tutorial test rewritten + Firebase verified live (2026-08-21)
+- [x] **Firebase works end to end — checked against the real project, not mocked.**
+      `tests/cloud_save_check.tscn` is deliberately network-free, so this was a live REST
+      probe of all three services under project `little-grand-hotel`: anonymous `signUp`
+      on Identity Toolkit (200, `sign_in_provider: anonymous`), `securetoken` refresh
+      (200), and a full Firestore round trip on `saves/{uid}` — create rev 1, read back,
+      update to rev 2, delete, then a 404 confirming the delete. The security rules were
+      exercised too and both denials fired: writing **rev 1 over rev 2** returned
+      `PERMISSION_DENIED` (the monotonic-counter guarantee holds server-side), and reading
+      another uid's document returned `PERMISSION_DENIED`. The probe document and the
+      throwaway anonymous user were both deleted afterwards — nothing left behind.
+
+- [x] **`tests/tutorial_check.tscn` was silently broken and is now rewritten.** It had been
+      dying since 2026-08-12 on `Invalid access to property '_tutorial_step'` — the
+      spotlight work (`24cc37f`) renamed the field to `_tutorial_step_index` — while still
+      **exiting 0**, so it looked green unless the output was read. A rename would not have
+      been enough: the semantics moved with it. `_tutorial_step_index` is `-1` for *modal*
+      steps and only set for *tap* steps, and the old test's "find the Button inside
+      `tutorial_layer`" helper now finds the **Skip tutorial** button, i.e. it would have
+      ended the tutorial instead of stepping through it.
+- [x] The new test walks `TUTORIAL_STEPS` and branches on step type: modal steps are
+      driven by pressing the modal's own action button (and its label is checked against
+      the step's `btn`), tap steps assert the spotlight is up, the target control really
+      exists, the ring sits on the target's rect + 6 px, the four dim strips are
+      `MOUSE_FILTER_STOP`, and a *foreign* event does not advance the step — then fire the
+      real one. It also covers "Skip tutorial" ending the whole sequence, and the second
+      launch not showing it again. 58 assertions, exits 0 with no `SCRIPT ERROR`.
+- [x] Two side defects fixed with it: the save is now restored in `_exit_tree` rather than
+      in a straight line at the end (a mid-test death used to orphan the backup and leave
+      the live save as whatever `new_game()` wrote), and a 45 s watchdog fails loudly
+      instead of hanging when a runtime error kills the `_ready` coroutine. The Android
+      back-button assertion was dropped on purpose: `_notification` calls
+      `get_tree().quit()` when no popup is open, so the old test's own check would have
+      ended the run — the comment in the file says why.
 
 ## To do
 
@@ -585,12 +663,35 @@ device. Setup, reasoning and the remaining manual step: `docs/cloud-save-setup.m
       because one gitignored file is exactly how it went missing the first time.
 
 ### Next session (agreed 2026-08-19)
-- [ ] **Play store listing page** — the tr-TR/en-US text is live, what is left is the
-      listing *page* work: upload the Turkish screenshot set (rendered and stored in
-      `docs/store-assets-originals/play-tr/`, backed up in the private pictures repo as
-      `LittleGrandHotel/store-tr-2026-08-19/`), and re-check the graphics against the
-      current build. Deliberately not uploaded yet — an upload sends the listing back
-      through review.
+- [~] **Play store listing page — screenshots uploaded 2026-08-21, not yet submitted.**
+      Both locales now carry their own 1080x1920 set, in the intended 01→08 order:
+      tr-TR (the default listing) got `docs/store-assets-originals/play-tr/`, en-US got
+      `docs/store-assets-originals/play/`. Two things turned up while doing it. The two
+      screenshots that were live were **596x1061** — under Play's 1080 px bar for
+      promotion eligibility — and they were the July English pair, on a listing whose
+      default language is Turkish. And en-US had **no set of its own**: it was inheriting
+      the default listing's images, so English users would have seen Turkish caption
+      bands. Both fixed.
+      **The remaining step is the user's:** Play Console ▸ Yayın özeti still shows
+      *"2 değişikliği incelemeye gönder"*. Saving only queues a change; nothing reaches
+      review until that button is pressed. Left unpressed on purpose — it was a recorded
+      decision that an upload sends the listing back through review.
+      Also noted: the app is in **Kapalı test** with 12 testers, 10 of the required 14
+      continuous days done, so *Üretime başvur* unlocks around 2026-08-25.
+      One judgement call worth a second opinion: four of the eight shots (02 decorate,
+      06 quests, 07 build/unlock, 08 empire) are popup screens that read as mostly-empty
+      cream or dark panels at thumbnail size. They are honest screenshots, but they are
+      the weak half of the set — worth re-rendering against a busier game state before
+      the production listing goes out.
+- [ ] **AdMob tax forms — checked 2026-08-21, still the user's to fill.** Verified on the
+      right account (Yilk Games / yilkgamesstudio@gmail.com, pub-9709993577664180). The
+      payment account is *AdSense (Türkiye)*, earnings ₺0.00 against a ₺200 threshold, and
+      under AdMob ▸ Ödemeler ▸ Ayarları yönet **both** tax sections are blank:
+      *Türkiye vergi bilgileri* and *Amerika Birleşik Devletleri vergi bilgileri*. Direct
+      link: https://admob.google.com/v2/payments/settings. These take a tax identity (TR
+      tax/ID number; a US W-8BEN with TIN and the treaty claim), so they can only be filled
+      by the account holder — not something to hand off. Nothing is blocked by it today at
+      ₺0 earnings; it blocks the first payout.
 - [ ] **Promo video — deferred by decision (2026-08-20).** Two edits were rejected and
       the reasons were never written down (the `[[store-listing-and-media-state]]` link
       this entry used to point at does not exist), so a third blind edit would most likely
@@ -658,7 +759,7 @@ device. Setup, reasoning and the remaining manual step: `docs/cloud-save-setup.m
   - **Verdict: do not migrate now.** The urgency was a misreading, the player-facing pain was already fixed (`afe359d`, foreground wait + retry), and `set_google_id_token_provider()` keeps the switch a one-call change whenever it is actually warranted. Revisit if Google announces an Android/iOS client requirement, or when the iOS port starts — at which point evaluate the Android+iOS plugin pair together rather than Android alone.
 - [ ] **Consider Block Store for silent durability** — researched 2026-08-08, not started. [Block Store](https://developer.android.com/identity/block-store) stores up to 16 entries of 4 KB each and is built precisely for re-authenticating on a new device with no sign-in screen; the docs are explicit that "the user has already agreed to restore your app data as a part of the restore flow, so no additional consents are required". Storing the anonymous refresh token there would carry the identity across a reinstall *and* a device transfer with zero UI, and unlike the sign-in migration it needs **no console setup at all** — no SHA-1, no OAuth client, no consent screen, no `google-services.json`. Caveats: needs a native plugin, Android/GMS only, device-to-device transfer only fires during the factory-reset restore flow, and cloud restore targets need Android 12+ (Pixel 9+). Auto Backup (now enabled) already covers the reinstall case more broadly — it restores on *any* APK install — so Block Store is the fresher-but-narrower complement, not a prerequisite.
 - [x] **Large-screen orientation warning (Play Console, seen 2026-08-18)** — Play flags `android:screenOrientation="PORTRAIT"` as a resizeability/orientation restriction. Decision (2026-08-18, with the user): **keep the portrait lock**. It is advisory, not a release blocker, and unlocking rotation would drag the top bar, popups and build mode through a landscape design pass for a phone-first idle game. What was fixed instead is the part that actually broke: when the canvas is narrower than the viewport the hotel used to stick to the left edge with the ground strips cut off at the building's width, which is what a tablet — or any Android 16 large screen, since those ignore the lock outright — would have shown. The canvas now centres and the pavement/road/grass run edge to edge. Re-checked 2026-08-19: the release manifest already carries `android:resizeableActivity="true"`, so nothing further can be turned off short of unlocking rotation. Closing this as accepted-by-decision; reopen only if Play turns the advisory into a policy requirement.
-- [ ] Touch testing on a real Android device/emulator (so far only the headless export has been verified) — no device/emulator was connected in this session (`adb` not found), manual testing is required
+- [ ] Touch testing on a real Android device/emulator (so far only the headless export has been verified). The old "`adb` not found" note is stale — `adb` is at `%LOCALAPPDATA%\Android\Sdk\platform-tools` and the `lgh_test` AVD boots fine (used on 2026-08-21 for the backup/restore work). What blocks *touch* testing specifically is that the game renders black on the emulator (godot#121035, fixed in 4.8), so this wants a physical device
 - [ ] A second building (a differently themed building after prestige) — currently limited to the single building + multiplier model, the economy/theme design needs to be settled first
 
 ### Long term
