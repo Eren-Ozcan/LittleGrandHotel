@@ -99,10 +99,13 @@ Other answers:
 
 - **Is all data encrypted in transit?** Yes — Firestore and Identity Toolkit are
   reached over HTTPS only.
-- **Can users request deletion?** **Yes**, and give the contact address from the
-  privacy policy. There is no in-app delete button, and `firestore.rules` denies
-  `delete` on `saves/{uid}`, so honouring a request means deleting the document from
-  the Firebase console by hand. Know that before someone asks.
+- **Can users request deletion?** **Yes** — and it is self-service now, so give the
+  contact address from the privacy policy as the fallback, not as the only route.
+  Settings ▸ **Delete account data** (`main.gd`, `CloudSave.delete_cloud_data()`) wipes
+  the Firestore document *and* the Firebase user, and `firestore.rules` allows `delete`
+  for the document's owner. Verified live on 2026-08-21. The old note here — no in-app
+  button, delete denied by the rules, console cleanup by hand — described an earlier
+  state and was wrong.
 - **App content → Ads**: "My app contains ads" = **Yes**. Three formats ship:
   rewarded, interstitial and app-open (`src/autoload/ads.gd`).
 - **Purchases**: this game uses Play Billing directly (`remove_ads`, `income_2x`) —
