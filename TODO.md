@@ -383,11 +383,18 @@ should be a build mode with editing/adding etc." (see the Gamezebo Hotel City gu
       forever. Nothing in the build catches it, because the desktop mock always
       succeeds; `tests/iap_check` verifies the ids match `docs/store/in-app-products.md`,
       which they do — the doc and the code agree, the *console* is the odd one out.
-      The three products must be created as **consumable** managed products (they are
-      in `IAP._CONSUMABLE_PRODUCTS`; created as non-consumable, Play refuses the
-      second purchase with "you already own this item"). Ids, names and suggested
-      prices are in `docs/store/in-app-products.md`. Pricing per region is the
-      user's call, which is why this was not done automatically.
+      Create them as one-time **Managed products**; there is no separate consumable
+      type in Play Billing, consumption is app-side and `iap.gd` already does it.
+      Ids, names and prices are in `docs/store/in-app-products.md`.
+      **Attempted on 2026-08-21 and deliberately abandoned half-way — nothing was
+      created, the list is still the same two products.** Three reasons to do this
+      by hand instead: the price field follows the console's UI language, so `1.99`
+      typed into the Turkish console produced **USD 199,99** (a 100× error that was
+      caught before activating, but only by reading a row back); the create form
+      repeatedly lost its Product ID through automation and ended on
+      *"Değişiklikleriniz kaydedilemedi"*; and a product id, once created, cannot be
+      deleted or reused — only deactivated. Both traps are now written down at the
+      top of `docs/store/in-app-products.md`.
 
 ### Main menu screen (July 2026, user request + 2026 mobile UI research)
 The game previously opened directly into gameplay with no main menu at all.

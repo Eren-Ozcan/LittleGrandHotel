@@ -39,8 +39,23 @@ no separate "consumable" product type, consumption is done by the app via
 > Console yet.** Monetise ▸ One-time products lists only `income_2x` and
 > `remove_ads`. Until these exist, every row in the in-game gems screen fails
 > with "item unavailable" on a real device — the desktop mock always succeeds,
-> so nothing in the build catches it. Create them as **consumable** managed
-> products; created as non-consumable, Play refuses the second purchase.
+> so nothing in the build catches it.
+>
+> **Two traps when creating them, both hit on 2026-08-21:**
+>
+> 1. **The price field follows the console's UI language.** With the console in
+>    Turkish, typing `1.99` is read as *one hundred ninety-nine* — the dot is a
+>    thousands separator there — and the row came out as **USD 199,99**, a 100×
+>    error that looks plausible enough to activate by accident. Type `1,99`
+>    with a **comma**, then read back a row (e.g. Germany) and confirm it says
+>    `EUR 1,99` before pressing Etkinleştir.
+> 2. **A product ID is permanent.** Once created it cannot be deleted or reused,
+>    only deactivated. Check the spelling against the table below before saving —
+>    the code matches on these strings exactly.
+>
+> Create them as one-time **Managed products**. There is no separate "consumable"
+> type in Play Billing; consumption happens app-side via `consumePurchase`, which
+> `iap.gd` already does for these three ids.
 
 | Product ID (**do not change**) | Name | Gems | Suggested price |
 |---|---|---|---|
