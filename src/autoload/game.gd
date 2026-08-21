@@ -288,8 +288,30 @@ func new_game() -> void:
 	state_changed.emit()
 
 
+## Tanınmayan bir oda tipi için dönen güvenli tanım. Eskiden burada boş bir
+## sözlük dönüyordu ve okuyucuların yarısı alanlara NOKTA ile eriştiği için
+## (`room_def(r.type).category`) bozuk bir kayıt on iki ayrı yerde çalışma
+## zamanı hatası veriyordu — üstelik bunların bir kısmı _load_from_dict'in
+## sonundaki başarım kontrolünden, yani oyun durumu değiştikten SONRA geliyordu.
+## Tek bir güvenli varsayılan, o çağrı noktalarının hepsini birden kapatır:
+## bilinmeyen tip artık gelir üretmeyen, hiçbir kategoriye girmeyen, bedava ve
+## 1 hücrelik bir odadır. "Bu tip gerçekten var mı" sorusunun cevabı artık
+## `is_empty()` değil `has_room_type()` (bkz. orası).
+const UNKNOWN_ROOM_DEF := {
+	"name": "", "category": "", "base_income": 0, "price": 0,
+	"unlock_level": 9999, "stay_hours": 0, "footprint_w": 1,
+}
+
+
 func room_def(type: String) -> Dictionary:
-	return eco.room_types.get(type, {})
+	return eco.room_types.get(type, UNKNOWN_ROOM_DEF)
+
+
+## Oyunun GERÇEKTEN tanıdığı bir oda tipi mi. Satın alma/yerleştirme yolları
+## bunu sorar; okuma yolları sormaz, çünkü onlar için UNKNOWN_ROOM_DEF zaten
+## zararsız bir sonuç veriyor.
+func has_room_type(type: String) -> bool:
+	return eco.room_types.has(type)
 
 
 func room_footprint(type: String) -> int:
@@ -345,7 +367,7 @@ func max_slots() -> int:
 ## kontrolü YOK, yalnızca geometri (açık genişlik + diğer odalarla çakışma).
 func _room_fits(type: String, floor_i: int, col: int) -> bool:
 	var d := room_def(type)
-	if d.is_empty() or floor_i < 1 or floor_i > floors:
+	if not has_room_type(type) or floor_i < 1 or floor_i > floors:
 		return false
 	var w := int(d.get("footprint_w", 1))
 	if w <= 0 or col < 0 or col + w > floor_open_width(floor_i):
@@ -360,7 +382,7 @@ func _room_fits(type: String, floor_i: int, col: int) -> bool:
 
 func can_place_room(type: String, floor_i: int, col: int) -> bool:
 	var d := room_def(type)
-	if d.is_empty():
+	if not has_room_type(type):
 		return false
 	return _room_fits(type, floor_i, col) \
 		and level() >= int(d.unlock_level) \
@@ -475,13 +497,21 @@ func item_def(item_id: String) -> Dictionary:
 	return {}
 
 
+## Bir odanın stil puanı. Eşya kimlikleri okunurken DİZE olup olmadıkları tek
+## tek denetlenir: bozuk bir kayıtta sayı/sözlük gelebiliyor ve `item_def`'in
+## dize parametresine dönüşüm çalışma zamanı hatası veriyordu. Tanınmayan
+## kimlik zaten 0 puan demek, o yüzden atlamak doğru davranış.
 func room_score(room: Dictionary) -> int:
 	var total := 0
-	for item_id in room.items:
-		total += int(item_def(item_id).get("sp", 0))
-	var base: Dictionary = room.get("base", {})
-	for slot in base:
-		total += int(item_def(String(base[slot])).get("sp", 0))
+	for item_id in room.get("items", []):
+		if typeof(item_id) == TYPE_STRING:
+			total += int(item_def(item_id).get("sp", 0))
+	var base: Variant = room.get("base", {})
+	if typeof(base) == TYPE_DICTIONARY:
+		for slot in (base as Dictionary):
+			var iid: Variant = (base as Dictionary)[slot]
+			if typeof(iid) == TYPE_STRING:
+				total += int(item_def(iid).get("sp", 0))
 	return total
 
 
@@ -573,7 +603,15 @@ func staff_count() -> int:
 	return maxi(1, ceili(rooms.size() * float(eco.staff_per_room)))
 
 
+## Vardiya saatlik oranı yalnızca shift_rates'te TANIMLI süreler için var
+## (1/4/8/24). `hours` her zaman arayüzden gelmiyor: otomatik yenileme onu
+## kayıttaki `last_shift_hours` alanından okuyor, yani bozuk bir kayıt buraya
+## 0, -5 ya da 999 sokabiliyordu ve sözlük erişimi çalışma zamanı hatası
+## veriyordu. Tanımsız süre için maliyet 0'dır; başlatma yolları zaten
+## start_shift/buy_auto_renew içinde geçerli süreyi ayrıca doğruluyor.
 func shift_cost(hours: int) -> int:
+	if not eco.shift_rates.has(str(hours)):
+		return 0
 	return int(staff_count() * hours * int(eco.shift_rates[str(hours)]) * staff_cost_mult())
 
 
@@ -659,6 +697,11 @@ func shift_remaining_game_hours() -> float:
 
 func start_shift(hours: int) -> bool:
 	if shift_active():
+		return false
+	# Yalnızca tabloda TANIMLI süreler başlatılabilir. shift_cost tanımsız süre
+	# için 0 döndüğü (ve artık patlamadığı) için bu kapı şart: aksi halde
+	# bozuk bir kayıttan gelen 999 saatlik bir vardiya BEDAVA başlardı.
+	if not eco.shift_rates.has(str(hours)):
 		return false
 	var cost := shift_cost(hours)
 	if coins < cost:
@@ -759,6 +802,10 @@ func simulate_to(to_unix: float) -> void:
 ## elle vardiya başlatılmışsa (last_shift_hours > 0) devreye girer.
 func _try_auto_renew() -> bool:
 	if last_shift_hours <= 0 or auto_renew_hours_left <= 0.0:
+		return false
+	# last_shift_hours KAYITTAN geliyor, arayüzden değil — tanımsız bir süre
+	# bedava ve keyfi uzunlukta bir vardiya anlamına gelirdi (bkz. start_shift).
+	if not eco.shift_rates.has(str(last_shift_hours)):
 		return false
 	var cost := shift_cost(last_shift_hours)
 	if coins < cost:
@@ -939,7 +986,7 @@ func min_shift_reserve(extra_rooms: int = 0) -> int:
 
 func can_buy_room(type: String) -> bool:
 	var d := room_def(type)
-	if d.is_empty():
+	if not has_room_type(type):
 		return false
 	if level() < int(d.unlock_level) or coins - int(d.price) < min_shift_reserve(1):
 		return false
@@ -1097,23 +1144,35 @@ func buy_bundle(room_index: int, bundle_id: String) -> bool:
 
 ## Satış iadesi: oda + coin'li eşya bedellerinin sell_refund oranı.
 func room_sell_value(index: int) -> int:
+	if index < 0 or index >= rooms.size():
+		return 0
 	var r: Dictionary = rooms[index]
 	var total := float(room_def(r.type).price)
-	for iid in r.items:
-		total += float(item_def(iid).get("price", 0))
-	for slot_item in r.get("base", {}).values():
-		total += float(item_def(String(slot_item)).get("price", 0))
+	total += _item_price_sum(r, "price")
 	return int(total * float(eco.sell_refund))
+
+
+## Bir odadaki tüm eşyaların (liste + taban yuvalar) verilen fiyat alanının
+## toplamı. Kimlikler dize olup olmadığına bakılarak okunur — bkz. room_score,
+## aynı gerekçe (bozuk kayıtta sayı/sözlük gelebiliyor).
+func _item_price_sum(r: Dictionary, field: String) -> float:
+	var total := 0.0
+	for iid in r.get("items", []):
+		if typeof(iid) == TYPE_STRING:
+			total += float(item_def(iid).get(field, 0))
+	var base: Variant = r.get("base", {})
+	if typeof(base) == TYPE_DICTIONARY:
+		for slot_item in (base as Dictionary).values():
+			if typeof(slot_item) == TYPE_STRING:
+				total += float(item_def(slot_item).get(field, 0))
+	return total
 
 
 ## Premium (elmaslı) eşyaların iadesi elmas olarak yapılır.
 func room_sell_gem_value(index: int) -> int:
-	var total := 0.0
-	for iid in rooms[index].items:
-		total += float(item_def(iid).get("gem_price", 0))
-	for slot_item in rooms[index].get("base", {}).values():
-		total += float(item_def(String(slot_item)).get("gem_price", 0))
-	return int(total * float(eco.sell_refund))
+	if index < 0 or index >= rooms.size():
+		return 0
+	return int(_item_price_sum(rooms[index], "gem_price") * float(eco.sell_refund))
 
 
 func sell_room(index: int) -> bool:
@@ -1543,6 +1602,15 @@ func _validate_save_dict(data: Dictionary) -> bool:
 		# bu sınıf (bkz. aşağıdaki numeric_fields notu, aynı gerekçe).
 		if typeof(r.get("base", {})) != TYPE_DICTIONARY:
 			return false
+		# Eşya kimliklerinin kendisi de dize olmalı. Okuyucular (room_score,
+		# _item_price_sum) artık dize olmayanı atlıyor ama kapının bunu kabul
+		# etmesi için bir sebep yok: geçerli oynanışta asla oluşmaz.
+		for iid in r.get("items", []):
+			if typeof(iid) != TYPE_STRING:
+				return false
+		for slot_item in (r.get("base", {}) as Dictionary).values():
+			if typeof(slot_item) != TYPE_STRING:
+				return false
 		for num_field in ["floor", "col", "w"]:
 			var val = r.get(num_field)
 			if val != null and typeof(val) != TYPE_FLOAT and typeof(val) != TYPE_INT:
@@ -1550,7 +1618,14 @@ func _validate_save_dict(data: Dictionary) -> bool:
 		# İki odanın aynı id'yi veya aynı ızgara hücresini paylaşması geçerli
 		# bir oyun durumunda asla oluşmaz — kabul edilirse render/satış/taşıma
 		# mantığı hangi odanın "gerçek" olduğu konusunda tutarsız davranır.
-		var rid := String(r.get("id", ""))
+		# Kimlik DİZE olmalı. `String(...)` Godot'ta yalnızca belirli tipleri
+		# kabul eder; sayı/sözlük gelen bir kayıtta bu satırın kendisi çalışma
+		# zamanı hatası veriyordu. Doğrulama kapısının bozuk girdide patlaması,
+		# kapıyı işlevsiz kılar — burada her şeyden önce o kapatılıyor.
+		var rid_value: Variant = r.get("id", "")
+		if typeof(rid_value) != TYPE_STRING:
+			return false
+		var rid: String = rid_value
 		if not rid.is_empty():
 			if seen_room_ids.has(rid):
 				return false
@@ -1601,6 +1676,11 @@ func _validate_save_dict(data: Dictionary) -> bool:
 			return false
 	# staff_tier geçerli aralığın (0..max_tier) dışına çıkarsa
 	# staff_income_mult()/staff_cost_mult() içindeki pow() Inf üretebilir.
+	# last_shift_hours yalnızca tabloda tanımlı bir süre (ya da 0) olabilir:
+	# otomatik yenileme onu doğrudan kullanıyor.
+	var lsh = data.get("last_shift_hours")
+	if lsh != null and int(lsh) != 0 and not eco.shift_rates.has(str(int(lsh))):
+		return false
 	var st = data.get("staff_tier")
 	if st != null and (float(st) < 0.0 or float(st) > float(eco.staff_upgrade.max_tier)):
 		return false
