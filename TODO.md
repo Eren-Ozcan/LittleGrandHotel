@@ -696,6 +696,51 @@ device. Setup, reasoning and the remaining manual step: `docs/cloud-save-setup.m
       `android/RELEASE_KEYSTORE_SECRETS.txt` (gitignored) — it belongs in a password manager,
       because one gitignored file is exactly how it went missing the first time.
 
+### START HERE — durum devri (2026-08-21 kapanışı)
+
+Repo temiz, `master` = `origin/master`, **paketin tamamı yeşil: 16 test,
+2178 kontrol** (`pwsh tests/run_all.ps1`). Kodda bilinen açık iş yok.
+
+**Sırada ne var — üçü de senin elinde, kod işi değil:**
+
+1. **Play Console ▸ Yayın özeti → "2 değişikliği incelemeye gönder".** tr-TR ve
+   en-US ekran görüntüleri yüklendi ve sıralandı ama kuyrukta bekliyor;
+   basılmadan incelemeye gitmiyor.
+2. **Üç elmas paketini oluştur** (`gems_small` / `gems_medium` / `gems_large`).
+   Oyun içi elmas ekranı bunlarsız gerçek cihazda sessizce başarısız oluyor.
+   Değerler ve **iki tuzak** (Türkçe konsolda `1.99` → USD 199,99; ürün kimliği
+   kalıcı) `docs/store/in-app-products.md` başında.
+3. **AdMob vergi formları** (TR + ABD) — ilk ödemeyi bloklar, bugün bir şeyi
+   bloklamıyor. https://admob.google.com/v2/payments/settings
+
+**Takvim:** kapalı test 14 günün 10'unu doldurdu → *Üretime başvur* ~2026-08-25.
+Üretime çıkış aynı zamanda AdMob'daki "sınırlı reklam sunumu" kısıtını da
+kaldırıyor (bkz. aşağıdaki reklam kontrolü).
+
+**Kod tarafında sıradaki iş, isteğe bağlı:** `store_compliance_check` ve
+`unlink_check`'e geçti/kaldı kararı eklemek — şu an yalnızca gözlem basıyorlar,
+yani başarısız olamıyorlar (koşucu onları `REPORT` diye işaretliyor).
+
+**Karar bekleyen:** tanıtım videosu (kriter netleşmeden yeni kurgu yok) ve
+sekiz mağaza görselinden zayıf kalan dördünün (02, 06, 07, 08) daha dolu bir
+oyun durumunda yeniden render edilmesi.
+
+### Reklam kontrolü (2026-08-21)
+- [x] **Reklamlarda düzeltilecek bir şey yok.** `ads_check` 67/67, ve panel elle
+      teyit edildi: App ID + üç birim kimliği `ads.gd` ile birebir aynı, sıklık
+      sınırları politikadaki gibi (App Open 1/saat, Interstitial 2/saat, ödüllü
+      sınırsız), politika merkezi temiz. Google test kimliği kodda hiç yok.
+- [x] **Ödüllünün panelde sınırsız olması "oyunda sınırsız" demek değil** —
+      sınır oyunda: ×2 gelir bonusu aktifken buton hiç çizilmiyor (30 dakikada
+      1) ve çevrimdışı ikiye katlama dönüş başına bir kez sunuluyor. Panele
+      sınır koymak, oyuncu izledikten sonra ödülü boşa çıkarırdı. Stüdyo
+      kuralı hâline getirildi: `pictures/ADS_POLICY.md` kural 10.
+- [ ] **Sınırlı reklam sunumu — Play'de üretime çıkınca kalkacak.** Dört
+      uygulamanın dördü de "İnceleme gerekli / Sınırlı reklam sunumu"
+      durumunda, sebebi ceza değil: hiçbirine mağaza listesi bağlı değil. LGH'de
+      son 7 günde 11 istek / 0 gösterim. Yapılacak bir şey yok, madde yalnızca
+      "üretime çıkınca kontrol et" diye açık bırakıldı.
+
 ### Next session (agreed 2026-08-19)
 - [~] **Play store listing page — screenshots uploaded 2026-08-21, not yet submitted.**
       Both locales now carry their own 1080x1920 set, in the intended 01→08 order:
