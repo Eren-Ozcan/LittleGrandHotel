@@ -294,7 +294,15 @@ var roof_theme_label: Label
 ## Otel adı artık üst bardaki sabit panelde değil, lobi duvarındaki boş
 ## çerçevede (lobby.png) asılı bir tabela gibi gösteriliyor — bkz. _rebuild_hotel.
 var lobby_name_label: Label
-const HOTEL_NAME_MAX_LEN := 16
+## Tabelaya sığan en uzun ad. 16 iken oyunun KENDİ varsayılan adı ("Little Grand
+## Hotel", 18 karakter) bu sınıra sığmıyordu: yeniden adlandırma modalindeki
+## LineEdit önceden dolu metni sessizce kırpıyor, oyuncu hiçbir şey yazmadan
+## Kaydet'e bastığında otelin adı "Little Grand Hot" oluyordu. Tabela
+## autowrap + clip_text ile 18 karakteri zaten sorunsuz gösteriyor (iki satıra
+## sarıyor), sınır o yüzden varsayılanı kapsayacak şekilde açıldı.
+## Değişmez kural: HOTEL_NAME_MAX_LEN >= varsayılan adın uzunluğu
+## (bkz. tests/ui_check.gd).
+const HOTEL_NAME_MAX_LEN := 18
 var build_mode_button: Button
 ## İnşa Modu kapalıyken boş/kilitli hücreler sade durur (buton/metin yok);
 ## açıkken vurgulanır ve dokunulabilir olur (TODO: görsel kalabalığı azaltma).
