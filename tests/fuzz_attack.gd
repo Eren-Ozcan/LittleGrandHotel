@@ -196,6 +196,19 @@ func _malicious_variants(baseline: Dictionary) -> Array:
 		d.rooms[0].w = 999999)])
 	variants.append(["w_sifir", _mut(baseline, func(d):
 		d.rooms[0].w = 0)])
+	# --- oda `base` alanı: room_score() onu doğrudan Dictionary'ye atıyor.
+	# Yanlış tip, _load_from_dict'in SONUNDAKİ başarım kontrolünde çalışma
+	# zamanı hatası veriyordu — yani oyun durumu çoktan değiştikten SONRA.
+	# 2026-08-21'de _validate_save_dict'e tip kapısı eklendi; bu varyantlar o
+	# kapının açık kalmasını sağlar. ---
+	variants.append(["base_dize", _mut(baseline, func(d):
+		d.rooms[0].base = "hepsi")])
+	variants.append(["base_dizi", _mut(baseline, func(d):
+		d.rooms[0].base = ["wallpaper_default"])])
+	variants.append(["base_sayi", _mut(baseline, func(d):
+		d.rooms[0].base = 7)])
+	variants.append(["base_null", _mut(baseline, func(d):
+		d.rooms[0].base = null)])
 	# aynı hücreye iki oda yerleştirilmiş kayıt (elle bozulmuş kod senaryosu)
 	variants.append(["cakisan_odalar", _mut(baseline, func(d):
 		d.rooms[1].floor = d.rooms[0].floor

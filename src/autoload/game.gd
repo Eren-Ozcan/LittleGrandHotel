@@ -1535,6 +1535,14 @@ func _validate_save_dict(data: Dictionary) -> bool:
 			return false
 		if typeof(r.get("items", [])) != TYPE_ARRAY:
 			return false
+		# `base` (duvar kâğıdı/zemin/yatak) tipi de burada tutulmalı:
+		# room_score() onu doğrudan `var base: Dictionary = room.get("base", {})`
+		# diye alıyor ve yanlış tip orada çalışma zamanı hatası veriyor. O çağrı
+		# _load_from_dict'in SONUNDAKİ _check_achievements zincirinden geliyor,
+		# yani oyun durumu ÇOKTAN değişmiş oluyor — atomikliği bozan tam olarak
+		# bu sınıf (bkz. aşağıdaki numeric_fields notu, aynı gerekçe).
+		if typeof(r.get("base", {})) != TYPE_DICTIONARY:
+			return false
 		for num_field in ["floor", "col", "w"]:
 			var val = r.get(num_field)
 			if val != null and typeof(val) != TYPE_FLOAT and typeof(val) != TYPE_INT:
