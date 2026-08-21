@@ -35,6 +35,13 @@ the Play Console side they are still created as "Managed products" (Play Billing
 no separate "consumable" product type, consumption is done by the app via
 `consumePurchase` — the code already does this).
 
+> **Status as of 2026-08-21: the three gem packs below are NOT created in Play
+> Console yet.** Monetise ▸ One-time products lists only `income_2x` and
+> `remove_ads`. Until these exist, every row in the in-game gems screen fails
+> with "item unavailable" on a real device — the desktop mock always succeeds,
+> so nothing in the build catches it. Create them as **consumable** managed
+> products; created as non-consumable, Play refuses the second purchase.
+
 | Product ID (**do not change**) | Name | Gems | Suggested price |
 |---|---|---|---|
 | `gems_small`  | Small Gem Pack  | 100  | $1.99  |

@@ -367,11 +367,27 @@ should be a build mode with editing/adding etc." (see the Gamezebo Hotel City gu
 - [x] A release keystore was created (`android/upload-keystore.jks`), a signed AAB
       was produced and verified (`jarsigner -verify`, with manifest/permission/plugin
       integration confirmed via `aapt2 dump badging/xmltree`).
-- [ ] **What the user needs to do themselves**: a Play Console account (~$25),
-      an AdMob account + a real App ID/rewarded ad unit ID (Google test IDs are
-      currently in use, they must be changed in `ads.gd`), defining the
-      `remove_ads`/`income_2x` in-app products in Play Console, Play App Signing
-      enrollment, the privacy policy + store listing content.
+- [x] **This July list is done — checked item by item in the console on 2026-08-21.**
+      The Play Console account exists (Yilk Games), AdMob is live with three real ad
+      unit IDs and no Google test IDs left in `ads.gd`, Play App Signing is enrolled,
+      and the privacy policy and store listing are published. Only one thing in it was
+      *not* true, and it is now its own entry below.
+- [ ] **The three gem packs do not exist in Play Console.** Verified 2026-08-21:
+      Monetise ▸ One-time products lists exactly **two** — `income_2x` and
+      `remove_ads`, both created 26 Jul 2026. Missing: **`gems_small`,
+      `gems_medium`, `gems_large`**.
+      This is not cosmetic. `main.gd`'s `GEM_PACKS` table drives a live screen (the
+      gems `+` button → `_build_gems_popup`), so on a real device every gem pack row
+      calls `IAP.purchase("gems_small"…)` and Play answers "item unavailable" — the
+      purchase fails silently and `price_for()` stays on the placeholder label
+      forever. Nothing in the build catches it, because the desktop mock always
+      succeeds; `tests/iap_check` verifies the ids match `docs/store/in-app-products.md`,
+      which they do — the doc and the code agree, the *console* is the odd one out.
+      The three products must be created as **consumable** managed products (they are
+      in `IAP._CONSUMABLE_PRODUCTS`; created as non-consumable, Play refuses the
+      second purchase with "you already own this item"). Ids, names and suggested
+      prices are in `docs/store/in-app-products.md`. Pricing per region is the
+      user's call, which is why this was not done automatically.
 
 ### Main menu screen (July 2026, user request + 2026 mobile UI research)
 The game previously opened directly into gameplay with no main menu at all.
