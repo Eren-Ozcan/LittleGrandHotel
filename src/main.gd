@@ -53,8 +53,31 @@ const PALETTE := {
 
 ## Kullanıcı geri bildirimi: "çoğu UI butonu ve yazısı gereksiz küçük" —
 ## tüm _label/_button metinleri bu çarpanla büyütülür (bkz. _label, _button).
-## İlk 1.15 denemesi sonrası "hâlâ küçük" geri bildirimiyle 1.3'e çıkarıldı.
-const UI_TEXT_SCALE := 1.3
+## Tasarımın telefon çerçevesi 360 CSS pikseli, viewport 720 — yani bire bir
+## karşılık 2.0. Bu çarpanla `_label(size)` çağrılarındaki sayı doğrudan
+## TASARIMDAKİ px değeri oluyor; 1.15/1.3/1.55 denemeleri hep bu ölçünün
+## altında kalıp "hâlâ küçük" geri bildirimi almıştı.
+const UI_TEXT_SCALE := 2.0
+
+## Minimum touch target, in viewport pixels. Android (and iOS) ask for 48dp.
+## On a 440dpi phone 48dp is 132 physical pixels, and the 720-wide viewport is
+## stretched to 1080, so the scale is 1.5 and 132 / 1.5 = 88 viewport pixels.
+## The bottom bar (see _bar_button) was already above it at 92; rows, tabs and
+## pill buttons were well under (measured: row ~34dp, tab ~16dp).
+const TOUCH_MIN := 88
+
+## The design sets every screen in Figtree, and the two currency counters in
+## Pixelify Sans. Both ship as variable fonts, so one file covers every weight
+## the design uses (400 body, 500/600 labels, 700 titles) through
+## FontVariation. Licenses sit next to them (SIL OFL, redistribution is fine).
+const FONT_UI := preload("res://assets/fonts/Figtree.ttf")
+const FONT_NUM := preload("res://assets/fonts/PixelifySans.ttf")
+
+## The two controls that sit ON the world rather than in a menu — the top bar's
+## gem "+" and the Build/Clean chips. At the full 88 the "+" swallows the top
+## bar and the chips turn into big circles, so they stop at 68 (~37dp). Every
+## control inside a menu still meets the full 48dp.
+const TOUCH_MIN_CHROME := 68
 
 ## Mağaza politikası bağlantıları (bkz. docs/store/store-listing.md ve
 ## account-setup-checklist.md). Ayarlar'dan açılır, açılış ekranındaki sürüm
@@ -706,6 +729,7 @@ func _build_tutorial_layer() -> void:
 	_tutorial_bubble.add_child(_tutorial_bubble_label)
 
 	var skip_b := _button("Skip tutorial", 12, PALETTE.bar_dark, PALETTE.cream_text)
+	skip_b.custom_minimum_size.y = TOUCH_MIN
 	skip_b.mouse_filter = Control.MOUSE_FILTER_STOP
 	skip_b.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 	skip_b.offset_left = -140
@@ -1086,7 +1110,7 @@ func _build_ui() -> void:
 	# Prototipteki yerleşim: krem kart YALNIZCA para/seviye bloğunu sarar,
 	# avatar kartın DIŞINDA, gökyüzünün üstünde ayrı bir kutu olarak durur.
 	var top_row := HBoxContainer.new()
-	top_row.add_theme_constant_override("separation", 8)
+	top_row.add_theme_constant_override("separation", 6)
 	_edge_pad(root, 14, 10).add_child(top_row)
 	var top := PanelContainer.new()
 	var top_sb := StyleBoxFlat.new()
@@ -1128,7 +1152,7 @@ func _build_ui() -> void:
 	# Button bir Container DEĞİL: çocuklarını yerleştirmez ve onlardan minimum
 	# boy da almaz. Boy elle verilir, içerik butona sabitlenir — yoksa avatar
 	# HBox'ta 0 genişlik sayılıp ekranın dışına taşıyor.
-	avatar_b.custom_minimum_size = Vector2(62, 86)
+	avatar_b.custom_minimum_size = Vector2(80, 118)
 	avatar_b.pressed.connect(func():
 		_profile_tab = "account"
 		_open_popup("Profile", _build_profile_popup))
@@ -1143,12 +1167,12 @@ func _build_ui() -> void:
 	av_sb.bg_color = PALETTE.cream
 	av_sb.border_color = PALETTE.facade_line
 	av_sb.set_border_width_all(2)
-	av_sb.set_corner_radius_all(13)
-	av_sb.set_content_margin_all(3)
+	av_sb.set_corner_radius_all(26)
+	av_sb.set_content_margin_all(6)
 	avatar_frame.add_theme_stylebox_override("panel", av_sb)
 	avatar_frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	avatar_col.add_child(avatar_frame)
-	avatar_frame.add_child(_icon("res://assets/guests/receptionist.png", 52))
+	avatar_frame.add_child(_icon("res://assets/guests/receptionist.png", 68))
 	var me_wrap := CenterContainer.new()
 	me_wrap.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	avatar_col.add_child(me_wrap)
@@ -1156,36 +1180,36 @@ func _build_ui() -> void:
 	var me_sb := StyleBoxFlat.new()
 	me_sb.bg_color = PALETTE.cream
 	me_sb.set_corner_radius_all(999)
-	me_sb.content_margin_left = 7
-	me_sb.content_margin_right = 7
-	me_sb.content_margin_top = 1
-	me_sb.content_margin_bottom = 1
+	me_sb.content_margin_left = 14
+	me_sb.content_margin_right = 14
+	me_sb.content_margin_top = 2
+	me_sb.content_margin_bottom = 2
 	me_pill.add_theme_stylebox_override("panel", me_sb)
 	me_pill.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	me_wrap.add_child(me_pill)
-	me_pill.add_child(_label("Me", 10, PALETTE.text))
+	me_pill.add_child(_label("Me", 9, PALETTE.text, 700))
 
 	var row1 := HBoxContainer.new()
 	row1.add_theme_constant_override("separation", 6)
 	top_box.add_child(row1)
-	row1.add_child(_icon("res://assets/ui/coin.svg", 24))
-	coins_label = _label("", 19, PALETTE.text)
+	row1.add_child(_icon("res://assets/ui/coin.svg", 38))
+	coins_label = _label("", 15, PALETTE.text, 600, true)
 	row1.add_child(coins_label)
 	# Prototipteki 1 piksellik ayraç — coin ve gem iki ayrı bakiye, aynı blok
 	# içinde bile birbirine karışmasın.
 	var divider := ColorRect.new()
 	divider.color = PALETTE.cream_dark
-	divider.custom_minimum_size = Vector2(1, 18)
+	divider.custom_minimum_size = Vector2(2, 32)
 	divider.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	row1.add_child(divider)
-	row1.add_child(_icon("res://assets/ui/gem.svg", 23))
-	gems_label = _label("", 19, PALETTE.green_deep)
+	row1.add_child(_icon("res://assets/ui/gem.svg", 36))
+	gems_label = _label("", 15, PALETTE.green_deep, 600, true)
 	row1.add_child(gems_label)
 	var gem_add_b := _button("+", 15, PALETTE.green_soft, PALETTE.green_deep)
-	gem_add_b.custom_minimum_size = Vector2(30, 30)
+	gem_add_b.custom_minimum_size = Vector2(52, 52)
 	for state in ["normal", "hover", "pressed", "disabled"]:
 		var gsb := gem_add_b.get_theme_stylebox(state) as StyleBoxFlat
-		gsb.set_corner_radius_all(9)
+		gsb.set_corner_radius_all(18)
 		gsb.border_color = PALETTE.green_deep
 		gsb.set_content_margin_all(0)
 	gem_add_b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -1197,7 +1221,7 @@ func _build_ui() -> void:
 	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row1.add_child(sp)
 	for i in 5:
-		var s := _icon("res://assets/ui/star_empty.svg", 21)
+		var s := _icon("res://assets/ui/star_empty.svg", 26)
 		s.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		star_icons.append(s)
 		row1.add_child(s)
@@ -1205,12 +1229,12 @@ func _build_ui() -> void:
 	var row2 := HBoxContainer.new()
 	row2.add_theme_constant_override("separation", 8)
 	top_box.add_child(row2)
-	level_label = _label("", 11, PALETTE.muted)
+	level_label = _label("", 11, PALETTE.muted, 600)
 	level_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	row2.add_child(level_label)
 	xp_bar = ProgressBar.new()
 	xp_bar.show_percentage = false
-	xp_bar.custom_minimum_size = Vector2(0, 10)
+	xp_bar.custom_minimum_size = Vector2(0, 12)
 	xp_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	xp_bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	var xb := StyleBoxFlat.new()
@@ -1226,7 +1250,7 @@ func _build_ui() -> void:
 	row2.add_child(xp_bar)
 	# Prototipteki "220 / 1,000 XP" sayacı — çubuk tek başına ne kadar kaldığını
 	# söylemiyordu.
-	xp_text_label = _label("", 11, PALETTE.muted)
+	xp_text_label = _label("", 10, PALETTE.muted, 600)
 	row2.add_child(xp_text_label)
 
 	# --- Gökyüzü durum çipi: bina üstündeki boş gökyüzü artık vardiya durumunu
@@ -1251,16 +1275,16 @@ func _build_ui() -> void:
 	status_row.add_theme_constant_override("separation", 7)
 	status_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	status_chip.add_child(status_row)
-	var clock_icon := _icon("res://assets/ui/icon_clock.svg", 17)
+	var clock_icon := _icon("res://assets/ui/icon_clock.svg", 28)
 	clock_icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	status_row.add_child(clock_icon)
-	shift_label = _label("", 12, PALETTE.cream_text)
+	shift_label = _label("", 11, PALETTE.cream_text, 600)
 	shift_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	shift_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	status_row.add_child(shift_label)
 	# Dokunulabilir olduğunu gösteren chevron — çip aksi hâlde salt bilgi gibi
 	# okunuyor.
-	var status_arrow := _label("›", 14, PALETTE.gold_soft)
+	var status_arrow := _label("›", 13, PALETTE.gold_soft, 700)
 	status_arrow.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	status_row.add_child(status_arrow)
 
@@ -1293,22 +1317,28 @@ func _build_ui() -> void:
 	var zoom_row_spacer := Control.new()
 	zoom_row_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	zoom_row.add_child(zoom_row_spacer)
+	# The zoom cluster is a canvas tool, not a menu control: at the full 88 it
+	# dwarfed the top bar, so it keeps the chrome size and stays in one row.
+	var zoom_cluster := HBoxContainer.new()
+	zoom_cluster.add_theme_constant_override("separation", 6)
+	zoom_cluster.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	zoom_row.add_child(zoom_cluster)
 	var zoom_out_b := _button("−", 18, PALETTE.wood, PALETTE.cream_text)
-	zoom_out_b.custom_minimum_size = Vector2(52, 48)
+	zoom_out_b.custom_minimum_size = Vector2(56, 56)
 	zoom_out_b.pressed.connect(func(): _zoom_by(-ZOOM_STEP, zoom_viewport.size / 2.0))
-	zoom_row.add_child(zoom_out_b)
+	zoom_cluster.add_child(zoom_out_b)
 	var zoom_reset_b := _button("⟳", 16, PALETTE.wood, PALETTE.cream_text)
-	zoom_reset_b.custom_minimum_size = Vector2(52, 48)
+	zoom_reset_b.custom_minimum_size = Vector2(56, 56)
 	zoom_reset_b.pressed.connect(func():
 		_zoom = _default_zoom()
 		_canvas_pan = Vector2.ZERO
 		_clamp_pan()
 		_apply_canvas_transform())
-	zoom_row.add_child(zoom_reset_b)
+	zoom_cluster.add_child(zoom_reset_b)
 	var zoom_in_b := _button("+", 18, PALETTE.wood, PALETTE.cream_text)
-	zoom_in_b.custom_minimum_size = Vector2(52, 48)
+	zoom_in_b.custom_minimum_size = Vector2(56, 56)
 	zoom_in_b.pressed.connect(func(): _zoom_by(ZOOM_STEP, zoom_viewport.size / 2.0))
-	zoom_row.add_child(zoom_in_b)
+	zoom_cluster.add_child(zoom_in_b)
 
 	# İnşa Modu mağaza rafı: yalnızca build_mode açıkken görünür (bkz.
 	# _rebuild_hotel). Oda kartları buradan tuvale sürüklenir — tıklayınca
@@ -1368,11 +1398,11 @@ func _build_ui() -> void:
 	#   2. Üstüne 6 piksel YUKARIDA duran, alfası dairede biten radial
 	#      GradientTexture2D. StyleBoxFlat radial gradient veremiyor; dokunun
 	#      son durağı saydam olduğu için kare doku daire gibi görünüyor.
-	collect_button = _button("", 17, PALETTE.red_lip, PALETTE.cream_text)
+	collect_button = _button("", 15, PALETTE.red_lip, PALETTE.cream_text)
 	for state in ["normal", "hover", "pressed", "disabled"]:
 		var sb: StyleBoxFlat = collect_button.get_theme_stylebox(state)
 		sb.bg_color = PALETTE.red_lip
-		sb.set_corner_radius_all(60)
+		sb.set_corner_radius_all(92)
 		sb.set_border_width_all(0)
 		sb.shadow_size = 0
 	var primary_grad := Gradient.new()
@@ -1386,8 +1416,8 @@ func _build_ui() -> void:
 	primary_tex.fill = GradientTexture2D.FILL_RADIAL
 	primary_tex.fill_from = Vector2(0.5, 0.5)
 	primary_tex.fill_to = Vector2(1.0, 0.5)
-	primary_tex.width = 120
-	primary_tex.height = 120
+	primary_tex.width = 184
+	primary_tex.height = 184
 	var primary_face := TextureRect.new()
 	primary_face.texture = primary_tex
 	primary_face.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
@@ -1404,12 +1434,12 @@ func _build_ui() -> void:
 	primary_col.add_theme_constant_override("separation", 0)
 	primary_col.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	collect_button.add_child(primary_col)
-	primary_label = _label("", 17, PALETTE.cream_text)
+	primary_label = _label("", 15, PALETTE.cream_text, 700)
 	primary_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	primary_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	primary_col.add_child(primary_label)
 	# Alt satır: vardiya kalan süresi / biriken tutar (eski shift_bar_label).
-	shift_bar_label = _label("", 12, PALETTE.gold_soft)
+	shift_bar_label = _label("", 10, PALETTE.gold_soft, 600)
 	shift_bar_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	shift_bar_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	primary_col.add_child(shift_bar_label)
@@ -1427,7 +1457,7 @@ func _build_ui() -> void:
 	bar_sb.set_corner_radius_all(0)
 	bar_sb.border_color = PALETTE.bar_edge
 	bar_sb.border_width_top = 3
-	bar_sb.set_content_margin_all(6)
+	bar_sb.set_content_margin_all(4)
 	bar_panel.add_theme_stylebox_override("panel", bar_sb)
 	root.add_child(bar_panel)
 	var bottom := HBoxContainer.new()
@@ -1457,7 +1487,7 @@ func _build_ui() -> void:
 		# yerini tutan boşluk var, butonun kendisi ekran köküne asılı.
 		if title == "Quests":
 			var gap := Control.new()
-			gap.custom_minimum_size = Vector2(112, 0)
+			gap.custom_minimum_size = Vector2(232, 0)
 			bottom.add_child(gap)
 		bottom.add_child(b)
 		_bar_buttons[title] = b
@@ -1496,10 +1526,10 @@ func _build_ui() -> void:
 	# kırmızı buton). Bar 104 yüksekliğinde ve ekranın en altına oturuyor (kök
 	# kenar boşluğu kalktı); ofsetler bunun üzerinden veriliyor.
 	collect_button.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
-	collect_button.offset_left = -60
-	collect_button.offset_right = 60
-	collect_button.offset_top = -174
-	collect_button.offset_bottom = -54
+	collect_button.offset_left = -92
+	collect_button.offset_right = 92
+	collect_button.offset_top = -190
+	collect_button.offset_bottom = -6
 	collect_button.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	collect_button.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	add_child(collect_button)
@@ -1543,27 +1573,27 @@ func _build_ui() -> void:
 	head.add_theme_constant_override("separation", 8)
 	head_panel.add_child(head)
 	popup_back_button = _button("‹", 20, PALETTE.wood, PALETTE.cream_text)
-	popup_back_button.custom_minimum_size = Vector2(48, 48)
+	popup_back_button.custom_minimum_size = Vector2(TOUCH_MIN_CHROME, TOUCH_MIN_CHROME)
 	for state in ["normal", "hover", "pressed"]:
-		(popup_back_button.get_theme_stylebox(state) as StyleBoxFlat).set_corner_radius_all(24)
+		(popup_back_button.get_theme_stylebox(state) as StyleBoxFlat).set_corner_radius_all(TOUCH_MIN_CHROME / 2)
 	popup_back_button.pressed.connect(_pop_popup)
 	head.add_child(popup_back_button)
-	popup_title = _label("", 21, PALETTE.cream_text)
+	popup_title = _label("", 16, PALETTE.cream_text, 700)
 	popup_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	popup_title.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	head.add_child(popup_title)
-	head.add_child(_icon("res://assets/ui/coin.svg", 20))
-	popup_coins_label = _label("", 14, PALETTE.cream_text)
+	head.add_child(_icon("res://assets/ui/coin.svg", 32))
+	popup_coins_label = _label("", 13, PALETTE.cream_text, 600, true)
 	popup_coins_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	head.add_child(popup_coins_label)
-	head.add_child(_icon("res://assets/ui/gem.svg", 20))
-	popup_gems_label = _label("", 14, PALETTE.cream_text)
+	head.add_child(_icon("res://assets/ui/gem.svg", 30))
+	popup_gems_label = _label("", 13, PALETTE.cream_text, 600, true)
 	popup_gems_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	head.add_child(popup_gems_label)
 	var close_b := _button("✕", 16, PALETTE.wood, PALETTE.cream_text)
-	close_b.custom_minimum_size = Vector2(48, 48)
+	close_b.custom_minimum_size = Vector2(TOUCH_MIN_CHROME, TOUCH_MIN_CHROME)
 	for state in ["normal", "hover", "pressed"]:
-		(close_b.get_theme_stylebox(state) as StyleBoxFlat).set_corner_radius_all(24)
+		(close_b.get_theme_stylebox(state) as StyleBoxFlat).set_corner_radius_all(TOUCH_MIN_CHROME / 2)
 	close_b.pressed.connect(_close_popup)
 	head.add_child(close_b)
 	popup_scroll = ScrollContainer.new()
@@ -1594,8 +1624,8 @@ func _build_ui() -> void:
 	toast_wrap.offset_right = -40
 	# Barın (104) ve onun üstüne binen yuvarlak butonun (tepesi -174) ikisinin de
 	# ÜSTÜNDE kalır — hiçbirine binmez (audit 15).
-	toast_wrap.offset_top = -266
-	toast_wrap.offset_bottom = -194
+	toast_wrap.offset_top = -274
+	toast_wrap.offset_bottom = -202
 	toast_wrap.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	toast_wrap.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	# Menü sayfasının (z_index 100) da üstünde — bkz. oradaki not.
@@ -1801,10 +1831,10 @@ func _chip(bg: Color) -> PanelContainer:
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = bg
 	sb.set_corner_radius_all(999)
-	sb.content_margin_left = 12
-	sb.content_margin_right = 12
-	sb.content_margin_top = 6
-	sb.content_margin_bottom = 6
+	sb.content_margin_left = 24
+	sb.content_margin_right = 24
+	sb.content_margin_top = 10
+	sb.content_margin_bottom = 10
 	p.add_theme_stylebox_override("panel", sb)
 	p.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	return p
@@ -1814,15 +1844,16 @@ func _chip(bg: Color) -> PanelContainer:
 ## yarı saydam koyu zemin — _chip() ile aynı dil, ama tıklanabilir/toggle.
 func _chip_toggle(text: String) -> Button:
 	var b := _button(text, 11, Color(PALETTE.chip_dark, 0.78), PALETTE.cream_text)
+	b.custom_minimum_size.y = 56
 	b.toggle_mode = true
 	for state in ["normal", "hover", "pressed", "disabled"]:
 		var sb := b.get_theme_stylebox(state) as StyleBoxFlat
 		sb.set_corner_radius_all(999)
 		sb.set_border_width_all(0)
-		sb.content_margin_left = 11
-		sb.content_margin_right = 11
-		sb.content_margin_top = 6
-		sb.content_margin_bottom = 6
+		sb.content_margin_left = 22
+		sb.content_margin_right = 22
+		sb.content_margin_top = 12
+		sb.content_margin_bottom = 12
 	b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	return b
 
@@ -1928,13 +1959,14 @@ func _sheet_row(c: VBoxContainer, cfg: Dictionary) -> Button:
 	sb.bg_color = cfg.get("bg", PALETTE.card)
 	sb.border_color = cfg.get("border", PALETTE.facade_line)
 	sb.set_border_width_all(2)
-	sb.set_corner_radius_all(int(cfg.get("radius", 12)))
-	sb.content_margin_left = 11
-	sb.content_margin_right = 11
-	sb.content_margin_top = 9
-	sb.content_margin_bottom = 9
+	sb.set_corner_radius_all(int(cfg.get("radius", 12)) * 2)
+	sb.content_margin_left = 22
+	sb.content_margin_right = 22
+	sb.content_margin_top = 20
+	sb.content_margin_bottom = 20
 	p.add_theme_stylebox_override("panel", sb)
 	p.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	p.custom_minimum_size.y = TOUCH_MIN
 	var enabled: bool = bool(cfg.get("enabled", true))
 	if not enabled:
 		# Prototipteki kilitli satır: `opacity:.5`.
@@ -1962,7 +1994,7 @@ func _sheet_row(c: VBoxContainer, cfg: Dictionary) -> Button:
 	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	h.add_child(col)
 	var title_l := _label_wrap(String(cfg.get("title", "")),
-		int(cfg.get("title_size", 13)), cfg.get("title_color", PALETTE.text))
+		int(cfg.get("title_size", 14)), cfg.get("title_color", PALETTE.text), 700)
 	col.add_child(title_l)
 	var meta_l := _label_wrap(String(cfg.get("meta", "")), 11, cfg.get("meta_color", PALETTE.muted))
 	meta_l.visible = String(cfg.get("meta", "")) != ""
@@ -1971,7 +2003,7 @@ func _sheet_row(c: VBoxContainer, cfg: Dictionary) -> Button:
 	var right: String = String(cfg.get("right", ""))
 	if right != "":
 		var pill_bg: Color = cfg.get("pill_bg", Color(0, 0, 0, 0))
-		var right_l := _label(right, 12, cfg.get("right_color", PALETTE.wood))
+		var right_l := _label(right, 12, cfg.get("right_color", PALETTE.wood), 700)
 		right_l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		if pill_bg.a > 0.0:
 			# Gerçek para / gem fiyatı: prototipte yeşil hap içinde.
@@ -1982,11 +2014,11 @@ func _sheet_row(c: VBoxContainer, cfg: Dictionary) -> Button:
 			if pill_border.a > 0.0:
 				psb.border_color = pill_border
 				psb.set_border_width_all(2)
-			psb.set_corner_radius_all(10)
-			psb.content_margin_left = 12
-			psb.content_margin_right = 12
-			psb.content_margin_top = 8
-			psb.content_margin_bottom = 8
+			psb.set_corner_radius_all(20)
+			psb.content_margin_left = 24
+			psb.content_margin_right = 24
+			psb.content_margin_top = 16
+			psb.content_margin_bottom = 16
 			pill.add_theme_stylebox_override("panel", psb)
 			pill.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 			pill.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -2019,13 +2051,13 @@ func _row_badge(text: String) -> PanelContainer:
 	sb.bg_color = PALETTE.pill_cream
 	sb.border_color = PALETTE.gold
 	sb.set_border_width_all(2)
-	sb.set_corner_radius_all(10)
-	sb.set_content_margin_all(4)
+	sb.set_corner_radius_all(18)
+	sb.set_content_margin_all(8)
 	p.add_theme_stylebox_override("panel", sb)
-	p.custom_minimum_size = Vector2(38, 38)
+	p.custom_minimum_size = Vector2(60, 60)
 	p.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var l := _label(text, 11, PALETTE.wood)
+	var l := _label(text, 11, PALETTE.wood, 700)
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	p.add_child(l)
@@ -2193,8 +2225,11 @@ func _bar(c: VBoxContainer, ratio: float, fill: Color = PALETTE.gold) -> void:
 
 ## Verilen metin `max_w` piksele sığana kadar font boyutunu `base_size`'dan
 ## `min_size`'a kadar küçültür — oda plaketlerinde metin taşmasın diye.
-func _fit_font_size(text: String, max_w: float, base_size: int, min_size: int) -> int:
-	var font := ThemeDB.fallback_font
+func _fit_font_size(text: String, max_w: float, base_size: int, min_size: int,
+		weight := 500) -> int:
+	# Ölçüm, etiketin GERÇEKTEN çizeceği fontla yapılmalı: fallback_font ile
+	# ölçmek Figtree'ye geçtikten sonra sistematik olarak yanlış genişlik verir.
+	var font: Font = _font(weight)
 	for size in range(base_size, min_size - 1, -1):
 		var sz := roundi(size * UI_TEXT_SCALE)
 		if font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, sz).x <= max_w:
@@ -2202,13 +2237,38 @@ func _fit_font_size(text: String, max_w: float, base_size: int, min_size: int) -
 	return min_size
 
 
-func _label(text: String, size: int, color: Color) -> Label:
+## One FontVariation per weight, built once and shared — a Label only needs the
+## resource, and rebuilding them per label would allocate on every popup.
+var _font_cache := {}
+## variation_opentype is keyed by the OpenType tag as an INT, not by name: with
+## a "wght" string key the axis is silently ignored and every label renders at
+## the file's default instance — which for Figtree is Light 300, far thinner
+## than the 500-700 the design uses.
+@onready var _wght_tag: int = TextServerManager.get_primary_interface().name_to_tag("wght")
+
+
+func _font(weight: int, numeric := false) -> FontVariation:
+	var key := weight + (10000 if numeric else 0)
+	if not _font_cache.has(key):
+		var fv := FontVariation.new()
+		fv.base_font = FONT_NUM if numeric else FONT_UI
+		fv.variation_opentype = {_wght_tag: weight}
+		_font_cache[key] = fv
+	return _font_cache[key]
+
+
+## `weight` follows the design's CSS: 400 body, 500 meta, 600 labels, 700
+## titles. `numeric` swaps in Pixelify Sans, which the design uses for the coin
+## and gem counters only.
+func _label(text: String, size: int, color: Color, weight := 500,
+		numeric := false) -> Label:
 	var l := Label.new()
 	# Deliberately NOT tr(): Godot auto-translates Label.text on display and
 	# re-translates it when the locale changes, so the node must keep the
 	# English key. Strings already built with `%` are not keys and are wrapped
 	# with tr() at their own call site instead.
 	l.text = text
+	l.add_theme_font_override("font", _font(weight, numeric))
 	l.add_theme_font_size_override("font_size", roundi(size * UI_TEXT_SCALE))
 	l.add_theme_color_override("font_color", color)
 	return l
@@ -2219,8 +2279,8 @@ func _label(text: String, size: int, color: Color) -> Label:
 ## dizilip bozulurdu (autowrap min-width'i ~0'a indiriyor); bu yüzden ortak
 ## varsayılan yerine yalnızca uzun açıklama metinlerinde bilinçli kullanılır
 ## (Ayarlar/Vardiya/Profil popup'ları — kullanıcı isteği: "görünümü bozuk").
-func _label_wrap(text: String, size: int, color: Color) -> Label:
-	var l := _label(text, size, color)
+func _label_wrap(text: String, size: int, color: Color, weight := 500) -> Label:
+	var l := _label(text, size, color, weight)
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	return l
 
@@ -2235,12 +2295,14 @@ func _icon(path: String, px: int) -> TextureRect:
 	return t
 
 
-## Alt bar butonu: ikon üstte, etiket altta. Etikete b.get_meta("label") ile
-## erişilir (vardiya geri sayımı gibi canlı metinler için).
+## Alt bar butonu: karo ikon, ETİKETSİZ (kullanıcı isteği — Clash Royale'deki
+## gibi ikon alanı doldursun). Etiket düğümü yine kuruluyor ama ikonlu
+## sekmelerde gizli: b.get_meta("label") sözleşmesini bozmadan (canlı metinler
+## ve ikonsuz sekmeler onu kullanıyor) yazıyı kaldırmanın yolu bu.
 func _bar_button(icon_path: String, text: String) -> Button:
 	var b := Button.new()
 	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	b.custom_minimum_size = Vector2(0, 92)
+	b.custom_minimum_size = Vector2(0, 100)
 	for state in ["normal", "hover", "pressed", "disabled"]:
 		var sb := StyleBoxFlat.new()
 		sb.bg_color = PALETTE.bar_dark
@@ -2267,7 +2329,7 @@ func _bar_button(icon_path: String, text: String) -> Button:
 		box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		# Prototip karosu 42x38 / ikon 34'tü; kullanıcı geri bildirimi "ikonlar
 		# küçük" olduğu için karo ve ikon bir kademe büyütüldü.
-		box.custom_minimum_size = Vector2(52, 46)
+		box.custom_minimum_size = Vector2(92, 92)
 		var box_sb := StyleBoxFlat.new()
 		box_sb.bg_color = PALETTE.cream
 		box_sb.border_color = PALETTE.gold
@@ -2295,17 +2357,18 @@ func _bar_button(icon_path: String, text: String) -> Button:
 		box.set_meta("active_sb", box_sb)
 		box.set_meta("idle_sb", idle_sb)
 		box.add_theme_stylebox_override("panel", idle_sb)
-		var ico := _icon(icon_path, 42)
+		var ico := _icon(icon_path, 70)
 		ico.modulate.a = 0.72
 		box.add_child(ico)
 		wrap.add_child(box)
 		v.add_child(wrap)
 		b.set_meta("icon", ico)
 		b.set_meta("icon_box", box)
-	var l := _label(text, 18 if icon_path == "" else 12, PALETTE.cream_text)
+	var l := _label(text, 18 if icon_path == "" else 12, PALETTE.cream_text, 700)
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	l.modulate.a = 0.78
+	l.visible = icon_path == ""
 	v.add_child(l)
 	b.set_meta("label", l)
 	return b
@@ -2323,6 +2386,10 @@ func _set_bar_button_active(b: Button, active: bool) -> void:
 	var l: Label = b.get_meta("label")
 	l.modulate.a = 1.0 if active else 0.78
 	l.add_theme_color_override("font_color", PALETTE.gold_soft if active else PALETTE.cream_text)
+	# İkon karosu tek durum göstergesi kaldı (etiket gizli): aktifken bir tık
+	# büyüsün ki dokunulan sekme yazısız da okunsun.
+	box.scale = Vector2.ONE * (1.06 if active else 1.0)
+	box.pivot_offset = box.size / 2.0
 
 
 ## Kök yerleşim kenardan kenara olduğu için (bkz. _build_ui'daki margin),
@@ -2358,6 +2425,8 @@ func _button(text: String, size: int, bg: Color, fg: Color) -> Button:
 	# yüksekliği yüzlerce piksele şişiriyor (min-size hesaplama tuzağı).
 	# Uzun buton metinleri için elle "\n" ile satır kır (bkz. vardiya/otomatik
 	# yenileme butonları) — bu her zaman güvenli ve öngörülebilir.
+	# Every button in the design is 700.
+	b.add_theme_font_override("font", _font(700))
 	b.add_theme_font_size_override("font_size", roundi(size * UI_TEXT_SCALE))
 	b.add_theme_color_override("font_color", fg)
 	b.add_theme_color_override("font_hover_color", fg)
@@ -2414,11 +2483,13 @@ func _menu_btn_colors(kind: String) -> Dictionary:
 func _menu_button(text: String, size: int, kind: String = "outline") -> Button:
 	var col := _menu_btn_colors(kind)
 	var b := _button(text, size, col.bg, col.fg)
+	b.custom_minimum_size.y = TOUCH_MIN
 	for state in ["normal", "hover", "pressed", "disabled"]:
 		# _button kenarı zeminden türetiyor; menü dilinde kenar ayrı bir renk.
 		var sb := b.get_theme_stylebox(state) as StyleBoxFlat
 		sb.border_color = col.border
-		sb.set_corner_radius_all(10)
+		sb.set_corner_radius_all(20)
+		sb.set_content_margin_all(24)
 	return b
 
 
@@ -2574,7 +2645,9 @@ func _rebuild_hotel() -> void:
 	# Hap rengi haftalık temaya göre DEĞİŞMİYOR: prototipte sabit
 	# rgba(224,85,74,.9). Bazı tema accent'leri (Golden Age, Winter Tale)
 	# gökyüzünün üstünde soluk kalıyordu; tema adı zaten metinde yazıyor.
-	roof_theme_label.text = tr("Theme of the week: %s") % tr(String(theme.name))
+	# Yalnızca temanın adı: "Theme of the week: …" öneki hapı ekranın dışına
+	# taşıracak kadar uzundu ve zaten çipin bağlamı bunu söylüyor.
+	roof_theme_label.text = "✦ %s" % tr(String(theme.name))
 
 	var grid_cols := int(Game.eco.building.grid_cols)
 	var canvas_w := grid_cols * CELL_W
@@ -3158,7 +3231,7 @@ func _make_room_button(idx: int) -> Button:
 			# Dekorasyon dürtmesi: en ucuz eşya karşılanabiliyorsa yanıp sönen rozet.
 			var cheapest := Game.cheapest_item_price()
 			if cheapest > 0 and Game.coins >= cheapest:
-				b.add_child(_make_decorate_badge())
+				b.add_child(_make_decorate_badge(int(room.get("w", 1)) * CELL_W - CELL_GAP))
 		else:
 			var anchor_counts := {}
 			for item_id in room.items:
@@ -3336,7 +3409,7 @@ func _make_room_button(idx: int) -> Button:
 
 
 ## Boş misafir odasının sağ üstünde yanıp sönen altın "Dekore et!" rozeti.
-func _make_decorate_badge() -> Control:
+func _make_decorate_badge(max_w: float) -> Control:
 	var badge := PanelContainer.new()
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = PALETTE.gold
@@ -3350,11 +3423,23 @@ func _make_decorate_badge() -> Control:
 	badge.add_theme_stylebox_override("panel", sb)
 	badge.anchor_left = 1.0
 	badge.anchor_right = 1.0
-	badge.offset_left = -84
+	# Dar odada rozet, odanın soluna taşıyordu: kutu artık odanın genişliğiyle
+	# sınırlı ve yazı o genişliğe sığana kadar küçülüyor (bkz. _fit_font_size,
+	# oda plakasıyla aynı yöntem).
+	var text := tr("✦ Decorate!")
+	var room_w := max_w - 8.0
+	var size := _fit_font_size(text, room_w - 18.0, 11, 8, 700)
+	if _font(700).get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1,
+			roundi(size * UI_TEXT_SCALE)).x > room_w - 18.0:
+		# Tek hücrelik odaya kelime hiçbir boyutta sığmıyor; yıldız tek başına
+		# da "burada yapılacak bir şey var" diyor.
+		text = "✦"
+		size = 11
+	badge.offset_left = -minf(room_w, 150.0)
 	badge.offset_right = -4
 	badge.offset_top = 4
 	badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var l := _label("✦ Decorate!", 11, PALETTE.text)
+	var l := _label(text, size, PALETTE.text, 700)
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	badge.add_child(l)
@@ -4743,17 +4828,17 @@ func _popup_tab_row(c: VBoxContainer, tabs: Array, current: String, on_pick: Cal
 		# Hap sekme: `border-radius:999px; padding:7px 12px`. Seçili sekme
 		# BEYAZ + altın kenar, seçilmeyen krem zemine karışır — dolu altın
 		# sayfada tek bir yere ayrıldı (bkz. _menu_btn_colors "primary").
-		var b := _button(String(t[1]), 12,
+		var b := _button(String(t[1]), 11,
 			PALETTE.card if active else PALETTE.field,
 			PALETTE.text if active else PALETTE.muted)
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		for state in ["normal", "hover", "pressed", "disabled"]:
 			var sb := b.get_theme_stylebox(state) as StyleBoxFlat
 			sb.set_corner_radius_all(999)
-			sb.content_margin_top = 7
-			sb.content_margin_bottom = 7
-			sb.content_margin_left = 12
-			sb.content_margin_right = 12
+			sb.content_margin_top = 14
+			sb.content_margin_bottom = 14
+			sb.content_margin_left = 24
+			sb.content_margin_right = 24
 			sb.border_color = PALETTE.gold if active else PALETTE.field
 		b.pressed.connect(func(): on_pick.call(key))
 		row.add_child(b)
@@ -5081,8 +5166,8 @@ func _gem_tile(row: HBoxContainer, amount: int, price: String, popular: bool,
 	psb.set_corner_radius_all(9)
 	psb.content_margin_left = 4
 	psb.content_margin_right = 4
-	psb.content_margin_top = 6
-	psb.content_margin_bottom = 6
+	psb.content_margin_top = 10
+	psb.content_margin_bottom = 10
 	pill.add_theme_stylebox_override("panel", psb)
 	pill.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	v.add_child(pill)
