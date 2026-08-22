@@ -102,6 +102,7 @@ For the next 30 minutes,Önümüzdeki 30 dakika boyunca
 Watch,İzle
 Ad bonus started: ×2 income for 30 min!,Reklam bonusu başladı: 30 dk boyunca ×2 gelir!
 Start a shift,Vardiya başlat
+Start,Başlat
 Pick a length — the hourly cost is the same for all:,Bir süre seç — saatlik maliyet hepsinde aynı:
 cost %s · est. income ~%s,maliyet %s · tahmini gelir ~%s
 A %d-hour shift has started!,%d saatlik vardiya başladı!
@@ -264,6 +265,7 @@ Decor sets,Dekor setleri
 Place rooms yourself,Odaları kendin yerleştir
 Build Mode is on — drag a room from the shelf onto the building,İnşa Modu açık — raftan bir odayı binanın üstüne sürükle
 Prices are set in the store (Play Console) — the ones below are suggestions.,Fiyatlar mağazada (Play Console) belirlenir — aşağıdakiler örnektir.
+MOST POPULAR,EN POPÜLER
 %s added!,%s eklendi!
 "One-time purchases, no ads or timers involved","Tek seferlik satın alma; reklam ya da sayaç yok"
 Sound effects: %s,Ses efektleri: %s
@@ -304,6 +306,7 @@ Watch an ad — double it,Reklam izle — ikiye katla
 Offline earnings doubled — +%s coins!,Çevrimdışı kazanç ikiye katlandı — +%s altın!
 %dd %dh,%dg %dsa
 %dh %dm,%dsa %ddk
+%dh,%dsa
 %dm,%ddk
 Daily Reward,Günlük Ödül
 Day %d streak!,%d. gün serisi!
