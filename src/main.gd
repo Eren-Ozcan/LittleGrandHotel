@@ -4740,9 +4740,11 @@ func _popup_tab_row(c: VBoxContainer, tabs: Array, current: String, on_pick: Cal
 	for t in tabs:
 		var key: String = String(t[0])
 		var active: bool = key == current
-		# Prototipteki hap sekme: `border-radius:999px; padding:7px 12px`.
+		# Hap sekme: `border-radius:999px; padding:7px 12px`. Seçili sekme
+		# BEYAZ + altın kenar, seçilmeyen krem zemine karışır — dolu altın
+		# sayfada tek bir yere ayrıldı (bkz. _menu_btn_colors "primary").
 		var b := _button(String(t[1]), 12,
-			PALETTE.gold if active else PALETTE.card,
+			PALETTE.card if active else PALETTE.field,
 			PALETTE.text if active else PALETTE.muted)
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		for state in ["normal", "hover", "pressed", "disabled"]:
@@ -4752,7 +4754,7 @@ func _popup_tab_row(c: VBoxContainer, tabs: Array, current: String, on_pick: Cal
 			sb.content_margin_bottom = 7
 			sb.content_margin_left = 12
 			sb.content_margin_right = 12
-			sb.border_color = PALETTE.gold if active else PALETTE.facade_line
+			sb.border_color = PALETTE.gold if active else PALETTE.field
 		b.pressed.connect(func(): on_pick.call(key))
 		row.add_child(b)
 
@@ -5029,7 +5031,7 @@ func _gem_tile(row: HBoxContainer, amount: int, price: String, popular: bool,
 	var p := PanelContainer.new()
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = PALETTE.card
-	sb.border_color = PALETTE.pop_red if popular else PALETTE.facade_line
+	sb.border_color = PALETTE.gold if popular else PALETTE.facade_line
 	sb.set_border_width_all(2)
 	sb.set_corner_radius_all(13)
 	sb.content_margin_left = 9
@@ -5052,7 +5054,7 @@ func _gem_tile(row: HBoxContainer, amount: int, price: String, popular: bool,
 	if popular:
 		var badge := PanelContainer.new()
 		var bsb := StyleBoxFlat.new()
-		bsb.bg_color = PALETTE.pop_red
+		bsb.bg_color = PALETTE.gold
 		bsb.set_corner_radius_all(999)
 		bsb.content_margin_left = 8
 		bsb.content_margin_right = 8
@@ -5060,7 +5062,7 @@ func _gem_tile(row: HBoxContainer, amount: int, price: String, popular: bool,
 		bsb.content_margin_bottom = 2
 		badge.add_theme_stylebox_override("panel", bsb)
 		badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		badge.add_child(_label("MOST POPULAR", 8, PALETTE.cream))
+		badge.add_child(_label("MOST POPULAR", 8, PALETTE.text))
 		badge_slot.add_child(badge)
 
 	var ic := _icon("res://assets/ui/gem.svg", icon_px)
@@ -5073,10 +5075,9 @@ func _gem_tile(row: HBoxContainer, amount: int, price: String, popular: bool,
 
 	var pill := PanelContainer.new()
 	var psb := StyleBoxFlat.new()
-	psb.bg_color = PALETTE.pop_red if popular else PALETTE.pill_cream
-	if not popular:
-		psb.border_color = PALETTE.gold
-		psb.set_border_width_all(2)
+	psb.bg_color = PALETTE.gold if popular else PALETTE.pill_cream
+	psb.border_color = PALETTE.gold.darkened(0.18) if popular else PALETTE.gold
+	psb.set_border_width_all(2)
 	psb.set_corner_radius_all(9)
 	psb.content_margin_left = 4
 	psb.content_margin_right = 4
@@ -5085,7 +5086,7 @@ func _gem_tile(row: HBoxContainer, amount: int, price: String, popular: bool,
 	pill.add_theme_stylebox_override("panel", psb)
 	pill.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	v.add_child(pill)
-	var price_l := _label(price, 11, PALETTE.cream if popular else PALETTE.text)
+	var price_l := _label(price, 11, PALETTE.text)
 	price_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	pill.add_child(price_l)
 
