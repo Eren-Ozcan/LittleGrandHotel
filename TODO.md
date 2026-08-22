@@ -696,6 +696,41 @@ device. Setup, reasoning and the remaining manual step: `docs/cloud-save-setup.m
       `android/RELEASE_KEYSTORE_SECRETS.txt` (gitignored) — it belongs in a password manager,
       because one gitignored file is exactly how it went missing the first time.
 
+### START HERE — durum devri (2026-08-22 kapanışı)
+
+`master` push'landı (`99f17c4`). İki iş bu oturumda yapıldı, biri yarım kaldı.
+
+**Bitti — menü blokları IA tasarımına uyduruldu.** Kullanıcının işaret ettiği
+fark blok kompozisyonuydu, renk değil. Mağaza ▸ Elmas artık üçlü karo ızgarası
+(`_gem_tile`); ortadaki karo kırmızı kenarlı, `EN POPÜLER` rozetli, ikon boyu
+paketle büyüyor. Para fiyatları dolu yeşil hap yerine krem zemin + altın kenarlı
+hapta — yeşil oyunun geri kalanında "kazanç" rengi. `_sheet_row` iki yeni anahtar
+aldı: `pill_border` ve `badge` (`_row_badge` ile 38px krem kare). Vardiya
+satırları süre rozeti (`1sa`/`4sa`/`8sa`/`24sa`) + `Başlat` butonuyla, otomatik
+yenileme satırları aynı rozet + coin hapıyla çiziliyor. `i18n_check`, `ui_check`
+(134 kontrol), `store_compliance_check` ve `iap_check` geçti. İnşa, Personel,
+Görevler ve Ayarlar ekranları prototiple zaten uyumlu, onlara dokunulmadı.
+
+**Yarım kaldı — cihazda reklam testi, telefonda ağ yok.** Oyun gerçek telefonda
+(POT-LX1, Android 10) kuruldu ve açıldı: çökme yok, Vulkan çalışıyor, AdMob SDK'sı
+ayağa kalkıyor. Ama logcat `ERR_INTERNET_DISCONNECTED` veriyor — wifi açık, bağlı
+ağ yok, dolayısıyla hiçbir reklam yüklenemedi. Telefon bir ağa bağlanınca ödüllü
+(vardiya ekranı), geçiş (vardiya bitişi), App Open (arka plandan dönüş) ve UMP
+onam akışı sırayla denenmeli.
+
+Test derlemesi Google'ın **resmi test reklam kimlikleriyle** yapıldı; cihaz AdMob
+panelinde test cihazı olarak kayıtlı değil ve canlı kimliklerle kendi cihazından
+reklam çekmek geçersiz trafik sayılabilir. Yamalar (`project.godot`,
+`src/autoload/ads.gd`, `export_presets.cfg`) test sonrası geri alındı, repo'ya
+girmedi. Kalıcı çözüm cihazı panelde test cihazı olarak kaydetmek.
+
+Kurulu APK'lar: telefonda `build/android/lgh-phone.apk` (arm64, Vulkan),
+emülatörde (`lgh_test`) `build/android/lgh-emu-gl3.apk` (x86_64, GL
+Compatibility — emülatörde Vulkan hâlâ patlıyor). Telefondaki eski kurulum
+imza uyuşmazlığı verdiği için kullanıcının onayıyla kaldırıldı; oradaki yerel
+kayıt sıfırlandı. `android/build/` altında export artıkları duruyor, bilerek
+commit edilmedi.
+
 ### START HERE — durum devri (2026-08-21 kapanışı)
 
 Repo temiz, `master` = `origin/master`, **paketin tamamı yeşil: 16 test,
