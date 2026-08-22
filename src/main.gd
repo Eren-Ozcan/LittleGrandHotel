@@ -2067,11 +2067,12 @@ func _buy_row(c: VBoxContainer, icon_path: String, title: String, meta: String,
 ## Birincil eylem: prototipteki sola hizalı kahverengi buton (başlık krem,
 ## alt satır soluk krem).
 func _action(c: VBoxContainer, title: String, sub: String = "",
-		enabled: bool = true, bg: Color = PALETTE.wood) -> Button:
+		enabled: bool = true, kind: String = "outline") -> Button:
+	var col := _menu_btn_colors(kind)
 	return _sheet_row(c, {
-		"bg": bg, "border": bg.darkened(0.25), "radius": 13,
-		"title": title, "title_size": 14, "title_color": PALETTE.cream_text,
-		"meta": sub, "meta_color": PALETTE.cream_dark, "enabled": enabled,
+		"bg": col.bg, "border": col.border, "radius": 12,
+		"title": title, "title_size": 14, "title_color": col.fg,
+		"meta": sub, "meta_color": col.meta, "enabled": enabled,
 	})
 
 
@@ -2081,14 +2082,10 @@ func _danger(c: VBoxContainer, title: String, sub: String = "", solid: bool = fa
 	if solid:
 		return _sheet_row(c, {
 			"bg": PALETTE.banner_red, "border": PALETTE.banner_red.darkened(0.2),
-			"radius": 13, "title": title, "title_size": 14,
+			"radius": 12, "title": title, "title_size": 14,
 			"title_color": PALETTE.cream, "meta": sub, "meta_color": PALETTE.red_soft,
 		})
-	return _sheet_row(c, {
-		"bg": PALETTE.red_soft, "border": PALETTE.banner_red, "radius": 13,
-		"title": title, "title_size": 14, "title_color": PALETTE.red_text,
-		"meta": sub, "meta_color": PALETTE.red_text,
-	})
+	return _action(c, title, sub, true, "danger")
 
 
 ## Bilgi/uyarı kutusu. kind: "gold" (vurgu), "warn" (kırmızı), "dark" (plum).
@@ -2389,6 +2386,47 @@ func _button_icon(b: Button, path: String) -> void:
 	b.expand_icon = true
 	b.add_theme_constant_override("icon_max_width", 26)
 	b.add_theme_constant_override("h_separation", 8)
+
+
+## Menü sayfalarının buton dili — üç biçim, hepsi 10 piksel köşe:
+##
+## - "outline": krem zemin, altın kenar, koyu kahve yazı. Sayfadaki normal
+##   eylemler. Bir kartta yan yana iki eylem varsa ikisi de budur.
+## - "primary": dolu altın, yine koyu kahve yazı. Sayfanın TEK vurgusu.
+## - "danger": yumuşak kırmızı zemin, kırmızı kenar ve yazı.
+##
+## Kırmızı ve yeşil dolgular menüden kalktı: kırmızı yalnızca tehlike, yeşil
+## yalnızca dünyadaki kazanç anlamına geliyor. Dünya HUD'u (zoom, alt bar,
+## merkezdeki büyük buton) bu dilin dışında, kendi biçiminde kalır.
+func _menu_btn_colors(kind: String) -> Dictionary:
+	match kind:
+		"primary":
+			return {"bg": PALETTE.gold, "border": PALETTE.gold.darkened(0.18),
+				"fg": PALETTE.text, "meta": PALETTE.wood_dark}
+		"danger":
+			return {"bg": PALETTE.red_soft, "border": PALETTE.banner_red,
+				"fg": PALETTE.red_text, "meta": PALETTE.red_text}
+	return {"bg": PALETTE.pill_cream, "border": PALETTE.gold,
+		"fg": PALETTE.text, "meta": PALETTE.muted}
+
+
+## _button'ın menü biçimi: _menu_btn_colors'daki üç dilden biri, sabit köşe.
+func _menu_button(text: String, size: int, kind: String = "outline") -> Button:
+	var col := _menu_btn_colors(kind)
+	var b := _button(text, size, col.bg, col.fg)
+	for state in ["normal", "hover", "pressed", "disabled"]:
+		# _button kenarı zeminden türetiyor; menü dilinde kenar ayrı bir renk.
+		var sb := b.get_theme_stylebox(state) as StyleBoxFlat
+		sb.border_color = col.border
+		sb.set_corner_radius_all(10)
+	return b
+
+
+## Satırın sağındaki eylem hapı ("Start", "Watch"): dolu altın, koyu kahve
+## yazı — _menu_button'ın "primary" biçiminin satır içindeki karşılığı.
+func _action_pill_cfg() -> Dictionary:
+	var col := _menu_btn_colors("primary")
+	return {"pill_bg": col.bg, "pill_border": col.border, "right_color": col.fg}
 
 
 # --- Yenileme ----------------------------------------------------------
@@ -3873,7 +3911,7 @@ func _show_modal(cfg: Dictionary) -> void:
 	var body_builder: Callable = cfg.get("body", Callable())
 	if body_builder.is_valid():
 		body_builder.call(pv)
-	var action_b := _button(String(cfg.get("action_text", "OK")), 16, PALETTE.green_deep, PALETTE.cream_text)
+	var action_b := _menu_button(String(cfg.get("action_text", "OK")), 16, "primary")
 	action_b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	pv.add_child(action_b)
 	var closed := false
@@ -3889,7 +3927,7 @@ func _show_modal(cfg: Dictionary) -> void:
 			on_action.call())
 	var secondary_text: String = cfg.get("secondary_text", "")
 	if secondary_text != "":
-		var sec_b := _button(secondary_text, 15, PALETTE.wood, PALETTE.cream_text)
+		var sec_b := _menu_button(secondary_text, 15)
 		sec_b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		var secondary_icon: String = cfg.get("secondary_icon", "")
 		if secondary_icon != "":
@@ -3945,11 +3983,11 @@ func _show_rename_hotel_modal() -> void:
 			return
 		closed = true
 		dim.queue_free()
-	var cancel_b := _button("Cancel", 15, PALETTE.wood_dark, PALETTE.cream_text)
+	var cancel_b := _menu_button("Cancel", 15)
 	cancel_b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	cancel_b.pressed.connect(do_close)
 	row.add_child(cancel_b)
-	var save_b := _button("Save", 15, PALETTE.green_deep, PALETTE.cream_text)
+	var save_b := _menu_button("Save", 15, "primary")
 	save_b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var do_save := func():
 		var new_name := field.text.strip_edges()
@@ -4067,7 +4105,7 @@ func _build_shift_popup(c: VBoxContainer) -> void:
 		var hk_active := Game.housekeeping_active()
 		var skip_b := _action(c, tr("Finish now — %s") % _count(gem_cost, "gem"),
 			"Ends the shift immediately and banks the earnings.",
-			Game.gems >= gem_cost, PALETTE.green_deep)
+			Game.gems >= gem_cost, "primary")
 		# "Emin misin?" durumu butonun META'sında DEĞİL, üye değişkende durur:
 		# popup her state_changed'de baştan kuruluyor (oda kirlenmesi bile
 		# yetiyor), meta ile tutulunca iki dokunuş arasında silinip vardiya
@@ -4096,8 +4134,13 @@ func _build_shift_popup(c: VBoxContainer) -> void:
 				tr("Income ×%.1f · %d min left") % [Game.boost_mult, maxi(0, left_min)],
 				"", false)
 		else:
-			var boost_b := _row(c, "res://assets/ui/ad_video.png",
-				"Watch an ad — ×2 income", "For the next 30 minutes", "Watch", true, PALETTE.green_deep)
+			var boost_cfg := _action_pill_cfg()
+			boost_cfg.merge({
+				"icon": "res://assets/ui/ad_video.png",
+				"title": "Watch an ad — ×2 income",
+				"meta": "For the next 30 minutes", "right": "Watch",
+			})
+			var boost_b := _sheet_row(c, boost_cfg)
 			boost_b.pressed.connect(func():
 				Ads.show_rewarded(func():
 					Game.start_income_boost(30.0, 2.0)
@@ -4112,13 +4155,14 @@ func _build_shift_popup(c: VBoxContainer) -> void:
 		var cost := Game.shift_cost(hours)
 		var est: float = Game.hourly_income() * hours
 		# Tasarımdaki vardiya bloğu: solda süre rozeti, sağda birincil buton.
-		var b := _sheet_row(c, {
+		var shift_cfg := _action_pill_cfg()
+		shift_cfg.merge({
 			"badge": tr("%dh") % hours,
 			"title": _count(hours, "hour"),
 			"meta": tr("cost %s · est. income ~%s") % [_fmt(cost), _fmt(int(est))],
-			"right": "Start", "right_color": PALETTE.cream_text,
-			"pill_bg": PALETTE.pop_red, "enabled": Game.coins >= cost,
+			"right": "Start", "enabled": Game.coins >= cost,
 		})
+		var b := _sheet_row(c, shift_cfg)
 		b.pressed.connect(func():
 			if Game.start_shift(hours):
 				_play("shift")
@@ -4183,7 +4227,7 @@ func _build_staff_popup(c: VBoxContainer) -> void:
 	var next_income_mult := pow(1.0 + float(Game.eco.staff_upgrade.income_boost_pct), tier + 1) - 1.0
 	var b := _action(c, tr("Upgrade tier — %s coins") % _fmt(cost),
 		tr("Next: -%%%.0f cost, +%%%.0f income") % [next_cost_mult * 100.0, next_income_mult * 100.0],
-		Game.can_buy_staff_upgrade())
+		Game.can_buy_staff_upgrade(), "primary")
 	b.pressed.connect(func():
 		if Game.buy_staff_upgrade():
 			_play("buy")
@@ -4214,7 +4258,7 @@ func _build_room_popup(c: VBoxContainer) -> void:
 		var clean_b := _action(c,
 			tr("Clean this room") + ("" if clean_cost <= 0 else tr(" — %s coins") % _fmt(clean_cost)),
 			"Or open Cleaning mode in Staff to clear several rooms in a row.",
-			clean_cost <= 0 or Game.coins >= clean_cost, PALETTE.green_deep)
+			clean_cost <= 0 or Game.coins >= clean_cost, "primary")
 		clean_b.pressed.connect(func():
 			if Game.clean_room(selected_room):
 				_play("clean")
@@ -4333,7 +4377,7 @@ func _add_manage_buttons(c: VBoxContainer) -> void:
 		c.add_child(_label("Turn on Build Mode first to move or sell.", 12, PALETTE.muted))
 		return
 	var ridx := selected_room
-	var mv := _action(c, "Move room", "Pick an empty block for it", true, PALETTE.wood_dark)
+	var mv := _action(c, "Move room", "Pick an empty block for it")
 	mv.pressed.connect(func():
 		move_from = String(Game.rooms[ridx].id)
 		_close_popup()
@@ -4433,7 +4477,7 @@ func _add_prestige_rows(c: VBoxContainer) -> void:
 		c.add_child(_label(tr("Level %d of %d") % [Game.level(), min_lv], 11, PALETTE.muted))
 		return
 	var next_mult: float = Game.prestige_mult() + float(Game.eco.prestige.mult_gain)
-	var p_b := _action(c, "Prestige the hotel", tr("New multiplier ×%.2f") % next_mult, true, PALETTE.green_deep)
+	var p_b := _action(c, "Prestige the hotel", tr("New multiplier ×%.2f") % next_mult, true, "primary")
 	p_b.pressed.connect(func():
 		if p_b.get_meta("armed", false):
 			Game.do_prestige()
@@ -4517,7 +4561,7 @@ func _build_cloud_section(c: VBoxContainer) -> void:
 	if CloudSave.is_linking():
 		_inert(v, "Waiting for your browser…")
 	else:
-		var link_b := _action(v, "Link with Google", "", true, PALETTE.green_deep)
+		var link_b := _action(v, "Link with Google", "", true, "primary")
 		link_b.pressed.connect(func():
 			link_b.disabled = true
 			_row_set(link_b, "Waiting for your browser…")
@@ -4619,11 +4663,11 @@ func _show_cloud_conflict_modal(on_closed: Callable = Callable()) -> void:
 		int(cloud.get("level", 0)), int(cloud.get("coins", 0)),
 		int(cloud.get("gems", 0)), int(cloud.get("rooms", 0)),
 		_fmt_relative(cloud_at) if cloud_at > 0.0 else tr("time unknown"),
-		"Use this one", PALETTE.green_deep)
+		"Use this one")
 	cols.add_child(cloud_card)
 	var local_card := _cloud_side_card("This device",
 		Game.level(), Game.coins, Game.gems, Game.rooms.size(), "now",
-		"Use this one", PALETTE.wood_dark)
+		"Use this one")
 	cols.add_child(local_card)
 
 	var closed := false
@@ -4660,7 +4704,7 @@ func _show_cloud_conflict_modal(on_closed: Callable = Callable()) -> void:
 ## Buton çağırana `get_meta("button")` ile döner (kart oluşturulurken kapanış
 ## callable'ı henüz tanımlı değil).
 func _cloud_side_card(title: String, lv: int, coins: int, gems: int,
-		rooms: int, when: String, action_text: String, accent: Color) -> PanelContainer:
+		rooms: int, when: String, action_text: String) -> PanelContainer:
 	var p := PanelContainer.new()
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = PALETTE.card
@@ -4680,7 +4724,7 @@ func _cloud_side_card(title: String, lv: int, coins: int, gems: int,
 	box.add_child(_label(_count(gems, "gem"), 13, PALETTE.text))
 	box.add_child(_label(_count(rooms, "room"), 13, PALETTE.text))
 	box.add_child(_spacer_y(2))
-	var b := _button(action_text, 13, accent, PALETTE.cream_text)
+	var b := _menu_button(action_text, 13)
 	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	box.add_child(b)
 	p.set_meta("button", b)
@@ -4957,7 +5001,7 @@ func _build_build_popup(c: VBoxContainer) -> void:
 
 	if Game.floors < int(Game.eco.building.max_floors):
 		var f_b := _action(c, tr("Unlock a new floor — %s coins") % _fmt(Game.floor_price()),
-			"", Game.can_buy_floor(), PALETTE.wood_dark)
+			"", Game.can_buy_floor(), "primary")
 		f_b.pressed.connect(func():
 			if Game.buy_floor():
 				_play("buy")
@@ -4967,7 +5011,7 @@ func _build_build_popup(c: VBoxContainer) -> void:
 	_section(c, "Decor sets")
 	_add_offer_rows(c)
 
-	var bm_b := _action(c, "✎ Open Build Mode", "Place rooms yourself", true, PALETTE.wood_dark)
+	var bm_b := _action(c, "✎ Open Build Mode", "Place rooms yourself")
 	bm_b.pressed.connect(func():
 		build_mode_button.button_pressed = true
 		_close_popup()
@@ -5111,7 +5155,7 @@ func _add_premium_teaser(c: VBoxContainer) -> void:
 
 func _build_settings_popup(c: VBoxContainer) -> void:
 	var s_b := _action(c, tr("Sound effects: %s") % (tr("On") if Game.sound_on else tr("Off")), "",
-		true, PALETTE.wood if Game.sound_on else PALETTE.wood_dark)
+		true, "primary" if Game.sound_on else "outline")
 	s_b.pressed.connect(func():
 		Game.sound_on = not Game.sound_on
 		Game.save_game()
@@ -5119,7 +5163,7 @@ func _build_settings_popup(c: VBoxContainer) -> void:
 		_rebuild_popup())
 
 	var m_b := _action(c, tr("Lobby music: %s") % (tr("On") if Game.music_on else tr("Off")), "",
-		true, PALETTE.wood if Game.music_on else PALETTE.wood_dark)
+		true, "primary" if Game.music_on else "outline")
 	m_b.pressed.connect(func():
 		Game.music_on = not Game.music_on
 		music_player.playing = Game.music_on
