@@ -18,6 +18,10 @@ const PALETTE := {
 	"green_soft": Color("e7f6ec"),
 	"chip_dark": Color(0.184, 0.141, 0.094, 0.62),
 	"red_text": Color("b8402f"),
+	# Fiyat hapının zemini ve vurgulu paketin kırmızısı (tasarımdaki mağaza
+	# blokları: krem hap + altın kenar, ortadaki paket dolu kırmızı).
+	"pill_cream": Color("fff5dc"),
+	"pop_red": Color("b23a2e"),
 	"gold_notice": Color("fff9ea"),
 	"field": Color("f7f1e2"),
 	"plum_text": Color("e6ddf2"),
@@ -1917,7 +1921,7 @@ func _to_upper(s: String) -> String:
 ##
 ## cfg anahtarları (hepsi isteğe bağlı): bg, border, radius, icon, icon_px,
 ## title, title_size, title_color, meta, meta_color, right, right_color,
-## pill_bg, enabled.
+## pill_bg, pill_border, enabled.
 func _sheet_row(c: VBoxContainer, cfg: Dictionary) -> Button:
 	var p := PanelContainer.new()
 	var sb := StyleBoxFlat.new()
@@ -1942,7 +1946,12 @@ func _sheet_row(c: VBoxContainer, cfg: Dictionary) -> Button:
 	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	p.add_child(h)
 	var icon_path: String = String(cfg.get("icon", ""))
-	if icon_path != "":
+	var badge_text: String = String(cfg.get("badge", ""))
+	if badge_text != "":
+		# Tasarımdaki vardiya bloğunun baş harfi: 38x38 krem kare, altın kenar,
+		# içinde kısa etiket ("4s"). İkonun yerini alır.
+		h.add_child(_row_badge(badge_text))
+	elif icon_path != "":
 		var ic := _icon(icon_path, int(cfg.get("icon_px", 34)))
 		ic.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		h.add_child(ic)
@@ -1969,6 +1978,10 @@ func _sheet_row(c: VBoxContainer, cfg: Dictionary) -> Button:
 			var pill := PanelContainer.new()
 			var psb := StyleBoxFlat.new()
 			psb.bg_color = pill_bg
+			var pill_border: Color = cfg.get("pill_border", Color(0, 0, 0, 0))
+			if pill_border.a > 0.0:
+				psb.border_color = pill_border
+				psb.set_border_width_all(2)
 			psb.set_corner_radius_all(10)
 			psb.content_margin_left = 12
 			psb.content_margin_right = 12
@@ -1997,6 +2010,28 @@ func _sheet_row(c: VBoxContainer, cfg: Dictionary) -> Button:
 	return b
 
 
+## _sheet_row'un baş rozeti (bkz. cfg.badge): kare krem kutu, altın kenar,
+## ortalanmış kısa metin. Tasarımda süre/adet gibi tek bakışta okunan değerler
+## ikon yerine burada duruyor.
+func _row_badge(text: String) -> PanelContainer:
+	var p := PanelContainer.new()
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = PALETTE.pill_cream
+	sb.border_color = PALETTE.gold
+	sb.set_border_width_all(2)
+	sb.set_corner_radius_all(10)
+	sb.set_content_margin_all(4)
+	p.add_theme_stylebox_override("panel", sb)
+	p.custom_minimum_size = Vector2(38, 38)
+	p.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var l := _label(text, 11, PALETTE.wood)
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	p.add_child(l)
+	return p
+
+
 ## _sheet_row ile kurulan bir satırın metinlerini sonradan değiştirir
 ## (iki adımlı onaylar: "Are you sure? Tap again").
 func _row_set(b: Button, title: String, meta: String = "") -> void:
@@ -2017,13 +2052,15 @@ func _row(c: VBoxContainer, icon_path: String, title: String, meta: String,
 	})
 
 
-## Gerçek para / gem ile satılan satır: sağdaki fiyat yeşil hap içinde.
+## Gerçek para / gem ile satılan satır: sağdaki fiyat, tasarımdaki krem zeminli
+## altın kenarlı hapın içinde. Dolu yeşil hap oyunun geri kalanında "kazanç"
+## rengi olduğu için mağaza fiyatlarında kullanılmıyor.
 func _buy_row(c: VBoxContainer, icon_path: String, title: String, meta: String,
 		price: String, enabled: bool = true) -> Button:
 	return _sheet_row(c, {
 		"icon": icon_path, "title": title, "meta": meta, "right": price,
-		"right_color": PALETTE.cream_text, "pill_bg": PALETTE.green_deep,
-		"enabled": enabled,
+		"right_color": PALETTE.text, "pill_bg": PALETTE.pill_cream,
+		"pill_border": PALETTE.gold, "enabled": enabled,
 	})
 
 
@@ -4074,9 +4111,14 @@ func _build_shift_popup(c: VBoxContainer) -> void:
 	for hours: int in [1, 4, 8, 24]:
 		var cost := Game.shift_cost(hours)
 		var est: float = Game.hourly_income() * hours
-		var b := _row(c, "res://assets/ui/icon_clock.svg", _count(hours, "hour"),
-			tr("cost %s · est. income ~%s") % [_fmt(cost), _fmt(int(est))],
-			"", Game.coins >= cost)
+		# Tasarımdaki vardiya bloğu: solda süre rozeti, sağda birincil buton.
+		var b := _sheet_row(c, {
+			"badge": tr("%dh") % hours,
+			"title": _count(hours, "hour"),
+			"meta": tr("cost %s · est. income ~%s") % [_fmt(cost), _fmt(int(est))],
+			"right": "Start", "right_color": PALETTE.cream_text,
+			"pill_bg": PALETTE.pop_red, "enabled": Game.coins >= cost,
+		})
 		b.pressed.connect(func():
 			if Game.start_shift(hours):
 				_play("shift")
@@ -4094,8 +4136,13 @@ func _add_auto_renew_shop(c: VBoxContainer) -> void:
 	c.add_child(_label_wrap("While you have hours banked, a finished shift renews itself for the same length if you can afford it, spending that many hours from your balance — so the hotel keeps earning while you are away.", 11, PALETTE.muted))
 	for hours: int in [1, 4, 8, 24]:
 		var ar_cost := Game.auto_renew_buy_cost(hours)
-		var ar_b := _row(c, "", tr("Buy %s of auto-renew") % _count(hours, "hour"), "",
-			tr("%s coins") % _fmt(ar_cost), Game.coins >= ar_cost)
+		var ar_b := _sheet_row(c, {
+			"badge": tr("%dh") % hours,
+			"title": tr("Buy %s of auto-renew") % _count(hours, "hour"),
+			"right": tr("%s coins") % _fmt(ar_cost), "right_color": PALETTE.text,
+			"pill_bg": PALETTE.pill_cream, "pill_border": PALETTE.gold,
+			"enabled": Game.coins >= ar_cost,
+		})
 		ar_b.pressed.connect(func():
 			if Game.buy_auto_renew(hours):
 				Game.save_game()
@@ -4927,13 +4974,104 @@ func _build_build_popup(c: VBoxContainer) -> void:
 		_show_toast("Build Mode is on — drag a room from the shelf onto the building"))
 
 
+## Tasarımdaki elmas paketi karosu: beyaz kutu, ortalanmış ikon + miktar, altta
+## tam genişlik fiyat hapı. `popular` olan karo kırmızı kenarlı, dolu kırmızı
+## fiyat hapı ve üstünde "MOST POPULAR" rozeti taşır.
+##
+## Rozet, karonun İÇİNDE en üstte durur ve rozetsiz karolar aynı yükseklikte
+## boş bir yuva alır — böylece üç karonun ikonları aynı hizada kalır.
+func _gem_tile(row: HBoxContainer, amount: int, price: String, popular: bool,
+		icon_px: int) -> Button:
+	var p := PanelContainer.new()
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = PALETTE.card
+	sb.border_color = PALETTE.pop_red if popular else PALETTE.facade_line
+	sb.set_border_width_all(2)
+	sb.set_corner_radius_all(13)
+	sb.content_margin_left = 9
+	sb.content_margin_right = 9
+	sb.content_margin_top = 9
+	sb.content_margin_bottom = 11
+	p.add_theme_stylebox_override("panel", sb)
+	p.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(p)
+
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 6)
+	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	p.add_child(v)
+
+	var badge_slot := CenterContainer.new()
+	badge_slot.custom_minimum_size = Vector2(0, 18)
+	badge_slot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	v.add_child(badge_slot)
+	if popular:
+		var badge := PanelContainer.new()
+		var bsb := StyleBoxFlat.new()
+		bsb.bg_color = PALETTE.pop_red
+		bsb.set_corner_radius_all(999)
+		bsb.content_margin_left = 8
+		bsb.content_margin_right = 8
+		bsb.content_margin_top = 2
+		bsb.content_margin_bottom = 2
+		badge.add_theme_stylebox_override("panel", bsb)
+		badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		badge.add_child(_label("MOST POPULAR", 8, PALETTE.cream))
+		badge_slot.add_child(badge)
+
+	var ic := _icon("res://assets/ui/gem.svg", icon_px)
+	ic.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	v.add_child(ic)
+
+	var amount_l := _label(_fmt(amount), 15 if popular else 13, PALETTE.text)
+	amount_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	v.add_child(amount_l)
+
+	var pill := PanelContainer.new()
+	var psb := StyleBoxFlat.new()
+	psb.bg_color = PALETTE.pop_red if popular else PALETTE.pill_cream
+	if not popular:
+		psb.border_color = PALETTE.gold
+		psb.set_border_width_all(2)
+	psb.set_corner_radius_all(9)
+	psb.content_margin_left = 4
+	psb.content_margin_right = 4
+	psb.content_margin_top = 6
+	psb.content_margin_bottom = 6
+	pill.add_theme_stylebox_override("panel", psb)
+	pill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	v.add_child(pill)
+	var price_l := _label(price, 11, PALETTE.cream if popular else PALETTE.text)
+	price_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	pill.add_child(price_l)
+
+	# Satır primitifiyle aynı hile: görünen kutu panel, tıklama üstteki
+	# şeffaf buton (bkz. _sheet_row).
+	var b := Button.new()
+	b.focus_mode = Control.FOCUS_NONE
+	for state in ["normal", "hover", "pressed", "disabled", "focus"]:
+		b.add_theme_stylebox_override(state, StyleBoxEmpty.new())
+	b.set_meta("title_label", amount_l)
+	b.set_meta("panel", p)
+	p.add_child(b)
+	return b
+
+
 func _build_gems_popup(c: VBoxContainer) -> void:
 	c.add_child(_label_wrap("Prices are set in the store (Play Console) — the ones below are suggestions.", 11, PALETTE.muted))
-	for pack in GEM_PACKS:
+	# Tasarımdaki blok: paketler alt alta satır değil, yan yana üçlü karo —
+	# oyuncu üçünü tek bakışta karşılaştırsın diye. Ortadaki vurgulu.
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	c.add_child(row)
+	# İkon boyu paketle birlikte büyür (tasarım: 26 / 30 / 34 px).
+	var icon_sizes := [26, 30, 34]
+	for i in GEM_PACKS.size():
+		var pack: Dictionary = GEM_PACKS[i]
 		var product: String = pack.product
 		var amount: int = pack.gems
-		var b := _buy_row(c, "res://assets/ui/gem.svg", _count(amount, "gem"), "",
-			IAP.price_for(pack.product, pack.price))
+		var b := _gem_tile(row, amount, IAP.price_for(product, pack.price),
+			i == 1, int(icon_sizes[mini(i, icon_sizes.size() - 1)]))
 		b.pressed.connect(func():
 			IAP.purchase(product, func(ok: bool):
 				if ok:
