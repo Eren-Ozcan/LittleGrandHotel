@@ -1,0 +1,5 @@
+# Godot regenerates the Android build template on every export and writes CRLF
+# line endings. With core.autocrlf=true that showed up as ~43 files "modified"
+# with an empty diff, which made `git pull --rebase` refuse to run. Pin the
+# generated template to LF so an export no longer dirties the tree.
+android/build/** text eol=lf
