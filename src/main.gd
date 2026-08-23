@@ -2540,12 +2540,14 @@ func _edge_pad(parent: Node, top: int = 0, bottom: int = 0) -> MarginContainer:
 
 func _spacer_x(px: int) -> Control:
 	var c := Control.new()
+	c.mouse_filter = MOUSE_PASSTHROUGH
 	c.custom_minimum_size = Vector2(px, 0)
 	return c
 
 
 func _spacer_y(px: int) -> Control:
 	var c := Control.new()
+	c.mouse_filter = MOUSE_PASSTHROUGH
 	c.custom_minimum_size = Vector2(0, px)
 	return c
 
@@ -2617,6 +2619,9 @@ func _menu_btn_colors(kind: String) -> Dictionary:
 func _menu_button(text: String, size: int, kind: String = "outline") -> Button:
 	var col := _menu_btn_colors(kind)
 	var b := _button(text, size, col.bg, col.fg)
+	# Yalnızca modallerde kullanılıyor ve modalin gövdesi kaydırılabilir
+	# (bkz. _modal_shell) — sürükleme butonun üstünden de geçmeli.
+	b.mouse_filter = MOUSE_SCROLLABLE
 	b.custom_minimum_size.y = TOUCH_MIN
 	for state in ["normal", "hover", "pressed", "disabled"]:
 		# _button kenarı zeminden türetiyor; menü dilinde kenar ayrı bir renk.
@@ -4952,6 +4957,7 @@ func _show_cloud_conflict_modal(on_closed: Callable = Callable()) -> void:
 func _cloud_side_card(title: String, lv: int, coins: int, gems: int,
 		rooms: int, when: String, action_text: String) -> PanelContainer:
 	var p := PanelContainer.new()
+	p.mouse_filter = MOUSE_PASSTHROUGH
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = PALETTE.card
 	sb.border_color = PALETTE.facade_line
@@ -5698,6 +5704,7 @@ func _daily_strip(c: VBoxContainer, cycle: Array, index: int) -> void:
 		var today := i == index
 		var past := i < index
 		var p := PanelContainer.new()
+		p.mouse_filter = MOUSE_PASSTHROUGH
 		var sb := StyleBoxFlat.new()
 		sb.bg_color = PALETTE.gold_soft if today else (PALETTE.cream_dark if past else PALETTE.card)
 		sb.border_color = PALETTE.gold if today else PALETTE.facade_line
