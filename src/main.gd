@@ -94,6 +94,18 @@ const MOUSE_SCROLLABLE := Control.MOUSE_FILTER_PASS
 ## 1.5 stretch: past finger jitter, well short of a deliberate swipe.
 const SCROLL_DEADZONE := 12
 
+## Modaller popup katmanının ÜSTÜNDE durmalı. `overlay` (popup) z_index 100
+## ile çiziliyor; modaller 90/95'teydi, yani açık bir popup varken modal onun
+## ARKASINA düşüyordu. Görünmez olması yarısı: bulut çakışma modalı bir de
+## `_cloud_conflict_open` bayrağını kaldırdığı için "Bir kayıt seç" düğmesi o
+## andan sonra hiçbir şey yapmıyordu — çakışma çözülemiyor, bulut yedeklemesi
+## kilitli kalıyordu. Gerçek cihazda hesap bağlandıktan sonra tam olarak bu
+## yaşandı. Toast (110) bilerek modallerin de üstünde kalır.
+const MODAL_Z := 105
+## Çakışma ekranı diğer modallerin de üstünde: hangi kaydın devam edeceği
+## belli olmadan oynanmamalı (bkz. _show_cloud_conflict_modal).
+const MODAL_Z_CONFLICT := 106
+
 ## Modal kartın ekran kenarına bırakacağı en az boşluk, viewport pikseli —
 ## güvenli alanın (çentik, sistem çubukları) ÜSTÜNE eklenir. Kart bu payı
 ## yiyecek kadar uzarsa gövdesi kaydırmaya döner (bkz. _modal_shell).
@@ -4161,7 +4173,7 @@ func _show_simple_modal(title: String, text: String, action_text: String,
 ## · action_text · on_action · secondary_text · secondary_icon · on_secondary
 ## · on_dismiss.
 func _show_modal(cfg: Dictionary) -> void:
-	var shell := _modal_shell(0.5, 500, 90, 14)
+	var shell := _modal_shell(0.5, 500, MODAL_Z, 14)
 	var dim: ColorRect = shell[0]
 	var pv: VBoxContainer = shell[1]
 	# Başlık: prototipte günlük ödül başlığının solunda sparkle ikonu var.
@@ -4224,7 +4236,7 @@ func _show_modal(cfg: Dictionary) -> void:
 ## değiştirilebilior mu?"). _show_simple_modal ile aynı dışına-tıkla-kapat
 ## deseni, yalnızca metin girişi eklendi.
 func _show_rename_hotel_modal() -> void:
-	var shell := _modal_shell(0.5, 500, 90, 14)
+	var shell := _modal_shell(0.5, 500, MODAL_Z, 14)
 	var dim: ColorRect = shell[0]
 	var pv: VBoxContainer = shell[1]
 	pv.add_child(_label("Rename your hotel", 20, PALETTE.wood_dark))
@@ -4898,7 +4910,7 @@ func _show_cloud_conflict_modal(on_closed: Callable = Callable()) -> void:
 	var cloud: Dictionary = CloudSave.conflict_summary()
 	var cloud_at: float = CloudSave.conflict_updated_at()
 
-	var shell := _modal_shell(0.6, 560, 95, 12)
+	var shell := _modal_shell(0.6, 560, MODAL_Z_CONFLICT, 12)
 	var dim: ColorRect = shell[0]
 	var pv: VBoxContainer = shell[1]
 	pv.add_child(_label("Which save should continue?", 20, PALETTE.wood_dark))
