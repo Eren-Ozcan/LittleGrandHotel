@@ -4214,7 +4214,8 @@ func _build_shift_popup(c: VBoxContainer) -> void:
 		else:
 			_notice(c, "No Housekeeping room — rooms left dirty earn nothing for this stretch.", "warn")
 		if Game.now() < Game.boost_end_unix:
-			var left_min := int((Game.boost_end_unix - Game.now()) / 60.0)
+			var left_min := int(
+				(Game.boost_end_unix - Game.now()) * Game.time_scale / 60.0)
 			_row(c, "res://assets/ui/ad_video.png", "Ad bonus active",
 				tr("Income ×%.1f · %d min left") % [Game.boost_mult, maxi(0, left_min)],
 				"", false)
