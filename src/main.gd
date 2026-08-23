@@ -94,6 +94,11 @@ const MOUSE_SCROLLABLE := Control.MOUSE_FILTER_PASS
 ## 1.5 stretch: past finger jitter, well short of a deliberate swipe.
 const SCROLL_DEADZONE := 12
 
+## Modal kartın ekran kenarına bırakacağı en az boşluk, viewport pikseli —
+## güvenli alanın (çentik, sistem çubukları) ÜSTÜNE eklenir. Kart bu payı
+## yiyecek kadar uzarsa gövdesi kaydırmaya döner (bkz. _modal_shell).
+const MODAL_SCREEN_MARGIN := 40
+
 ## The design sets every screen in Figtree, and the two currency counters in
 ## Pixelify Sans. Both ship as variable fonts, so one file covers every weight
 ## the design uses (400 body, 500/600 labels, 700 titles) through
@@ -4068,6 +4073,64 @@ func _fly_coins(from: Vector2, amount: int) -> void:
 
 # --- Popuplar ----------------------------------------------------------
 
+## Üç modalin de ortak kabuğu: karartma + ortalanmış kart + kaydırılabilir
+## gövde. `[dim, pv]` döner; `dim` ağaca EKLENMEZ (çağıran önce kendi
+## sinyallerini bağlar), `pv` içeriğin gireceği kaptır.
+##
+## Gövde neden bir ScrollContainer: kart doğrudan CenterContainer'ın içindeydi,
+## yani her zaman içeriğinin tam boyunda duruyordu. Ekrandan uzun bir gövde —
+## uzun bir çeviri, küçük bir ekran, uzun bir çevrimdışı özeti — taşıyor ve
+## okunamayan, hatta eylem butonu ekranın dışında kaldığı için KAPATILAMAYAN
+## bir modal veriyordu. Kaydırma yalnızca gerektiği kadar açılır: kap içeriğin
+## boyu ile ekranda kalan yerin küçüğünü alır, yani kısa modaller eskisi gibi
+## görünür.
+func _modal_shell(dim_alpha: float, min_w: int, z: int, separation: int) -> Array:
+	var dim := ColorRect.new()
+	dim.color = Color(0.2, 0.15, 0.05, dim_alpha)
+	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dim.z_index = z
+	var center := CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	dim.add_child(center)
+	var panel := _panel(PALETTE.cream, PALETTE.facade_line)
+	panel.custom_minimum_size = Vector2(min_w, 0)
+	center.add_child(panel)
+	var scroll := ScrollContainer.new()
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	# Parmak kart üstünden de kaydırabilsin diye (bkz. MOUSE_PASSTHROUGH).
+	scroll.scroll_deadzone = SCROLL_DEADZONE
+	panel.add_child(scroll)
+	var pv := VBoxContainer.new()
+	pv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pv.add_theme_constant_override("separation", separation)
+	scroll.add_child(pv)
+	# Dikey kaydırma açık bir ScrollContainer'ın en küçük boyu SIFIRDIR, yani
+	# CenterContainer karta hiç yükseklik vermez; yükseklik burada elle verilir.
+	# Panelin kendi iç boşluğu stilbox'tan okunur, elle tekrarlanmaz.
+	var pad: float = 0.0
+	var panel_sb := panel.get_theme_stylebox("panel")
+	if panel_sb != null:
+		pad = panel_sb.content_margin_top + panel_sb.content_margin_bottom
+	var fit := func():
+		var insets := _safe_insets()
+		var avail: float = get_viewport_rect().size.y - insets.y - insets.z 			- MODAL_SCREEN_MARGIN * 2.0 - pad
+		var want := minf(pv.get_combined_minimum_size().y, maxf(avail, 0.0))
+		# Aynı değeri geri yazmak yeni bir yerleşim turu tetikler; ölçüm
+		# `resized`'a bağlı olduğu için bu sonsuz döngü olurdu.
+		if absf(scroll.custom_minimum_size.y - want) > 0.5:
+			scroll.custom_minimum_size.y = want
+	# Ölçüm GENİŞLİK belli olduktan sonra yapılmalı: satır kaydıran bir etiketin
+	# en küçük yüksekliği genişliğine bağlı, genişlik 0 iken her kelime ayrı
+	# satıra düşüyormuş gibi ölçülüyor ve kart ekran boyu uzuyor. `resized` ilk
+	# gerçek yerleşimden sonra gelir, oradan ölçülür.
+	pv.resized.connect(fit)
+	var vp := get_viewport()
+	vp.size_changed.connect(fit)
+	dim.tree_exiting.connect(func(): vp.size_changed.disconnect(fit))
+	return [dim, pv]
+
+
 ## Oyunun kendi görsel diliyle (yuvarlak kart, PALETTE renkleri, _panel/_label/
 ## _button) tek eylem butonlu basit bir modal — açılış tutorial'ı, günlük ödül
 ## ve "sen yokken" popup'ları için ortak. Godot'un varsayılan AcceptDialog'u
@@ -4093,20 +4156,9 @@ func _show_simple_modal(title: String, text: String, action_text: String,
 ## · action_text · on_action · secondary_text · secondary_icon · on_secondary
 ## · on_dismiss.
 func _show_modal(cfg: Dictionary) -> void:
-	var dim := ColorRect.new()
-	dim.color = Color(0.2, 0.15, 0.05, 0.5)
-	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
-	dim.z_index = 90
-	var center := CenterContainer.new()
-	center.set_anchors_preset(Control.PRESET_FULL_RECT)
-	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	dim.add_child(center)
-	var panel := _panel(PALETTE.cream, PALETTE.facade_line)
-	panel.custom_minimum_size = Vector2(500, 0)
-	center.add_child(panel)
-	var pv := VBoxContainer.new()
-	pv.add_theme_constant_override("separation", 14)
-	panel.add_child(pv)
+	var shell := _modal_shell(0.5, 500, 90, 14)
+	var dim: ColorRect = shell[0]
+	var pv: VBoxContainer = shell[1]
 	# Başlık: prototipte günlük ödül başlığının solunda sparkle ikonu var.
 	var title_row := HBoxContainer.new()
 	title_row.add_theme_constant_override("separation", 8)
@@ -4167,20 +4219,9 @@ func _show_modal(cfg: Dictionary) -> void:
 ## değiştirilebilior mu?"). _show_simple_modal ile aynı dışına-tıkla-kapat
 ## deseni, yalnızca metin girişi eklendi.
 func _show_rename_hotel_modal() -> void:
-	var dim := ColorRect.new()
-	dim.color = Color(0.2, 0.15, 0.05, 0.5)
-	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
-	dim.z_index = 90
-	var center := CenterContainer.new()
-	center.set_anchors_preset(Control.PRESET_FULL_RECT)
-	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	dim.add_child(center)
-	var panel := _panel(PALETTE.cream, PALETTE.facade_line)
-	panel.custom_minimum_size = Vector2(500, 0)
-	center.add_child(panel)
-	var pv := VBoxContainer.new()
-	pv.add_theme_constant_override("separation", 14)
-	panel.add_child(pv)
+	var shell := _modal_shell(0.5, 500, 90, 14)
+	var dim: ColorRect = shell[0]
+	var pv: VBoxContainer = shell[1]
 	pv.add_child(_label("Rename your hotel", 20, PALETTE.wood_dark))
 	pv.add_child(_label(tr("Up to %d characters, so it fits the sign in the lobby.") % HOTEL_NAME_MAX_LEN, 12, PALETTE.muted))
 	var field := LineEdit.new()
@@ -4852,20 +4893,9 @@ func _show_cloud_conflict_modal(on_closed: Callable = Callable()) -> void:
 	var cloud: Dictionary = CloudSave.conflict_summary()
 	var cloud_at: float = CloudSave.conflict_updated_at()
 
-	var dim := ColorRect.new()
-	dim.color = Color(0.2, 0.15, 0.05, 0.6)
-	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
-	dim.z_index = 95
-	var center := CenterContainer.new()
-	center.set_anchors_preset(Control.PRESET_FULL_RECT)
-	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	dim.add_child(center)
-	var panel := _panel(PALETTE.cream, PALETTE.facade_line)
-	panel.custom_minimum_size = Vector2(560, 0)
-	center.add_child(panel)
-	var pv := VBoxContainer.new()
-	pv.add_theme_constant_override("separation", 12)
-	panel.add_child(pv)
+	var shell := _modal_shell(0.6, 560, 95, 12)
+	var dim: ColorRect = shell[0]
+	var pv: VBoxContainer = shell[1]
 	pv.add_child(_label("Which save should continue?", 20, PALETTE.wood_dark))
 	pv.add_child(_label_wrap("There are two different saves, one in the cloud and one on this device. They are never merged automatically — pick one and the other stays as it is.", 12, PALETTE.muted))
 
