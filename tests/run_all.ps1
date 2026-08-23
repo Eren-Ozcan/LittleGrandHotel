@@ -77,7 +77,8 @@ $tests = @(
     @{ name = "store_compliance"; target = "res://tests/store_compliance_check.tscn"; mode = "scene";  window = $false; timeout = 90;  verdict = $false },
     @{ name = "unlink_check";     target = "res://tests/unlink_check.tscn";           mode = "scene";  window = $false; timeout = 90;  verdict = $false },
     @{ name = "tutorial_check";   target = "res://tests/tutorial_check.tscn";         mode = "scene";  window = $true;  timeout = 120; success = "TÜM TESTLER GEÇTİ" },
-    @{ name = "ui_check";         target = "res://tests/ui_check.tscn";               mode = "scene";  window = $true;  timeout = 240; success = "TÜM TESTLER GEÇTİ" }
+    @{ name = "ui_check";         target = "res://tests/ui_check.tscn";               mode = "scene";  window = $true;  timeout = 240; success = "TÜM TESTLER GEÇTİ" },
+    @{ name = "scroll_check";     target = "res://tests/scroll_check.tscn";           mode = "scene";  window = $true;  timeout = 180; success = "TÜM TESTLER GEÇTİ" }
 )
 
 # Çıktıda görülürse test başarısız sayılır (çıkış kodu 0 olsa bile).
