@@ -138,7 +138,9 @@ func _tap(pos: Vector2) -> void:
 ## "Class < ParentClass" so the offending primitive is identifiable without a
 ## node path (these trees are built in code and unnamed).
 func _blockers(n: Node, out: Array) -> Array:
-	if n is Control and (n as Control).mouse_filter == Control.MOUSE_FILTER_STOP:
+	# A text field is the one control that legitimately keeps the drag: dragging
+	# inside it selects text. It is never the thing a finger scrolls from.
+	if n is Control and (n as Control).mouse_filter == Control.MOUSE_FILTER_STOP 			and not n is LineEdit and not n is TextEdit:
 		var parent := n.get_parent()
 		var key := "%s < %s" % [n.get_class(), parent.get_class() if parent else "?"]
 		if not out.has(key):
@@ -177,13 +179,31 @@ func _ready() -> void:
 
 	_main = load("res://main.tscn").instantiate()
 	add_child(_main)
+	# The developer machine has a real cloud/device save conflict, and the
+	# download that detects it lands at an unpredictable point in the run. The
+	# conflict modal is a full-screen overlay, so it silently eats the taps and
+	# drags this test aims at the list underneath. Clearing the state costs
+	# nothing on disk or in the cloud; CloudSave.resolve_keep_local would upload
+	# to the real account, which a UI test has no business doing.
+	CloudSave._blocked = false
+	CloudSave._pending_cloud = {}
+	if CloudSave.conflict_detected.is_connected(_main._on_cloud_conflict):
+		CloudSave.conflict_detected.disconnect(_main._on_cloud_conflict)
 	_main._finish_loading_screen()
 	await get_tree().create_timer(0.6).timeout
+	# Freeze the simulation. This test measures input plumbing, not gameplay:
+	# while it runs, a shift can end or a quest can complete, and main rebuilds
+	# the open popup in response — which throws away the probe rows mid-drag and
+	# resets scroll_vertical to 0, showing up as a rare "the drag did not
+	# scroll" failure that has nothing to do with the drag.
+	game.set_process(false)
+	_main.set_process(false)
 
 	await _test_filters_every_popup()
 	await _test_drag_over_card_scrolls()
 	await _test_drag_over_row_does_not_press_it()
 	await _test_tap_still_presses_row()
+	await _test_modals_scroll()
 
 	_finished = true
 	print("=".repeat(64))
@@ -280,18 +300,33 @@ var _probe_rows: Array[Button] = []
 var _probe_hits := 0
 
 
+func _probe_rows_alive() -> bool:
+	for b in _probe_rows:
+		if not is_instance_valid(b):
+			return false
+	return true
+
+
+## main rebuilds the open popup whenever a game signal says its numbers moved,
+## and a rebuild frees everything appended here. The simulation is frozen, but a
+## signal queued before the freeze can still land — so build the rows, give them
+## two frames to survive, and start over if they did not.
 func _open_probe_popup() -> void:
-	_main._open_popup("Settings", _main._build_settings_popup)
-	await get_tree().process_frame
-	_probe_rows.clear()
-	_probe_hits = 0
-	for i in 30:
-		var b: Button = _main._sheet_row(_main.popup_content,
-			{"title": "probe row %d" % i, "meta": "scroll test"})
-		b.pressed.connect(func(): _probe_hits += 1)
-		_probe_rows.append(b)
-	await get_tree().process_frame
-	await get_tree().process_frame
+	for attempt in 3:
+		_main._open_popup("Settings", _main._build_settings_popup)
+		await get_tree().process_frame
+		_probe_rows.clear()
+		_probe_hits = 0
+		for i in 30:
+			var b: Button = _main._sheet_row(_main.popup_content,
+				{"title": "probe row %d" % i, "meta": "scroll test"})
+			b.pressed.connect(func(): _probe_hits += 1)
+			_probe_rows.append(b)
+		await get_tree().process_frame
+		await get_tree().process_frame
+		if _probe_rows_alive():
+			break
+	check(_probe_rows_alive(), "deneme satırları ayakta")
 	_main.popup_scroll.scroll_vertical = 0
 	await get_tree().process_frame
 
@@ -299,10 +334,15 @@ func _open_probe_popup() -> void:
 ## The centre of a probe row that is fully on screen — where a thumb would land.
 func _visible_probe_row() -> Button:
 	var view: Rect2 = _main.popup_scroll.get_global_rect()
+	var first: Button = null
 	for b in _probe_rows:
+		if not is_instance_valid(b):
+			continue
+		if first == null:
+			first = b
 		if view.encloses(b.get_global_rect()):
 			return b
-	return _probe_rows[0]
+	return first
 
 
 func _test_drag_over_card_scrolls() -> void:
@@ -337,3 +377,123 @@ func _test_tap_still_presses_row() -> void:
 		"dokunuş listeyi kaydırmadı (scroll_vertical = %d)" % _main.popup_scroll.scroll_vertical)
 	_main._close_popup()
 	await get_tree().process_frame
+
+# --- Modals --------------------------------------------------------------
+#
+# A modal is a centred card, so an over-long body used to run straight off the
+# screen — including its action button, which made the modal impossible to
+# close. The body now lives in a ScrollContainer (see _modal_shell in
+# src/main.gd), and the same drag rules apply to it as to the popup lists.
+
+## Topmost open modal (see main.gd _modal_shell: ColorRect, z_index >= 90, a
+## direct child of main). Topmost, not first: modals stack.
+func _modal_root() -> ColorRect:
+	var top: ColorRect = null
+	for c in _main.get_children():
+		if c is ColorRect and c.z_index >= 90 and not c.is_queued_for_deletion():
+			top = c
+	return top
+
+
+func _modal_scroll(m: Node) -> ScrollContainer:
+	var found := m.find_children("*", "ScrollContainer", true, false)
+	return found[0] if found.size() > 0 else null
+
+
+func _free_modal() -> void:
+	var m := _modal_root()
+	if m != null:
+		m.queue_free()
+	await get_tree().process_frame
+	await get_tree().process_frame
+
+
+## Every modal check that does not depend on how the body was built.
+func _check_modal(label: String) -> void:
+	var m := _modal_root()
+	check(m != null, "%s: modal açıldı" % label)
+	if m == null:
+		return
+	var scroll := _modal_scroll(m)
+	check(scroll != null, "%s: gövde kaydırılabilir kapta" % label)
+	if scroll == null:
+		return
+	var found := _blockers(scroll, [])
+	check(found.is_empty(), "%s: sürüklemeyi yutan düğüm yok%s"
+		% [label, "" if found.is_empty() else " — " + ", ".join(found)])
+	# The card must fit on screen, or the action button is out of reach and the
+	# modal cannot be dismissed at all.
+	var panel := scroll.get_parent() as Control
+	check(panel.size.y <= _main.get_viewport_rect().size.y,
+		"%s: kart ekrana sığıyor (%d ≤ %d)"
+			% [label, int(panel.size.y), int(_main.get_viewport_rect().size.y)])
+
+
+func _test_modals_scroll() -> void:
+	print("
+[5] Modaller kaydırılabilir")
+	var game := get_node("/root/Game")
+
+	_main._show_simple_modal("Test", "Kısa gövde", "Tamam", func(): pass)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_check_modal("basit modal")
+	await _free_modal()
+
+	_main._show_rename_hotel_modal()
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_check_modal("otel adı modalı")
+	await _free_modal()
+
+	_main._show_offline_popup(12345, 2, 500)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_check_modal("çevrimdışı özet")
+	await _free_modal()
+
+	game.last_daily_claim_day = game.daily_day_index() - 1
+	_main._show_daily_reward_popup()
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_check_modal("günlük ödül")
+	await _free_modal()
+
+	# The conflict screen never opens without a conflict, and the real one was
+	# cleared above. Fake the state instead of provoking a real conflict — this
+	# touches nothing on disk or in the cloud.
+	CloudSave._blocked = true
+	CloudSave._pending_cloud = {
+		"rev": 1, "updated_at": Time.get_unix_time_from_system() - 60.0,
+		"summary": {"level": 7, "coins": 1234, "gems": 42, "rooms": 5},
+	}
+	_main._cloud_conflict_open = false
+	_main._show_cloud_conflict_modal()
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_check_modal("bulut çakışması")
+	await _free_modal()
+	_main._cloud_conflict_open = false
+	CloudSave._blocked = false
+	CloudSave._pending_cloud = {}
+
+	# The case the whole change is about: a body far taller than the screen.
+	var long_text := ""
+	for i in 60:
+		long_text += "Bu satır modalın gövdesini ekrandan uzun yapmak için var. %d
+" % i
+	_main._show_simple_modal("Uzun", long_text, "Tamam", func(): pass)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_check_modal("uzun gövde")
+	var m := _modal_root()
+	var scroll := _modal_scroll(m)
+	if scroll != null:
+		check(scroll.get_v_scroll_bar().max_value > scroll.size.y + 1.0,
+			"uzun gövde: kaydırma gerçekten gerekiyor (%d > %d)"
+				% [int(scroll.get_v_scroll_bar().max_value), int(scroll.size.y)])
+		await _drag_from(scroll.get_global_rect().get_center())
+		check(scroll.scroll_vertical > 0,
+			"uzun gövde: gövde üstünden sürükleme kaydırdı (scroll_vertical = %d)"
+				% scroll.scroll_vertical)
+	await _free_modal()
