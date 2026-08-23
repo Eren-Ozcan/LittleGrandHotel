@@ -66,6 +66,34 @@ const UI_TEXT_SCALE := 2.0
 ## pill buttons were well under (measured: row ~34dp, tab ~16dp).
 const TOUCH_MIN := 88
 
+## Touch scrolling in a ScrollContainer is driven by the InputEventScreenDrag
+## the finger produces, and that event only reaches the ScrollContainer if every
+## Control under the finger lets it through. Control defaults to
+## MOUSE_FILTER_STOP, so the decorative PanelContainer a list row is painted
+## with, and the transparent Button laid over it, both swallowed the drag: the
+## popup lists only scrolled from the ~15px gutter beside the cards, where no
+## row was in the way.
+##
+## Two roles, two filters. MOUSE_PASSTHROUGH is for anything that only draws —
+## panels, dividers, progress bars: they are not hit targets at all. Anything
+## that must still be tapped keeps receiving events but hands the drag on to the
+## ScrollContainer above it (MOUSE_SCROLLABLE). A drag that gets past the
+## ScrollContainer's deadzone makes it fire NOTIFICATION_SCROLL_BEGIN down the
+## tree, which BaseButton reads as "cancel the press" — so scrolling over a row
+## scrolls and does not also activate the row.
+##
+## Only popup content is set up this way. The bottom bar, the hotel canvas and
+## the build tray run their own drag gestures and stay MOUSE_FILTER_STOP.
+const MOUSE_PASSTHROUGH := Control.MOUSE_FILTER_IGNORE
+const MOUSE_SCROLLABLE := Control.MOUSE_FILTER_PASS
+
+## Touch scrolling starts once the finger has travelled this far, in viewport
+## pixels. Godot's default is 0, which means the tiniest wobble during a tap
+## already counts as a drag and cancels the row press underneath — on a phone
+## almost every tap wobbles. 12 viewport pixels is 18 physical pixels at the
+## 1.5 stretch: past finger jitter, well short of a deliberate swipe.
+const SCROLL_DEADZONE := 12
+
 ## The design sets every screen in Figtree, and the two currency counters in
 ## Pixelify Sans. Both ship as variable fonts, so one file covers every weight
 ## the design uses (400 body, 500/600 labels, 700 titles) through
@@ -1635,6 +1663,8 @@ func _build_ui() -> void:
 	popup_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	# Yatay kaydırma kapalı: içerik ekran genişliğine sarsın, yana kaymasın.
 	popup_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	# Parmak kart ÜSTÜNDEN de kaydırabilsin diye (bkz. MOUSE_PASSTHROUGH).
+	popup_scroll.scroll_deadzone = SCROLL_DEADZONE
 	pv.add_child(popup_scroll)
 	# Yanlar ve alt _apply_safe_area'dan gelir (sona kadar kaydırılan listenin
 	# son satırı köşeye girmesin); üst boşluk başlık şeridinin altında kaldığı
@@ -1953,6 +1983,7 @@ func _panel(bg: Color, border: Color) -> PanelContainer:
 ## kartına girer. Dönen VBoxContainer içeriğin ekleneceği kaptır.
 func _card(c: VBoxContainer, border: Color = PALETTE.facade_line) -> VBoxContainer:
 	var p := PanelContainer.new()
+	p.mouse_filter = MOUSE_PASSTHROUGH
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = PALETTE.card
 	sb.border_color = border
@@ -2008,6 +2039,7 @@ func _sheet_row(c: VBoxContainer, cfg: Dictionary) -> Button:
 	sb.content_margin_top = 20
 	sb.content_margin_bottom = 20
 	p.add_theme_stylebox_override("panel", sb)
+	p.mouse_filter = MOUSE_PASSTHROUGH
 	p.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	p.custom_minimum_size.y = TOUCH_MIN
 	var enabled: bool = bool(cfg.get("enabled", true))
@@ -2072,6 +2104,7 @@ func _sheet_row(c: VBoxContainer, cfg: Dictionary) -> Button:
 
 	var b := Button.new()
 	b.focus_mode = Control.FOCUS_NONE
+	b.mouse_filter = MOUSE_SCROLLABLE
 	b.disabled = not enabled
 	# Butonun kendi çizimi yok: görünen her şey alttaki panelden geliyor.
 	for state in ["normal", "hover", "pressed", "disabled", "focus"]:
@@ -2178,6 +2211,7 @@ func _notice(c: VBoxContainer, text: String, kind: String = "gold") -> void:
 			border = PALETTE.bar_dark
 			fg = PALETTE.plum_text
 	var p := PanelContainer.new()
+	p.mouse_filter = MOUSE_PASSTHROUGH
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = bg
 	sb.border_color = border
@@ -2198,6 +2232,7 @@ func _notice(c: VBoxContainer, text: String, kind: String = "gold") -> void:
 ## satırlar _list_row ile eklenir.
 func _list_card(c: VBoxContainer) -> VBoxContainer:
 	var p := PanelContainer.new()
+	p.mouse_filter = MOUSE_PASSTHROUGH
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = PALETTE.card
 	sb.border_color = PALETTE.facade_line
@@ -2220,9 +2255,11 @@ func _list_row(v: VBoxContainer, label: String, right: String,
 	if v.get_child_count() > 0:
 		var line := ColorRect.new()
 		line.color = PALETTE.cream_dark
+		line.mouse_filter = MOUSE_PASSTHROUGH
 		line.custom_minimum_size = Vector2(0, 1)
 		v.add_child(line)
 	var p := PanelContainer.new()
+	p.mouse_filter = MOUSE_PASSTHROUGH
 	var sb := StyleBoxEmpty.new()
 	sb.set_content_margin_all(12)
 	p.add_theme_stylebox_override("panel", sb)
@@ -2242,6 +2279,7 @@ func _list_row(v: VBoxContainer, label: String, right: String,
 		return null
 	var b := Button.new()
 	b.focus_mode = Control.FOCUS_NONE
+	b.mouse_filter = MOUSE_SCROLLABLE
 	for state in ["normal", "hover", "pressed", "disabled", "focus"]:
 		b.add_theme_stylebox_override(state, StyleBoxEmpty.new())
 	p.add_child(b)
@@ -2251,6 +2289,7 @@ func _list_row(v: VBoxContainer, label: String, right: String,
 ## Prototipteki ince ilerleme çubuğu (9 piksel, tam yuvarlak uçlar).
 func _bar(c: VBoxContainer, ratio: float, fill: Color = PALETTE.gold) -> void:
 	var pb := ProgressBar.new()
+	pb.mouse_filter = MOUSE_PASSTHROUGH
 	pb.show_percentage = false
 	pb.custom_minimum_size = Vector2(0, 9)
 	pb.max_value = 1.0
@@ -4754,6 +4793,7 @@ func _build_cloud_section(c: VBoxContainer) -> void:
 ## metin) — "bu derlemede yok" / "bağlandı" gibi bilgi satırları için.
 func _inert(c: VBoxContainer, text: String) -> void:
 	var p := PanelContainer.new()
+	p.mouse_filter = MOUSE_PASSTHROUGH
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = PALETTE.field
 	sb.set_corner_radius_all(10)
@@ -4923,6 +4963,7 @@ func _popup_tab_row(c: VBoxContainer, tabs: Array, current: String, on_pick: Cal
 			PALETTE.card if active else PALETTE.field,
 			PALETTE.text if active else PALETTE.muted)
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		b.mouse_filter = MOUSE_SCROLLABLE
 		for state in ["normal", "hover", "pressed", "disabled"]:
 			var sb := b.get_theme_stylebox(state) as StyleBoxFlat
 			sb.set_corner_radius_all(999)
@@ -5071,6 +5112,7 @@ func _build_bundle_room_picker(c: VBoxContainer) -> void:
 func _tile(grid: GridContainer, icon_path: String, name: String, meta: String,
 		enabled: bool) -> Button:
 	var p := PanelContainer.new()
+	p.mouse_filter = MOUSE_PASSTHROUGH
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = PALETTE.card
 	sb.border_color = PALETTE.facade_line
@@ -5098,6 +5140,7 @@ func _tile(grid: GridContainer, icon_path: String, name: String, meta: String,
 	v.add_child(m)
 	var b := Button.new()
 	b.focus_mode = Control.FOCUS_NONE
+	b.mouse_filter = MOUSE_SCROLLABLE
 	b.disabled = not enabled
 	for state in ["normal", "hover", "pressed", "disabled", "focus"]:
 		b.add_theme_stylebox_override(state, StyleBoxEmpty.new())
@@ -5205,6 +5248,7 @@ func _build_build_popup(c: VBoxContainer) -> void:
 func _gem_tile(row: HBoxContainer, amount: int, price: String, popular: bool,
 		icon_px: int) -> Button:
 	var p := PanelContainer.new()
+	p.mouse_filter = MOUSE_PASSTHROUGH
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = PALETTE.card
 	sb.border_color = PALETTE.gold if popular else PALETTE.facade_line
@@ -5270,6 +5314,7 @@ func _gem_tile(row: HBoxContainer, amount: int, price: String, popular: bool,
 	# şeffaf buton (bkz. _sheet_row).
 	var b := Button.new()
 	b.focus_mode = Control.FOCUS_NONE
+	b.mouse_filter = MOUSE_SCROLLABLE
 	for state in ["normal", "hover", "pressed", "disabled", "focus"]:
 		b.add_theme_stylebox_override(state, StyleBoxEmpty.new())
 	b.set_meta("title_label", amount_l)
