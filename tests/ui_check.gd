@@ -474,6 +474,45 @@ func _test_modals() -> void:
 	await _close_modal()
 	check(closed[0], "kapanış callback'i çağrıldı")
 
+	# Modal, AÇIK BİR POPUP'IN ÜSTÜNDE durmalı. Popup katmanı z_index 100 ile
+	# çiziliyor; modaller 90/95'teyken bir popup açıkken modal onun arkasına
+	# düşüyor ve dokunulamıyordu. Bulut çakışma modalinde bu ölümcül: modal
+	# görünmeden `_cloud_conflict_open` bayrağı kalkıyor ve "Bir kayıt seç"
+	# düğmesi bir daha hiçbir şey yapmıyor — 2026-08-23'te gerçek cihazda,
+	# hesap bağlandıktan hemen sonra yaşandı.
+	_main._open_popup("Profile", _main._build_profile_popup)
+	await get_tree().process_frame
+	_main._show_simple_modal("Üstte mi", "Gövde", "Tamam", func(): pass)
+	await get_tree().process_frame
+	m = _modal_root()
+	check(m != null and m.z_index > _main.overlay.z_index,
+		"modal açık popup'ın üstünde (modal %d > popup %d)"
+			% [m.z_index if m != null else -1, _main.overlay.z_index])
+	await _close_modal()
+	_main._close_popup()
+	await get_tree().process_frame
+
+	# Aynı hatanın ikinci yarısı: çakışma modalı kapanınca bayrak DÜŞMELİ,
+	# yoksa ekran bir daha açılmaz.
+	CloudSave._blocked = true
+	CloudSave._pending_cloud = {
+		"rev": 1, "updated_at": Time.get_unix_time_from_system() - 60.0,
+		"summary": {"level": 7, "coins": 1234, "gems": 42, "rooms": 5},
+	}
+	_main._cloud_conflict_open = false
+	_main._show_cloud_conflict_modal()
+	await get_tree().process_frame
+	check(_modal_root() != null, "çakışma varken modal açıldı")
+	check(_main._cloud_conflict_open, "çakışma modalı açıkken bayrak kalkık")
+	var conflict_root := _modal_root()
+	if conflict_root != null:
+		conflict_root.queue_free()
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_main._cloud_conflict_open = false
+	CloudSave._blocked = false
+	CloudSave._pending_cloud = {}
+
 	# Bulut çakışması: çakışma YOKKEN modal açılmamalı, callback yine çağrılmalı.
 	# Temizlik ile çağrı arasında `await` YOK: bulut indirmesi ancak bir sonraki
 	# karede durumu geri yazabilir, o yüzden bu iki satır bitişik kalmalı.
