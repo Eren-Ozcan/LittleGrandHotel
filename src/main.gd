@@ -455,12 +455,16 @@ var _drag_room_id := ""
 var _drag_new_type := ""
 var _drag_active := false
 var _drag_start_mouse := Vector2.ZERO
+## Mağaza rafından bir oda çıkarılırken rafın kaydığı yer — sürükleme boyunca
+## oraya sabitlenir (bkz. _update_room_drag).
+var _tray_scroll_lock := 0
 var _drag_ghost: Control = null
 
 ## İnşa Modu mağaza rafı: oda tipi kartları buradan tuvale sürüklenerek
 ## yerleştirilir (kullanıcı isteği: "açık olmayan odalar oluşturulmamış
 ## olmalı" — boş hücrelerde artık tıklanabilir bir "oda ekle" butonu yok).
 var build_shop_panel: Control
+var build_shop_scroll: ScrollContainer
 var build_shop_row: HBoxContainer
 
 var _walker: Control = null
@@ -1421,9 +1425,19 @@ func _build_ui() -> void:
 	build_shop_col.add_theme_constant_override("separation", 2)
 	build_shop_panel.add_child(build_shop_col)
 	build_shop_col.add_child(_label("Room Shop — drag and drop onto the building", 12, PALETTE.wood_dark))
-	var build_shop_scroll := ScrollContainer.new()
+	build_shop_scroll = ScrollContainer.new()
 	build_shop_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	build_shop_scroll.custom_minimum_size = Vector2(0, 112)
+	# Raf on bir oda tipi taşıyor ve ekrana sekizi sığıyor: kaydırma zorunlu.
+	# Parmak kartın ÜSTÜNDEN de kaydırabilmeli (bkz. MOUSE_PASSTHROUGH) —
+	# eskiden yalnızca kartlar arasındaki 6 pikselden kayıyordu, yani sağdaki
+	# oda tipleri oyuncuya pratikte kapalıydı.
+	build_shop_scroll.scroll_deadzone = SCROLL_DEADZONE
+	# Yatay kaydırma başladığı an bekleyen "odayı raftan çıkar" sürüklemesi
+	# iptal edilir: iki hareket aynı parmakla başlıyor, biri kazanmalı.
+	build_shop_scroll.scroll_started.connect(func():
+		if not _drag_active:
+			_drag_new_type = "")
 	build_shop_col.add_child(build_shop_scroll)
 	build_shop_row = HBoxContainer.new()
 	build_shop_row.add_theme_constant_override("separation", 6)
@@ -3669,6 +3683,10 @@ func _make_shop_tray_card(type: String) -> Control:
 	var d: Dictionary = Game.room_def(type)
 	var locked := Game.level() < int(d.unlock_level)
 	var b := Button.new()
+	# Rafın kendisi kaydırılabilir: sürükleme kartın üstünden de geçmeli
+	# (bkz. MOUSE_PASSTHROUGH). Karta basmak yine odayı almaya başlar —
+	# hangi hareketin kazandığına _update_room_drag karar verir.
+	b.mouse_filter = MOUSE_SCROLLABLE
 	b.custom_minimum_size = Vector2(92, 104)
 	b.disabled = locked
 	for state in ["normal", "hover", "pressed", "disabled"]:
@@ -3751,11 +3769,24 @@ func _update_room_drag() -> void:
 	if not _drag_active:
 		if mouse.distance_to(_drag_start_mouse) < PAN_DRAG_THRESHOLD * 2.0:
 			return
+		# Raftan çıkarma YALNIZCA dikey ağırlıklı bir harekettir. Raf yatay
+		# kaydığı için yanlamasına sürükleme rafı kaydırmak demek; yönü ayırt
+		# etmezsek iki hareket aynı parmakta çakışır ve raf hiç kaymaz.
+		# Tuvaldeki bir odayı taşımak bu kuralın dışında: o hareket rafta
+		# başlamıyor, her yöne serbest.
+		var delta := mouse - _drag_start_mouse
+		if _drag_new_type != "" and absf(delta.x) >= absf(delta.y):
+			return
 		_drag_active = true
+		if _drag_new_type != "" and build_shop_scroll != null:
+			# Sürükleme başladı: raf artık oynamasın, kart parmağı takip etsin.
+			_tray_scroll_lock = build_shop_scroll.scroll_horizontal
 		var w := int(Game.rooms[_room_index_by_id(_drag_room_id)].w) if _drag_room_id != "" else Game.room_footprint(_drag_new_type)
 		var type_name := String(Game.room_def(Game.rooms[_room_index_by_id(_drag_room_id)].type).name) if _drag_room_id != "" else String(Game.room_def(_drag_new_type).name)
 		_drag_ghost = _make_drag_ghost(w, type_name)
 		add_child(_drag_ghost)
+	if _drag_new_type != "" and build_shop_scroll != null:
+		build_shop_scroll.scroll_horizontal = _tray_scroll_lock
 	_drag_ghost.position = mouse - _drag_ghost.size / 2.0
 
 
