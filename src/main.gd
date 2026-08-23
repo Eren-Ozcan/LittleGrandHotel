@@ -73,6 +73,21 @@ const TOUCH_MIN := 88
 const FONT_UI := preload("res://assets/fonts/Figtree.ttf")
 const FONT_NUM := preload("res://assets/fonts/PixelifySans.ttf")
 
+## Bands run edge to edge, but the controls inside them must not. The Android
+## manifest asks for layoutInDisplayCutoutMode=always, so the game paints into
+## the notch and all the way into the display's rounded corners — the bottom
+## bar's outermost tiles (Build, Store) were being clipped by that arc, and the
+## top bar sits under the cutout. Every piece of chrome that touches an edge
+## takes its inset from _safe_insets instead of a hand-picked number.
+##
+## Android reports the cutout and the system bars through the safe area, but
+## NOT the corner radius, so these floors carry that case on their own. In
+## viewport pixels: 24 is 36 physical pixels at the 1.5 stretch, comfortably
+## past a typical corner arc.
+const UI_SAFE_MIN_X := 24
+const UI_SAFE_MIN_TOP := 14
+const UI_SAFE_MIN_BOTTOM := 10
+
 ## The two controls that sit ON the world rather than in a menu — the top bar's
 ## gem "+" and the Build/Clean chips. At the full 88 the "+" swallows the top
 ## bar and the chips turn into big circles, so they stop at 68 (~37dp). Every
@@ -208,6 +223,13 @@ var _collect_pulse_on := false
 var _collect_tween: Tween
 var shift_button: Button
 var quest_bar_button: Button
+## Kenara değen parçaları ekranın çentiğinden, sistem çubuklarından ve
+## yuvarlatılmış köşelerinden uzak tutan kenar boşlukları — hepsi
+## _apply_safe_area tarafından tek yerden beslenir.
+var bar_safe_pad: MarginContainer
+var top_safe_pad: MarginContainer
+var popup_head_pad: MarginContainer
+var popup_pad: MarginContainer
 ## Alt bar sekmeleri, başlığa göre — aktif durumu boyamak için.
 var _bar_buttons := {}
 ## Açık olan sekmenin başlığı ("" = popup kapalı).
@@ -1111,7 +1133,10 @@ func _build_ui() -> void:
 	# avatar kartın DIŞINDA, gökyüzünün üstünde ayrı bir kutu olarak durur.
 	var top_row := HBoxContainer.new()
 	top_row.add_theme_constant_override("separation", 6)
-	_edge_pad(root, 14, 10).add_child(top_row)
+	# Üstteki ilk parça bu: üst kenar boşluğu çentiğe göre büyüyebilsin diye
+	# saklanır (bkz. _apply_safe_area). Sabit 14 artık yalnızca taban.
+	top_safe_pad = _edge_pad(root, UI_SAFE_MIN_TOP, 10)
+	top_safe_pad.add_child(top_row)
 	var top := PanelContainer.new()
 	var top_sb := StyleBoxFlat.new()
 	top_sb.bg_color = PALETTE.cream
@@ -1460,9 +1485,14 @@ func _build_ui() -> void:
 	bar_sb.set_content_margin_all(4)
 	bar_panel.add_theme_stylebox_override("panel", bar_sb)
 	root.add_child(bar_panel)
+	# Şerit kenardan kenara, karolar değil: yuvarlatılmış ekran köşeleri en
+	# dıştaki iki karoyu (Build ve Store) kesiyordu. Kenar boşluğu güvenli
+	# alandan okunur, tabanı UI_SAFE_MIN_* sabitleri belirler (bkz. _apply_safe_area).
+	bar_safe_pad = MarginContainer.new()
+	bar_panel.add_child(bar_safe_pad)
 	var bottom := HBoxContainer.new()
 	bottom.add_theme_constant_override("separation", 6)
-	bar_panel.add_child(bottom)
+	bar_safe_pad.add_child(bottom)
 
 	# Dört sekme: coin harcanan her şey Build'de, gem/gerçek para harcanan her
 	# şey Store'da. Shift sekmesi kalktı (merkez butona döndü), Settings
@@ -1569,9 +1599,13 @@ func _build_ui() -> void:
 	head_sb.set_content_margin_all(10)
 	head_panel.add_theme_stylebox_override("panel", head_sb)
 	pv.add_child(head_panel)
+	# Bant kenardan kenara kalır; ‹ ve ✕ çentiğin ve köşe yayının dışına
+	# bu boşlukla çıkar (bkz. _apply_safe_area).
+	popup_head_pad = MarginContainer.new()
+	head_panel.add_child(popup_head_pad)
 	var head := HBoxContainer.new()
 	head.add_theme_constant_override("separation", 8)
-	head_panel.add_child(head)
+	popup_head_pad.add_child(head)
 	popup_back_button = _button("‹", 20, PALETTE.wood, PALETTE.cream_text)
 	popup_back_button.custom_minimum_size = Vector2(TOUCH_MIN_CHROME, TOUCH_MIN_CHROME)
 	for state in ["normal", "hover", "pressed"]:
@@ -1602,10 +1636,14 @@ func _build_ui() -> void:
 	# Yatay kaydırma kapalı: içerik ekran genişliğine sarsın, yana kaymasın.
 	popup_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	pv.add_child(popup_scroll)
+	# Yanlar ve alt _apply_safe_area'dan gelir (sona kadar kaydırılan listenin
+	# son satırı köşeye girmesin); üst boşluk başlık şeridinin altında kaldığı
+	# için sabit.
 	var pad := MarginContainer.new()
 	pad.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	for side in ["left", "right", "top", "bottom"]:
 		pad.add_theme_constant_override("margin_" + side, 12)
+	popup_pad = pad
 	popup_scroll.add_child(pad)
 	popup_content = VBoxContainer.new()
 	popup_content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -1654,6 +1692,11 @@ func _build_ui() -> void:
 
 	_build_tutorial_layer()
 	_build_start_screen()
+
+	# Kenara değen parçaların hepsi kurulduktan sonra, tek seferde dağıt.
+	# Döndürme/yeniden boyutlandırma güvenli alanı değiştirir, o yüzden bağlı.
+	_apply_safe_area()
+	get_viewport().size_changed.connect(_apply_safe_area)
 
 
 ## Açılış yükleme ekranı: sky gradyanı + logo rozeti + otel adı + küçük→
@@ -2390,6 +2433,53 @@ func _set_bar_button_active(b: Button, active: bool) -> void:
 	# büyüsün ki dokunulan sekme yazısız da okunsun.
 	box.scale = Vector2.ONE * (1.06 if active else 1.0)
 	box.pivot_offset = box.size / 2.0
+
+
+## Cihazın güvenli alanı, viewport birimine çevrilmiş kenar boşluğu olarak:
+## x = yan, y = üst, z = alt. Güvenli alan ekran pikseli cinsinden gelir,
+## yerleşim ise 720 genişlikteki viewport biriminde; oran window boyutundan
+## çıkarılır. Yuvarlatılmış köşeler güvenli alana YANSIMADIĞI için sonuç
+## UI_SAFE_MIN_* tabanlarıyla karşılaştırılır — masaüstü/web'de zaten yalnızca
+## bu tabanlar kalır.
+func _safe_insets() -> Vector3:
+	var out := Vector3(UI_SAFE_MIN_X, UI_SAFE_MIN_TOP, UI_SAFE_MIN_BOTTOM)
+	var win := Vector2(DisplayServer.window_get_size())
+	if win.x <= 0.0 or win.y <= 0.0:
+		return out
+	var view := get_viewport_rect().size
+	var safe := DisplayServer.get_display_safe_area()
+	# Sol ve sağ ayrı ayrı gelebilir (yatay çentik); yerleşim simetrik dursun
+	# diye ikisinin büyüğü iki yana da uygulanır.
+	var edge := maxf(float(safe.position.x), float(win.x - safe.end.x))
+	out.x = maxf(out.x, edge * view.x / win.x)
+	out.y = maxf(out.y, float(safe.position.y) * view.y / win.y)
+	out.z = maxf(out.z, float(win.y - safe.end.y) * view.y / win.y)
+	return out
+
+
+## Kenara değen her parçaya güncel güvenli alan boşluğunu dağıtır. Pencere
+## boyutu değişince (döndürme, masaüstünde yeniden boyutlandırma) yeniden
+## çağrılır — bkz. _build_ui'daki size_changed bağlantısı.
+func _apply_safe_area() -> void:
+	var pad := _safe_insets()
+	# Alt bar: şerit kenardan kenara kalır, karolar içeri girer.
+	if bar_safe_pad != null:
+		bar_safe_pad.add_theme_constant_override("margin_left", int(pad.x))
+		bar_safe_pad.add_theme_constant_override("margin_right", int(pad.x))
+		bar_safe_pad.add_theme_constant_override("margin_bottom", int(pad.z))
+	# Üst bar: çentiğin altına iner (eski sabit 14 artık yalnızca taban).
+	if top_safe_pad != null:
+		top_safe_pad.add_theme_constant_override("margin_top", int(pad.y))
+	# Popup başlık şeridi: bant kenardan kenara, ‹ ve ✕ düğmeleri içeri.
+	if popup_head_pad != null:
+		popup_head_pad.add_theme_constant_override("margin_left", int(pad.x))
+		popup_head_pad.add_theme_constant_override("margin_right", int(pad.x))
+		popup_head_pad.add_theme_constant_override("margin_top", int(pad.y))
+	# Popup gövdesi: sona kadar kaydırıldığında son satır köşeye girmesin.
+	if popup_pad != null:
+		popup_pad.add_theme_constant_override("margin_left", int(pad.x))
+		popup_pad.add_theme_constant_override("margin_right", int(pad.x))
+		popup_pad.add_theme_constant_override("margin_bottom", int(pad.z) + 12)
 
 
 ## Kök yerleşim kenardan kenara olduğu için (bkz. _build_ui'daki margin),
