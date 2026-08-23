@@ -95,11 +95,27 @@ func _has_text(node: Node, needle: String) -> bool:
 
 
 ## Açık modalın kökü (bkz. main.gd _show_modal: z_index 90, main'in çocuğu).
+##
+## EN ÜSTTEKİ modal döner, ilki değil. Modallar üst üste binebiliyor (açılış
+## zinciri: bulut çakışması → tutorial → günlük ödül → çevrimdışı özet) ve
+## "ilkini al" demek, altta unutulmuş tek bir modal yüzünden ONDAN SONRAKİ HER
+## iddianın yanlış ağaca bakması demek: 2026-08-23'te bu test dönüşümlü olarak
+## "9/131 BAŞARISIZ" verirken sebebi buydu.
 func _modal_root() -> ColorRect:
+	var top: ColorRect = null
 	for c in _main.get_children():
 		if c is ColorRect and c.z_index >= 90 and not c.is_queued_for_deletion():
-			return c
-	return null
+			top = c
+	return top
+
+
+## Ekranda kaç modal duruyor — açılış zinciri bittikten sonra sıfır olmalı.
+func _modal_count() -> int:
+	var n := 0
+	for c in _main.get_children():
+		if c is ColorRect and c.z_index >= 90 and not c.is_queued_for_deletion():
+			n += 1
+	return n
 
 
 ## Modalin BİRİNCİL eylem butonu. _show_modal onu panelin VBox'ına DOĞRUDAN
@@ -147,11 +163,24 @@ func _ready() -> void:
 	game.coins = 5_000_000
 	game.gems = 5000
 	game.add_xp(200000)
+	_suppress_cloud_conflict()
 
 	_main = load("res://main.tscn").instantiate()
 	add_child(_main)
+	# Bulut indirmesi AĞ üzerinden geliyor ve ne zaman biteceği belli değil:
+	# geliştirme makinesinde gerçek bir çakışma var, sinyal testin ortasında
+	# düşüp "Which save should continue?" modalını açıyordu. Bu testin konusu
+	# çakışma ekranı DEĞİL — [9] onu zaten doğrudan çağırarak ölçüyor — bu
+	# yüzden kendiliğinden açılması kapatılır.
+	if CloudSave.conflict_detected.is_connected(_main._on_cloud_conflict):
+		CloudSave.conflict_detected.disconnect(_main._on_cloud_conflict)
 	_main._finish_loading_screen()
 	await get_tree().create_timer(0.6).timeout
+	# Açılış zinciri burada bitmiş olmalı. Bitmediyse geri kalan her bölüm yanlış
+	# ağaca bakar; tek ve okunur bir satırda patlaması, on tane anlamsız FAIL'den
+	# iyi.
+	check(_modal_count() == 0,
+		"açılış zinciri modal bırakmadı (%d açık)" % _modal_count())
 
 	await _test_base_screen()
 	await _test_every_popup()
@@ -375,6 +404,14 @@ func _test_back_button() -> void:
 	# bitireceği için burada denenmiyor (bkz. tutorial_check.gd, aynı gerekçe).
 
 
+## Çakışma DURUMUNU siler; diskteki ya da buluttaki kayda dokunmaz.
+## CloudSave.resolve_keep_local() doğru API olurdu ama gerçek hesaba yükleme
+## yapardı — bir arayüz testinin yapmaması gereken şey.
+func _suppress_cloud_conflict() -> void:
+	CloudSave._blocked = false
+	CloudSave._pending_cloud = {}
+
+
 func _test_modals() -> void:
 	print("\n[9] Modallar")
 	var game := get_node("/root/Game")
@@ -438,6 +475,9 @@ func _test_modals() -> void:
 	check(closed[0], "kapanış callback'i çağrıldı")
 
 	# Bulut çakışması: çakışma YOKKEN modal açılmamalı, callback yine çağrılmalı.
+	# Temizlik ile çağrı arasında `await` YOK: bulut indirmesi ancak bir sonraki
+	# karede durumu geri yazabilir, o yüzden bu iki satır bitişik kalmalı.
+	_suppress_cloud_conflict()
 	var chained := [false]
 	_main._show_cloud_conflict_modal(func(): chained[0] = true)
 	await get_tree().process_frame
