@@ -109,13 +109,14 @@ func _move(from_pos: Vector2, to_pos: Vector2) -> void:
 	Input.parse_input_event(e)
 
 
-## Press, drag DRAG_STEPS times, release.
-func _drag_from(start: Vector2) -> void:
+## Press, drag DRAG_STEPS times, release. The step defaults to a swipe up; the
+## build tray is horizontal and passes its own.
+func _drag_from(start: Vector2, step: Vector2 = DRAG_STEP) -> void:
 	_press(start, true)
 	await get_tree().process_frame
 	var p := start
 	for i in DRAG_STEPS:
-		var n := p + DRAG_STEP
+		var n := p + step
 		_move(p, n)
 		p = n
 		await get_tree().process_frame
@@ -204,6 +205,7 @@ func _ready() -> void:
 	await _test_drag_over_row_does_not_press_it()
 	await _test_tap_still_presses_row()
 	await _test_modals_scroll()
+	await _test_build_tray()
 
 	_finished = true
 	print("=".repeat(64))
@@ -497,3 +499,84 @@ func _test_modals_scroll() -> void:
 			"uzun gövde: gövde üstünden sürükleme kaydırdı (scroll_vertical = %d)"
 				% scroll.scroll_vertical)
 	await _free_modal()
+
+# --- Build Mode room tray -------------------------------------------------
+#
+# The tray is the one horizontal list in the game, and it holds more room types
+# than fit on screen: without scrolling from on top of a card, the rightmost
+# types are simply unreachable. It also has a second gesture on the same finger
+# — press a card and pull it out to place a room — so here the two have to be
+# told apart rather than one simply winning.
+
+func _test_build_tray() -> void:
+	print("
+[6] İnşa Modu oda rafı")
+	var game := get_node("/root/Game")
+	# The tray reads the drag through _process, so the freeze has to lift.
+	_main.set_process(true)
+	game.set_process(false)
+	_main._set_build_mode(true)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	var tray: ScrollContainer = _main.build_shop_scroll
+	check(tray != null and tray.visible, "raf açıldı")
+	if tray == null:
+		return
+	check(tray.get_h_scroll_bar().max_value > tray.size.x + 1.0,
+		"raf ekrandan geniş — kaydırma zorunlu (%d > %d)"
+			% [int(tray.get_h_scroll_bar().max_value), int(tray.size.x)])
+	var found := _blockers(tray, [])
+	check(found.is_empty(), "rafta sürüklemeyi yutan düğüm yok%s"
+		% ("" if found.is_empty() else " — " + ", ".join(found)))
+
+	var card: Button = _main.build_shop_row.get_child(0)
+	var centre: Vector2 = card.get_global_rect().get_center()
+
+	# Sideways: the tray scrolls and no room leaves the shelf.
+	tray.scroll_horizontal = 0
+	await get_tree().process_frame
+	await _drag_from(centre, Vector2(-30, 0))
+	check(tray.scroll_horizontal > 0,
+		"kart üstünden yatay sürükleme rafı kaydırdı (scroll_horizontal = %d)"
+			% tray.scroll_horizontal)
+	check(not _main._drag_active and _main._drag_new_type == "",
+		"yatay sürükleme odayı raftan ÇIKARMADI")
+
+	# Upwards: the room comes out, and the tray stays put underneath it.
+	#
+	# The direction rule is driven through the state machine rather than through
+	# synthetic motion: Input.parse_input_event does not move the engine's cursor,
+	# and _update_room_drag reads get_global_mouse_position(). So the press is
+	# real and the gesture's DIRECTION is set by moving its start point — which
+	# is exactly the quantity the rule is written against.
+	tray.scroll_horizontal = 0
+	await get_tree().process_frame
+	await get_tree().process_frame
+	card = _main.build_shop_row.get_child(0)
+	centre = card.get_global_rect().get_center()
+	_press(centre, true)
+	await get_tree().process_frame
+	check(_main._drag_new_type != "", "karta basmak odayı aday yaptı")
+	var here: Vector2 = _main.get_global_mouse_position()
+
+	# Sideways gesture: stays on the shelf, so the tray can scroll.
+	_main._drag_active = false
+	_main._drag_start_mouse = here + Vector2(200, 0)
+	_main._update_room_drag()
+	check(not _main._drag_active, "yanlamasına hareket odayı raftan çıkarmıyor")
+
+	# Upward gesture: comes out.
+	_main._drag_start_mouse = here + Vector2(0, 200)
+	_main._update_room_drag()
+	check(_main._drag_active, "yukarı doğru hareket odayı raftan çıkardı")
+	check(tray.scroll_horizontal == 0, "oda çıkarılırken raf yerinde kaldı (%d)"
+		% tray.scroll_horizontal)
+	_press(here, false)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	check(not _main._drag_active and _main._drag_ghost == null,
+		"bırakınca sürükleme temizlendi")
+
+	_main._set_build_mode(false)
+	await get_tree().process_frame
+	_main.set_process(false)
