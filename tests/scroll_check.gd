@@ -244,6 +244,9 @@ func _test_filters_every_popup() -> void:
 	# Room and facility screens are reached from the building, not the bar, and
 	# they are the longest lists in the game — worth covering by hand.
 	var game := get_node("/root/Game")
+	# A fresh save has no facility room, so without this the facility screen —
+	# one of the longest lists in the game — would silently go uncovered.
+	game.buy_room("cafe")
 	var guest := -1
 	var facility := -1
 	for i in game.rooms.size():
