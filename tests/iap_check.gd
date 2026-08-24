@@ -58,10 +58,15 @@ func check(cond: bool, label: String) -> void:
 
 
 ## Play'in döndürdüğü satın alma kaydının test karşılığı.
+##
+## ANAHTAR ADLARI EKLENTİDEN ALINDI (`GodotGooglePlayBilling-release.aar`),
+## uydurulmadı: ürün listesi `product_ids`. 2026-08-25'e kadar burada `products`
+## yazıyordu; test yeşil görünürken gerçek cihazda satın alma sessizce
+## uygulanmıyordu — oyuncu ödeyip elması alamıyordu.
 func _purchase(products: Array, token: String, acknowledged := false,
 		state := PURCHASED) -> Dictionary:
 	return {
-		"products": products,
+		"product_ids": products,
 		"purchase_token": token,
 		"is_acknowledged": acknowledged,
 		"purchase_state": state,
@@ -309,16 +314,16 @@ func _test_prices() -> void:
 	var sig := func(): updated[0] += 1
 	IAP.prices_updated.connect(sig)
 
-	# Eklentinin snake_case biçimi.
+	# Eklentinin GERÇEK biçimi (aar'dan: `product_details`).
 	IAP._on_query_product_details_response({
 		"response_code": OK_CODE,
-		"product_details_list": [{
+		"product_details": [{
 			"product_id": IAP.PRODUCT_REMOVE_ADS,
 			"one_time_purchase_offer_details": {"formatted_price": "₺149,99"},
 		}],
 	})
 	check(IAP.price_for(IAP.PRODUCT_REMOVE_ADS, "₺--") == "₺149,99",
-		"snake_case yanıt okundu")
+		"eklentinin gerçek anahtarı (product_details) okundu")
 
 	# Aynı eklentinin camelCase biçimi — sürüme göre değişiyor, ikisi de
 	# desteklenmezse cihazda fiyat sessizce yedek etikette kalır.
@@ -333,9 +338,20 @@ func _test_prices() -> void:
 		"camelCase yanıt da okundu")
 	check(updated[0] == 2, "her başarılı fiyat yanıtında prices_updated yayıldı")
 
+	# Eski anahtar adları yedekte duruyor; hâlâ okunabildiklerini de sür.
+	IAP._on_query_product_details_response({
+		"response_code": OK_CODE,
+		"product_details_list": [{
+			"product_id": IAP.PRODUCT_GEMS_SMALL,
+			"one_time_purchase_offer_details": {"formatted_price": "₺114,99"},
+		}],
+	})
+	check(IAP.price_for(IAP.PRODUCT_GEMS_SMALL, "$--") == "₺114,99",
+		"eski product_details_list anahtarı yedekte çalışıyor")
+
 	# Bozuk/eksik yanıtlar sinyal yaymamalı ve mevcut fiyatı bozmamalı.
 	var before: int = updated[0]
-	IAP._on_query_product_details_response({"response_code": OK_CODE, "product_details_list": []})
+	IAP._on_query_product_details_response({"response_code": OK_CODE, "product_details": []})
 	IAP._on_query_product_details_response({
 		"response_code": OK_CODE,
 		"product_details_list": [{"bilinmeyen": "yapı"}],
