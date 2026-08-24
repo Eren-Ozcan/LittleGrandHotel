@@ -60,7 +60,10 @@ if (-not (Test-Path $Godot)) {
 #           besliyor, cloud_api_check kasten bozuk JSON yazıyor).
 # verdict : $false ise test bir geçti/kaldı kararı BASMIYOR, yalnızca gözlem
 #           satırları yazıyor. Bunlar PASS sayılmaz, RAPOR diye işaretlenir —
-#           sessizce yeşil görünen test istemiyoruz.
+#           sessizce yeşil görünen test istemiyoruz. 2026-08-24'ten beri hiçbir
+#           test bu durumda değil (son ikisi, store_compliance ve unlink_check,
+#           gerçek iddialara çevrildi); alan yeni bir gözlem testi eklenirse
+#           diye duruyor.
 $tests = @(
     @{ name = "sim_check";        target = "res://tests/sim_check.gd";                mode = "script"; window = $false; timeout = 120; success = "TÜM TESTLER GEÇTİ" },
     @{ name = "data_check";       target = "res://tests/data_check.tscn";             mode = "scene";  window = $false; timeout = 90;  success = "TÜM TESTLER GEÇTİ" },
@@ -74,8 +77,8 @@ $tests = @(
     @{ name = "iap_check";        target = "res://tests/iap_check.tscn";              mode = "scene";  window = $false; timeout = 90;  success = "TÜM TESTLER GEÇTİ" },
     @{ name = "i18n_check";       target = "res://tests/i18n_check.tscn";             mode = "scene";  window = $false; timeout = 120; success = "all checks passed" },
     @{ name = "google_signin";    target = "res://tests/google_signin_check.tscn";    mode = "scene";  window = $false; timeout = 90;  success = "SONUC:" },
-    @{ name = "store_compliance"; target = "res://tests/store_compliance_check.tscn"; mode = "scene";  window = $false; timeout = 90;  verdict = $false },
-    @{ name = "unlink_check";     target = "res://tests/unlink_check.tscn";           mode = "scene";  window = $false; timeout = 90;  verdict = $false },
+    @{ name = "store_compliance"; target = "res://tests/store_compliance_check.tscn"; mode = "scene";  window = $false; timeout = 90;  success = "TÜM TESTLER GEÇTİ" },
+    @{ name = "unlink_check";     target = "res://tests/unlink_check.tscn";           mode = "scene";  window = $false; timeout = 90;  success = "TÜM TESTLER GEÇTİ" },
     @{ name = "tutorial_check";   target = "res://tests/tutorial_check.tscn";         mode = "scene";  window = $true;  timeout = 120; success = "TÜM TESTLER GEÇTİ" },
     @{ name = "ui_check";         target = "res://tests/ui_check.tscn";               mode = "scene";  window = $true;  timeout = 240; success = "TÜM TESTLER GEÇTİ" },
     @{ name = "scroll_check";     target = "res://tests/scroll_check.tscn";           mode = "scene";  window = $true;  timeout = 180; success = "TÜM TESTLER GEÇTİ" }
