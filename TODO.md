@@ -742,10 +742,12 @@ sanılan `..._PASS` değil) ve alias satırı `android/RELEASE_KEYSTORE_SECRETS.
 açıklama parantezi içeriyor — ilk token alınmalı. Godot export AAB'yi yazdıktan
 sonra süreç ASILI kalıyor; dosya tamamlandıktan sonra süreci öldürmek yeterli.
 
-**Sıradaki tek iş — AAB'yi kapalı teste yükle.** Tarayıcı otomasyonu bunu yapamıyor:
-dosya yükleme aracının sınırı 10 MB, paket 62 MB. Elle yükle
-(Test edin ve yayınlayın ▸ Kapalı test ▸ yeni sürüm) ya da kalıcı çözüm olarak
-Play Developer API + servis hesabı kur.
+**AAB kapalı teste YÜKLENDİ ve incelemeye gönderildi** (kullanıcı elle yükledi;
+tarayıcı otomasyonu yapamıyor — dosya yükleme aracının sınırı 10 MB, paket 62 MB.
+Kalıcı çözüm Play Developer API + servis hesabı). Sürüm 4 (1.0.3), Kapalı test -
+Alpha kanalı, tr-TR + en-US sürüm notlarıyla; durum "İncelenmekte olan
+değişiklikler". Derlemedeki iki uyarı (R8 eşleme dosyası yok, yerel hata ayıklama
+sembolleri yok) her sürümde çıkıyor, engel değil.
 
 **Takvim:** kontrol paneli "12 test kullanıcısı kesintisiz olarak **13 gündür**
 kayıtlı" diyor, *Üretime başvur* hâlâ pasif — 14. gün **2026-08-25**'te doluyor.
