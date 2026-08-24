@@ -696,6 +696,63 @@ device. Setup, reasoning and the remaining manual step: `docs/cloud-save-setup.m
       `android/RELEASE_KEYSTORE_SECRETS.txt` (gitignored) — it belongs in a password manager,
       because one gitignored file is exactly how it went missing the first time.
 
+### START HERE — durum devri (2026-08-24 kapanışı)
+
+Paketin tamamı yeşil ve artık **REPORT kalmadı: 17 test, 2268 kontrol**
+(`pwsh tests/run_all.ps1`). `store_compliance_check` ve `unlink_check` gerçek
+iddialara çevrildi.
+
+**Bu arada bir güvenlik/veri sorunu çıktı ve kapatıldı:** `store_compliance_check`
+`CloudSave.delete_cloud_data()`'yı GERÇEKTEN çağırıyordu. Firebase yapılandırılmış
+olduğu için her koşu üretimde anonim bir hesap yaratıp siliyordu; makinede bağlı bir
+Google oturumu olsaydı geliştiricinin **gerçek hesabını** silecekti. Ağ dalı artık
+sahte auth ile kapalı, açılış senkronu da `_syncing`/`_uploading` ile.
+
+**Cihazda reklam testi TAMAMLANDI** (POT-LX1, Google'ın resmi test kimlikleriyle
+derlenmiş `build/android/lgh-adtest.apk`; canlı kimliklerle tek istek atılmadı):
+- Ödüllü: vardiya ekranından açıldı, "Ödül verildi", `×2.0 · 29 dk` bonusu başladı,
+  bonus etkinken buton hiç çizilmiyor (stüdyo kuralı 10 cihazda doğrulandı).
+- Geçiş: vardiya bitişinde göründü, impression kaydedildi.
+- App Open: arka plandan **ikinci** dönüşte göründü; ilk dönüşte önbellekte reklam
+  olmadığı için kod yalnızca yükleme başlatıyor (doğru davranış, panik yapma).
+- UMP: TR EEA dışı olduğu için form yok. Ayrıca Google 502 döndü ve kod hata
+  dalından `_init_ads()`'e düşerek reklamları yine de başlattı.
+- Kapılar canlıda tuttu: 5 dk soğuma vardiya bitişindeki reklamı engelledi, popup
+  açıkken biten vardiyada da reklam basılmadı.
+- Cihazın AdMob test cihazı kimliği: `0CC228E543E790AFB7DD69E7A8021761`.
+  Kalıcı çözüm hâlâ bunu panele test cihazı olarak eklemek.
+- Yan çıktı: bulut çakışma ekranı gerçek cihazda çıktı, "Bu cihaz" seçilince kayıt
+  korunup buluta yüklendi; Profil ▸ Hesap "Bir Google hesabına bağlı" diyor.
+
+**Play Console'da bugün yapılanlar (yilkgamesstudio@gmail.com, /u/5):**
+- Bekleyen **2 değişiklik incelemeye gönderildi** (tr-TR + en-US ekran görüntüleri).
+  Durum artık "İncelenmekte olan değişiklikler".
+- **Üç elmas paketi oluşturuldu ve etkinleştirildi**: `gems_small` (Küçük Elmas
+  Paketi, USD 1,99), `gems_medium` (Orta, USD 4,99), `gems_large` (Büyük, USD 14,99).
+  Hepsi 173 ülke, "Etkin" ve **"Eski sürümlerle uyumlu"** rozetli — yani `iap.gd`'nin
+  eski usul ürün sorgusu bunları görüyor. Satın alma seçeneği kimlikleri alt çizgi
+  kabul etmediği için `gems-small` / `gems-medium` / `gems-large` (kısa çizgi).
+  Fiyat tuzağı: konsol Türkçe olduğu için para birimi USD'ye çevrilip `1,99`
+  **virgülle** yazıldı; Almanya satırı `EUR 1,99` okunarak doğrulandı.
+
+**Sürüm 1.0.3 (kod 4) derlendi ve imzalandı:** `build/android/little-grand-hotel.aab`
+(62 MB). İmza SHA-1 `B1:00:9A:…:89:AF` — Play'deki yükleme sertifikasıyla aynı.
+İmzalama ortam değişkeni **`GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD`** (yaygın
+sanılan `..._PASS` değil) ve alias satırı `android/RELEASE_KEYSTORE_SECRETS.txt`'de
+açıklama parantezi içeriyor — ilk token alınmalı. Godot export AAB'yi yazdıktan
+sonra süreç ASILI kalıyor; dosya tamamlandıktan sonra süreci öldürmek yeterli.
+
+**Sıradaki tek iş — AAB'yi kapalı teste yükle.** Tarayıcı otomasyonu bunu yapamıyor:
+dosya yükleme aracının sınırı 10 MB, paket 62 MB. Elle yükle
+(Test edin ve yayınlayın ▸ Kapalı test ▸ yeni sürüm) ya da kalıcı çözüm olarak
+Play Developer API + servis hesabı kur.
+
+**Takvim:** kontrol paneli "12 test kullanıcısı kesintisiz olarak **13 gündür**
+kayıtlı" diyor, *Üretime başvur* hâlâ pasif — 14. gün **2026-08-25**'te doluyor.
+
+**Kalan:** AdMob vergi formları (TR + ABD, yalnızca ilk ödemeyi bloklar); tanıtım
+videosu kararı; zayıf dört mağaza görselinin (02, 06, 07, 08) yeniden render'ı.
+
 ### START HERE — durum devri (2026-08-22 kapanışı)
 
 `master` push'landı (`99f17c4`). İki iş bu oturumda yapıldı, biri yarım kaldı.
