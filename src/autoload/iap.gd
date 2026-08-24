@@ -97,7 +97,11 @@ func price_for(product_id: String, fallback: String) -> String:
 func _on_query_product_details_response(response: Dictionary) -> void:
 	if response.get("response_code", -1) != BillingClient.BillingResponseCode.OK:
 		return
-	var list: Array = response.get("product_details_list", response.get("productDetailsList", []))
+	# GERÇEK ANAHTAR `product_details`: eklentinin Java tarafı (aar) bu adı
+	# kullanıyor — 2026-08-25'te cihazda doğrulandı. Diğer iki ad eski
+	# sürümler için yedekte tutuluyor.
+	var list: Array = response.get("product_details",
+		response.get("product_details_list", response.get("productDetailsList", [])))
 	if list.is_empty():
 		print("[IAP] ürün detayı yanıtı boş/tanınmadı: ", response.keys())
 		return
@@ -177,7 +181,16 @@ func _apply_purchase(p: Dictionary) -> void:
 	if p.get("purchase_state", 0) != BillingClient.PurchaseState.PURCHASED:
 		return
 	var token: String = p.get("purchase_token", "")
-	var products: Array = p.get("products", [])
+	# Eklenti satın alma sözlüğünde ürün listesini `product_ids` diye veriyor
+	# (aar'dan doğrulandı). Yanlış anahtar okununca satın alma sessizce
+	# uygulanmıyordu: oyuncu ödüyor, elması alamıyor.
+	var products: Array = p.get("product_ids", p.get("products", []))
+	if products.is_empty():
+		# Sessizce dönmek 2026-08-25'te yakalanan hatanın ta kendisiydi: ödeme
+		# alınıyor, ürün verilmiyordu. Anahtar adı yine değişirse bu satır
+		# cihaz günlüğünde görünür.
+		print("[IAP] satın alma kaydında ürün kimliği yok, anahtarlar: ", p.keys())
+		return
 	var consumable := products.any(func(pid): return _CONSUMABLE_PRODUCTS.has(pid))
 	if consumable:
 		_billing.consume_purchase(token)
