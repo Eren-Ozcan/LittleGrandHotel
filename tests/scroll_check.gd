@@ -90,6 +90,31 @@ func _to_screen(viewport_pos: Vector2) -> Vector2:
 	return get_tree().root.get_final_transform() * viewport_pos
 
 
+## main'i yeniden kuruluma götüren tüm sinyal bağlantılarını söker.
+##
+## Yalnızca `_main`'e giden bağlantılar sökülür; oyunun kendi iç bağlantıları
+## yerinde kalır, yoksa test ölçtüğü şeyin altını oymuş olur.
+func _mute_rebuilds() -> void:
+	var game := get_node("/root/Game")
+	var signals: Array[Signal] = [
+		game.state_changed,
+		game.quest_completed,
+		game.achievement_unlocked,
+		game.leveled_up,
+		IAP.prices_updated,
+		CloudSave.status_changed,
+		CloudSave.sync_finished,
+	]
+	var cut := 0
+	for sig: Signal in signals:
+		for c in sig.get_connections():
+			var cb: Callable = c["callable"]
+			if cb.get_object() == _main:
+				sig.disconnect(cb)
+				cut += 1
+	print("  (yeniden kurulum bağlantıları söküldü: %d)" % cut)
+
+
 func _press(viewport_pos: Vector2, pressed: bool) -> void:
 	var e := InputEventMouseButton.new()
 	e.button_index = MOUSE_BUTTON_LEFT
@@ -199,6 +224,13 @@ func _ready() -> void:
 	# scroll" failure that has nothing to do with the drag.
 	game.set_process(false)
 	_main.set_process(false)
+	# Donma TEK BAŞINA yetmiyor: yeniden kurulum _process'ten değil SİNYALDEN
+	# geliyor. Süreç kapalıyken bile bir bulut durumu, bir fiyat yanıtı ya da
+	# kuyrukta kalmış bir state_changed düşerse popup yeniden kuruluyor ve
+	# ölçtüğümüz kaydırma sıfırlanıyor — paket yüklüyken gerçekten yaşandı
+	# (2026-08-25, iki ayrı koşuda iki ayrı kontrol). Bu yüzden main'in
+	# yeniden kurulum bağlantıları test boyunca sökülüyor.
+	_mute_rebuilds()
 
 	await _test_filters_every_popup()
 	await _test_drag_over_card_scrolls()
