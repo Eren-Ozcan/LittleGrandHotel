@@ -9,6 +9,31 @@ extends Node
 var main: Node
 var game: Node
 
+# --- Bütçeler ------------------------------------------------------------
+#
+# 2026-08-25'e kadar bu dosya yalnızca sayı basıyordu ve koşucuya hiç
+# bağlanmamıştı: bir performans gerilemesi kimseye çarpmadan yayına gidebilirdi.
+# Eşikler ölçülen değerlerin ~3 katı — amaç gün içi dalgalanmayı değil, kategori
+# değiştiren bir gerilemeyi (ör. her karede yeniden kurulum) yakalamak.
+const BUDGET_REBUILD_240_MS := 150.0
+const BUDGET_IDLE_P95_MS := 20.0
+const BUDGET_BUSY_P95_MS := 25.0
+const BUDGET_WALKER_LEFTOVER := 5
+
+var failures := 0
+var checks := 0
+var _last_rebuild_avg := 0.0
+var _p95: Dictionary = {}
+
+
+func check(cond: bool, label: String) -> void:
+	checks += 1
+	if cond:
+		print("  OK   ", label)
+	else:
+		failures += 1
+		printerr("  FAIL ", label)
+
 
 func _ready() -> void:
 	main = load("res://main.tscn").instantiate()
@@ -25,8 +50,12 @@ func _ready() -> void:
 	await _bench_node_leak_check()
 
 	print("=".repeat(64))
+	if failures == 0:
+		print("TÜM TESTLER GEÇTİ (%d kontrol)" % checks)
+	else:
+		printerr("%d/%d TEST BAŞARISIZ" % [failures, checks])
 	print("PERF_DONE")
-	get_tree().quit()
+	get_tree().quit(1 if failures > 0 else 0)
 
 
 func _set_room_count(floors: int, rooms_per_floor: int) -> void:
@@ -75,6 +104,10 @@ func _bench_rebuild_scaling() -> void:
 		print("  %3d kat x %d oda = %4d oda  ->  ort %6.2fms  min %6.2fms  max %6.2fms  |  toplam node: %d" % [
 			floors, rpf, floors * rpf, stats.avg, stats.min, stats.max, get_tree().get_node_count()
 		])
+		_last_rebuild_avg = stats.avg
+	check(_last_rebuild_avg < BUDGET_REBUILD_240_MS,
+		"240 odalı yeniden kurulum bütçede (%.1fms < %.0fms)"
+		% [_last_rebuild_avg, BUDGET_REBUILD_240_MS])
 
 
 func _sample_frame_times(duration: float, label: String) -> void:
@@ -96,6 +129,7 @@ func _sample_frame_times(duration: float, label: String) -> void:
 	print("  [%-9s] %4d kare | ort %5.2fms (~%3.0f FPS) | p95 %5.2fms | maks %5.2fms | node sayısı %d" % [
 		label, samples.size(), avg, 1000.0 / avg, p95, samples[-1], get_tree().get_node_count()
 	])
+	_p95[label] = p95
 
 
 func _bench_frame_time_idle() -> void:
@@ -103,6 +137,11 @@ func _bench_frame_time_idle() -> void:
 	_set_room_count(2, 2)
 	main._rebuild_hotel()
 	await _sample_frame_times(3.0, "boşta")
+	check(float(_p95.get("boşta", 999.0)) < BUDGET_IDLE_P95_MS,
+		"boşta p95 bütçede (%.2fms < %.0fms)"
+		% [_p95.get("boşta", 999.0), BUDGET_IDLE_P95_MS])
+	check(float(_p95.get("boşta", 999.0)) < BUDGET_IDLE_P95_MS,
+		"boşta p95 bütçede (%.2fms < %.0fms)" % [_p95.get("boşta", 999.0), BUDGET_IDLE_P95_MS])
 
 
 func _bench_guest_flood() -> void:
@@ -118,6 +157,12 @@ func _bench_guest_flood() -> void:
 	for _i in 20:
 		main._spawn_passerby()
 	await _sample_frame_times(5.0, "kalabalık")
+	check(float(_p95.get("kalabalık", 999.0)) < BUDGET_BUSY_P95_MS,
+		"kalabalık p95 bütçede (%.2fms < %.0fms)"
+		% [_p95.get("kalabalık", 999.0), BUDGET_BUSY_P95_MS])
+	check(float(_p95.get("kalabalık", 999.0)) < BUDGET_BUSY_P95_MS,
+		"kalabalık p95 bütçede (%.2fms < %.0fms)"
+		% [_p95.get("kalabalık", 999.0), BUDGET_BUSY_P95_MS])
 	print("  kuyruk (_queue_count): %d  |  yolda (_inbound): %d  |  walker_layer node: %d" % [
 		main._queue_count, main._inbound, main._walker_layer.get_child_count()
 	])
@@ -133,7 +178,6 @@ func _bench_node_leak_check() -> void:
 		print("  t=%2.0fs  walker_layer node: %3d  |  kuyruk: %d  |  yolda: %d  |  toplam node: %d" % [
 			t, main._walker_layer.get_child_count(), main._queue_count, main._inbound, get_tree().get_node_count()
 		])
-	if main._walker_layer.get_child_count() > 5:
-		printerr("  UYARI: walker ikonları serbest bırakılmıyor olabilir (olası sızıntı)")
-	else:
-		print("  OK: walker katmanı büyük ölçüde temizlendi")
+	check(main._walker_layer.get_child_count() <= BUDGET_WALKER_LEFTOVER,
+		"yoğunluk bitince walker katmanı boşaldı (%d <= %d)"
+		% [main._walker_layer.get_child_count(), BUDGET_WALKER_LEFTOVER])

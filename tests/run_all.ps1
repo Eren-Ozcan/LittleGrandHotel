@@ -65,6 +65,8 @@ if (-not (Test-Path $Godot)) {
 #           gerçek iddialara çevrildi); alan yeni bir gözlem testi eklenirse
 #           diye duruyor.
 $tests = @(
+    @{ name = "parse_check";      target = "res://tests/parse_check.tscn";           mode = "scene";  window = $false; timeout = 120; success = "TÜM TESTLER GEÇTİ" },
+    @{ name = "plugin_keys";      target = "res://tests/plugin_keys_check.tscn";    mode = "scene";  window = $false; timeout = 120; success = "TÜM TESTLER GEÇTİ" },
     @{ name = "sim_check";        target = "res://tests/sim_check.gd";                mode = "script"; window = $false; timeout = 120; success = "TÜM TESTLER GEÇTİ" },
     @{ name = "data_check";       target = "res://tests/data_check.tscn";             mode = "scene";  window = $false; timeout = 90;  success = "TÜM TESTLER GEÇTİ" },
     @{ name = "economy_api";      target = "res://tests/economy_api_check.tscn";      mode = "scene";  window = $false; timeout = 90;  success = "TÜM TESTLER GEÇTİ" },
@@ -81,6 +83,7 @@ $tests = @(
     @{ name = "unlink_check";     target = "res://tests/unlink_check.tscn";           mode = "scene";  window = $false; timeout = 90;  success = "TÜM TESTLER GEÇTİ" },
     @{ name = "tutorial_check";   target = "res://tests/tutorial_check.tscn";         mode = "scene";  window = $true;  timeout = 120; success = "TÜM TESTLER GEÇTİ" },
     @{ name = "ui_check";         target = "res://tests/ui_check.tscn";               mode = "scene";  window = $true;  timeout = 240; success = "TÜM TESTLER GEÇTİ" },
+    @{ name = "perf_test";        target = "res://tests/perf_test.tscn";            mode = "scene";  window = $true;  timeout = 300; success = "PERF_DONE" },
     @{ name = "scroll_check";     target = "res://tests/scroll_check.tscn";           mode = "scene";  window = $true;  timeout = 180; success = "TÜM TESTLER GEÇTİ" }
 )
 
