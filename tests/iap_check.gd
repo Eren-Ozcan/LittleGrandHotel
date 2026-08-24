@@ -98,6 +98,9 @@ func _ready() -> void:
 	_test_pending_state_is_ignored()
 	_test_purchase_updated_error_code()
 	_test_pending_callbacks()
+	_test_failed_and_cancelled()
+	_test_pending_state()
+	_test_entitlement_sync()
 	_test_restore_flow()
 	_test_prices()
 
@@ -367,3 +370,108 @@ func _test_prices() -> void:
 	check(updated[0] == before, "boş/tanınmayan/hatalı yanıtlar sinyal yaymadı")
 	check(IAP.price_for(IAP.PRODUCT_REMOVE_ADS, "₺--") == "₺149,99",
 		"hatalı yanıt önceki geçerli fiyatı EZMEDİ")
+
+
+# --- Başarısız / iptal / beklemede ----------------------------------------
+#
+# Bu üç yol 2026-08-25'e kadar hiç sürülmemişti: kart reddederse ya da oyuncu
+# vazgeçerse çağıran taraf sonsuza kadar bekliyordu ve ekranda hiçbir şey
+# olmuyordu. Google'ın kendi test yönergesi bu iki kartı ("her zaman
+# onaylar" / "her zaman reddeder") ve yavaş kartı ayrı ayrı denemeyi istiyor.
+
+func _test_failed_and_cancelled() -> void:
+	print("
+[10] Reddedilen ve iptal edilen satın alma")
+	_fresh_spy()
+	var calls := []
+	var failed := []
+	var sig := func(pid: String, code: int): failed.append([pid, code])
+	IAP.purchase_failed.connect(sig)
+
+	IAP._pending[IAP.PRODUCT_GEMS_SMALL] = [func(ok): calls.append(ok)]
+	IAP._on_purchase_updated({"response_code": BillingClient.BillingResponseCode.ERROR})
+	check(calls.size() == 1 and calls[0] == false,
+		"reddedilen satın almada callback BAŞARISIZ diye kapandı")
+	check(not IAP._pending.has(IAP.PRODUCT_GEMS_SMALL), "kuyruk temizlendi")
+	check(failed.size() == 1 and failed[0][0] == IAP.PRODUCT_GEMS_SMALL,
+		"purchase_failed ürün kimliğiyle yayıldı")
+
+	# Oyuncunun kendi iptali hata DEĞİLDİR: callback kapanır ama hata sinyali
+	# yayılmaz, yoksa vazgeçen oyuncuya "satın alma başarısız" denir.
+	calls.clear()
+	failed.clear()
+	IAP._pending[IAP.PRODUCT_GEMS_LARGE] = [func(ok): calls.append(ok)]
+	IAP._on_purchase_updated({
+		"response_code": BillingClient.BillingResponseCode.USER_CANCELED,
+	})
+	check(calls.size() == 1 and calls[0] == false, "iptalde de callback kapandı")
+	check(failed.is_empty(), "iptal purchase_failed YAYMADI")
+	IAP.purchase_failed.disconnect(sig)
+
+
+func _test_pending_state() -> void:
+	print("
+[11] Beklemede kalan satın alma")
+	_fresh_spy()
+	var pending := []
+	var granted := []
+	var sig := func(pid: String): pending.append(pid)
+	var grant := func(pid: String, ok: bool): granted.append([pid, ok])
+	IAP.purchase_pending.connect(sig)
+	IAP.purchase_result.connect(grant)
+
+	IAP._apply_purchase(_purchase([IAP.PRODUCT_GEMS_MEDIUM], "tok-pend", false,
+		BillingClient.PurchaseState.PENDING))
+	check(pending.size() == 1 and pending[0] == IAP.PRODUCT_GEMS_MEDIUM,
+		"beklemedeki satın alma duyuruldu")
+	check(granted.is_empty(), "BEKLEMEDEKİ satın alma ödül VERMEDİ")
+	check(spy.consumed.is_empty() and spy.acknowledged.is_empty(),
+		"beklemedeki satın alma tüketilmedi/onaylanmadı")
+
+	# Onay gelince aynı satın alma PURCHASED olarak döner ve ödül orada verilir.
+	IAP._apply_purchase(_purchase([IAP.PRODUCT_GEMS_MEDIUM], "tok-pend"))
+	check(granted.size() == 1 and granted[0][1] == true,
+		"onaylanınca ödül verildi")
+	check(spy.consumed == ["tok-pend"], "onaylanan tüketilebilir consume edildi")
+	IAP.purchase_pending.disconnect(sig)
+	IAP.purchase_result.disconnect(grant)
+
+
+func _test_entitlement_sync() -> void:
+	print("
+[12] Sahiplik mutabakatı (iade)")
+	_fresh_spy()
+	var seen := []
+	var sig := func(owned: PackedStringArray): seen.append(owned)
+	IAP.entitlements_synced.connect(sig)
+
+	IAP._on_query_purchases_response({
+		"response_code": OK_CODE,
+		"purchases": [_purchase([IAP.PRODUCT_REMOVE_ADS], "tok-own", true)],
+	})
+	check(seen.size() == 1, "sorgu yanıtı sahiplik listesini duyurdu")
+	var owned: PackedStringArray = seen[0]
+	check(owned.has(IAP.PRODUCT_REMOVE_ADS), "sahip olunan ürün listede")
+	check(not owned.has(IAP.PRODUCT_INCOME_2X),
+		"iade edilen/alınmamış ürün listede DEĞİL — hakkı kapatan taraf bunu görür")
+
+	# Başarısız sorgu sahiplik duyurmamalı: boş liste sanılıp haklar silinirdi.
+	seen.clear()
+	IAP._on_query_purchases_response({
+		"response_code": BillingClient.BillingResponseCode.ERROR,
+		"purchases": [],
+	})
+	check(seen.is_empty(), "başarısız sorgu sahiplik listesi YAYMADI")
+
+	# Beklemedeki satın alma "sahip" sayılmaz.
+	seen.clear()
+	IAP._on_query_purchases_response({
+		"response_code": OK_CODE,
+		"purchases": [_purchase([IAP.PRODUCT_INCOME_2X], "tok-p2", false,
+			BillingClient.PurchaseState.PENDING)],
+	})
+	var owned2: PackedStringArray = seen[0]
+	check(not owned2.has(IAP.PRODUCT_INCOME_2X),
+		"beklemedeki satın alma sahiplik listesine girmedi")
+	IAP.entitlements_synced.disconnect(sig)
+
