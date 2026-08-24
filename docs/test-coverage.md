@@ -38,13 +38,16 @@ aşımı vardır (sahne hiç yüklenemezse süreç asılıyor).
 | `google_signin_check` | Yeniden deneme bütçesi, tarayıcı turu zamanlaması | — | 13 |
 | `tutorial_check` | Zorunlu açılış tutorial'ı: her adım, atlama, tekrar gelmeme | ✔ | 61 |
 | `ui_check` | `main.gd`: her popup, her sekme, her modal, iki dil, canlı etiketler | ✔ | 134 |
-| `store_compliance_check` | Mağaza uyumu gözlemleri | — | rapor |
-| `unlink_check` | Hesap bağlantısını kaldırma akışı gözlemleri | — | rapor |
+| `scroll_check` | Popup/tepsi kaydırma: dokunma sürüklemesi, modal z-sırası | ✔ | 63 |
+| `store_compliance_check` | Elmas paketi ödülü, hak geri yükleme, silme yolunun dürüst hatası | — | 11 |
+| `unlink_check` | Hesap bağlantısını kaldırma: iki kez sorma, kimlik sıfırlama, yerel kayda dokunmama | — | 10 |
 
-Son ikisi bir geçti/kaldı kararı basmıyor, yalnızca gözlem satırları yazıyor.
-Koşucu onları `PASS` değil **`REPORT`** diye işaretler — sessizce yeşil görünen
-test istemiyoruz. Verdikleri satırlar elle okunmalı; bir karar satırı eklemek
-açık bir iş.
+Son ikisi 2026-08-24'e kadar bir geçti/kaldı kararı basmıyordu; koşucu onları
+`PASS` değil `REPORT` diye işaretliyordu. Artık ikisi de gerçek iddialar basıyor.
+Aynı gözden geçirmede `store_compliance_check`'in **ağa çıktığı** da görüldü:
+`delete_cloud_data()` gerçekten çağrılıyordu, yani her koşu üretimde bir anonim
+Firebase hesabı yaratıp siliyor, makinede bağlı bir Google oturumu varsa gerçek
+hesabı siliyordu. Ağ dalı artık sahte bir auth ile kapalı.
 
 ## Kaynak kapsamı
 
