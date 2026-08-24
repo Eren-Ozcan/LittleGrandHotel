@@ -82,6 +82,7 @@ func _ready() -> void:
 	_test_flush_triggers()
 	_test_state_file()
 	_test_state_file_is_robust()
+	_test_restore_lands_on_disk()
 
 	print("=".repeat(64))
 	if failures == 0:
@@ -355,3 +356,46 @@ func _test_state_file_is_robust() -> void:
 	CloudSave._load_state()
 	check(CloudSave._rev == 11 and CloudSave._last_synced_uid == "iyi-uid",
 		"bozuk dosyalardan sonra geçerli dosya yine doğru okundu")
+
+
+## Geri yükleme DİSKE de yazılmalı.
+##
+## reefy'de bu iki yarım ayrı ayrı kırıldı ve ikisi de veri kaybettirdi: önce
+## geri yükleme sırasında sahneden üretilen kayıt indirileni ezdi, sonra bunu
+## engellemek için her şey donduruldu ve bu sefer indirilen kayıt DİSKE hiç
+## yazılmadı — uygulama yeniden açılınca eski kayıt geri geldi. Buradaki
+## karşılığı: `_apply_cloud` indirdiği kaydı uygulayıp `save_game()` çağırmalı,
+## bayrakları temizlemeli ve buluttaki rev'i devralmalı (devralmazsa sonraki
+## yazma "rev geriye gidemez" kuralıyla kalıcı olarak reddedilir).
+func _test_restore_lands_on_disk() -> void:
+	print("\n[13] Geri yükleme diske yazılıyor ve rev devralınıyor")
+	var game := get_node("/root/Game")
+
+	# Buluttan gelmiş gibi bir yük üret: mevcut oyunu al, birkaç alanı değiştir.
+	game.coins = 4242
+	game.gems = 77
+	var payload := CloudPayload.build(game)
+	game.coins = 1
+	game.gems = 1
+
+	CloudSave._rev = 3
+	CloudSave._dirty = true
+	CloudSave._blocked = true
+	CloudSave._pending_cloud = {"rev": 9}
+	var result: String = CloudSave._apply_cloud(game, {
+		"payload": payload, "rev": 9, "schema": game.SAVE_VERSION,
+	})
+
+	check(result == CloudPayload.RESULT_RESTORE, "sonuç RESTORE")
+	check(game.coins == 4242 and game.gems == 77,
+		"buluttaki değerler oyuna uygulandı (%d altın, %d elmas)" % [game.coins, game.gems])
+	check(CloudSave._rev == 9, "buluttaki rev devralındı (%d)" % CloudSave._rev)
+	check(not CloudSave._dirty, "geri yüklenen kayıt 'değişmiş' sayılmıyor")
+	check(not CloudSave._blocked, "çakışma engeli kalktı")
+	check(CloudSave._pending_cloud.is_empty(), "bekleyen bulut kaydı temizlendi")
+
+	# Asıl mesele: diskteki kayıt da yenilenmiş olmalı. Kaynağa değil sonuca
+	# bakıyoruz — dosyayı okuyup içindeki altın değerini kontrol ediyoruz.
+	var raw := FileAccess.get_file_as_string("user://save.json")
+	check(raw.contains("4242"),
+		"indirilen kayıt DİSKE yazıldı (yeniden açılışta eski kayıt geri gelmez)")
