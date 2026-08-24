@@ -575,6 +575,11 @@ func _ready() -> void:
 	Game.achievement_unlocked.connect(_on_achievement_unlocked)
 	IAP.purchase_result.connect(_on_purchase_restored)
 	IAP.restore_finished.connect(_on_restore_finished)
+	IAP.purchase_failed.connect(func(_pid: String, _code: int):
+		_show_toast("The purchase could not be completed — nothing was charged."))
+	IAP.purchase_pending.connect(func(_pid: String):
+		_show_toast("Purchase pending — it will arrive once your payment clears."))
+	IAP.entitlements_synced.connect(_on_entitlements_synced)
 	# Mağaza fiyatları bağlantı kurulduktan sonra asenkron geliyor; Elmas popup'ı
 	# o sırada açıksa yedek etiketlerle çizilmiş olur, gelince tazelenir.
 	IAP.prices_updated.connect(_rebuild_popup)
@@ -835,6 +840,27 @@ func _on_purchase_restored(product_id: String, success: bool) -> void:
 					Game.gems += int(pack.gems)
 					Game.save_game()
 					break
+
+
+## Mağaza "şu an sahip olunanlar" listesini bildirdi. Kalıcı bir ürün listede
+## YOKSA hak kapatılır: iade edilen ya da geri alınan bir satın alma aksi halde
+## oyunda sonsuza kadar açık kalırdı (oyuncu parasını geri alır, ürünü de tutar).
+##
+## Yalnızca KALICI iki ürün için geçerli. Elmas paketleri tüketilebilir — satın
+## alınır alınmaz tüketildikleri için listede zaten görünmezler; onları burada
+## değerlendirmek her açılışta elmasları geri almak olurdu.
+func _on_entitlements_synced(owned: PackedStringArray) -> void:
+	var changed := false
+	if Game.remove_ads and not owned.has(IAP.PRODUCT_REMOVE_ADS):
+		Game.remove_ads = false
+		changed = true
+	if Game.permanent_income_mult > 1.0 and not owned.has(IAP.PRODUCT_INCOME_2X):
+		Game.permanent_income_mult = 1.0
+		changed = true
+	if changed:
+		Game.save_game()
+		_refresh()
+		_show_toast("A refunded purchase was removed from your account.")
 
 
 ## Ayarlar ▸ Restore purchases'ın sonucu. Hakların kendisi zaten

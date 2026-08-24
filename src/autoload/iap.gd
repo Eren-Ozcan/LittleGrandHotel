@@ -18,6 +18,20 @@ extends Node
 
 signal purchase_result(product_id: String, success: bool)
 
+## Satın alma mağaza tarafından reddedildi (kart geçmedi, ürün alınamadı…).
+## Oyuncunun kendi iptali BU sinyali yaymaz — iptal bir hata değildir ve
+## oyuncuya hata mesajı göstermek yanlış olur.
+signal purchase_failed(product_id: String, response_code: int)
+
+## Satın alma BEKLEMEDE: ödeme yöntemi yavaş (havale/ön ödemeli kart), onay
+## gelince ürün verilecek. Ödül bu noktada verilmez.
+signal purchase_pending(product_id: String)
+
+## Mağazaya göre şu an sahip olunan ürünlerin tam listesi (yalnızca
+## query_purchases yanıtından sonra). İade edilen kalıcı bir ürün bu listeden
+## düşer — hakkı kapatmak dinleyenin işi.
+signal entitlements_synced(owned_product_ids: PackedStringArray)
+
 ## Mağaza fiyatları geldi — fiyat gösteren ekranlar kendini tazelemeli.
 signal prices_updated
 
@@ -154,12 +168,33 @@ func restore_purchases() -> bool:
 	return true
 
 
+## Satın alma akışı bir sonuçla döndü. Başarısızlık da bir sonuçtur: oyuncu
+## iptal ettiyse ya da kart reddettiyse bekleyen geri çağrılar TEMİZLENİR,
+## yoksa çağıran taraf sonsuza kadar sessizce bekler ve ekranda hiçbir şey
+## olmaz. (Google'ın "her zaman reddeder" test kartı tam bu yolu sürüyor.)
 func _on_purchase_updated(response: Dictionary) -> void:
 	var response_code: int = response.get("response_code", -1)
 	if response_code != BillingClient.BillingResponseCode.OK:
+		_fail_all_pending(response_code)
 		return
 	for p in response.get("purchases", []):
 		_apply_purchase(p)
+
+
+## Bekleyen tüm satın almaları başarısız olarak kapatır.
+##
+## Hangi ürünün reddedildiğini yanıt söylemiyor (başarısız yanıtta satın alma
+## listesi boş gelir), ama aynı anda birden fazla akış açık olamaz: satın alma
+## ekranı modaldir. Bu yüzden bekleyenlerin hepsi kapatılır.
+func _fail_all_pending(response_code: int) -> void:
+	if _pending.is_empty():
+		return
+	var cancelled := response_code == BillingClient.BillingResponseCode.USER_CANCELED
+	for product_id: String in _pending.keys().duplicate():
+		if not cancelled:
+			purchase_failed.emit(product_id, response_code)
+		purchase_result.emit(product_id, false)
+		_flush_pending(product_id, false)
 
 
 func _on_query_purchases_response(response: Dictionary) -> void:
@@ -173,12 +208,34 @@ func _on_query_purchases_response(response: Dictionary) -> void:
 	var purchases: Array = response.get("purchases", [])
 	for p in purchases:
 		_apply_purchase(p)
+	# MUTABAKAT: bu yanıt mağazanın SAHİP OLUNAN ürünler listesinin tamamı.
+	# İade edilen (ya da geri alınan) kalıcı bir ürün listeden düşer; oyunun
+	# hakkı kendiliğinden kapanmazsa iade alan oyuncu ürünü kullanmaya devam
+	# eder. Kararı burada vermiyoruz — hakkın sahibi Game/main; buradan yalnızca
+	# "mağazaya göre şu an sahip olunanlar" duyurulur.
+	var owned := PackedStringArray()
+	for p in purchases:
+		if p.get("purchase_state", 0) != BillingClient.PurchaseState.PURCHASED:
+			continue
+		for pid in p.get("product_ids", p.get("products", [])):
+			owned.append(String(pid))
+	entitlements_synced.emit(owned)
 	if requested:
 		restore_finished.emit(purchases.size())
 
 
 func _apply_purchase(p: Dictionary) -> void:
-	if p.get("purchase_state", 0) != BillingClient.PurchaseState.PURCHASED:
+	var state: int = p.get("purchase_state", 0)
+	if state == BillingClient.PurchaseState.PENDING:
+		# Yavaş ödeme yöntemleri (havale, ön ödemeli kart) satın almayı BEKLEMEDE
+		# bırakır. Ödül burada VERİLMEZ; onaylanınca satın alma bir sonraki
+		# query_purchases yanıtında PURCHASED olarak gelir ve orada verilir.
+		# Oyuncuya durumu söylemek çağıranın işi — sessiz kalmak "para gitti,
+		# bir şey olmadı" hissi veriyor.
+		for pid in p.get("product_ids", p.get("products", [])):
+			purchase_pending.emit(String(pid))
+		return
+	if state != BillingClient.PurchaseState.PURCHASED:
 		return
 	var token: String = p.get("purchase_token", "")
 	# Eklenti satın alma sözlüğünde ürün listesini `product_ids` diye veriyor
