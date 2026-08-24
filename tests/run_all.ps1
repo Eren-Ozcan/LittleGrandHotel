@@ -73,6 +73,8 @@ $tests = @(
     @{ name = "sfx_check";        target = "res://tests/sfx_check.tscn";              mode = "scene";  window = $false; timeout = 90;  success = "TÜM TESTLER GEÇTİ" },
     @{ name = "migration_check";  target = "res://tests/migration_check.tscn";        mode = "scene";  window = $false; timeout = 90;  success = "TÜM TESTLER GEÇTİ" },
     @{ name = "fuzz_attack";      target = "res://tests/fuzz_attack.tscn";            mode = "scene";  window = $false; timeout = 300; success = "FUZZ_DONE";        noisy = $true },
+    @{ name = "time_check";       target = "res://tests/time_check.tscn";            mode = "scene";  window = $false; timeout = 90;  success = "TÜM TESTLER GEÇTİ" },
+    @{ name = "offline_check";    target = "res://tests/offline_check.tscn";         mode = "scene";  window = $false; timeout = 120; success = "TÜM TESTLER GEÇTİ" },
     @{ name = "cloud_save_check"; target = "res://tests/cloud_save_check.tscn";       mode = "scene";  window = $false; timeout = 120; success = "CLOUD_SAVE_DONE" },
     @{ name = "cloud_api_check";  target = "res://tests/cloud_api_check.tscn";        mode = "scene";  window = $false; timeout = 120; success = "TÜM TESTLER GEÇTİ"; noisy = $true },
     @{ name = "ads_check";        target = "res://tests/ads_check.tscn";              mode = "scene";  window = $false; timeout = 90;  success = "TÜM TESTLER GEÇTİ" },
