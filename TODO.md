@@ -696,6 +696,63 @@ device. Setup, reasoning and the remaining manual step: `docs/cloud-save-setup.m
       `android/RELEASE_KEYSTORE_SECRETS.txt` (gitignored) — it belongs in a password manager,
       because one gitignored file is exactly how it went missing the first time.
 
+### START HERE — durum devri (2026-08-25)
+
+**Paket: 22 test, 2370 kontrol, hepsi yeşil** (`pwsh tests/run_all.ps1`).
+Dünden bu yana beş yeni test dosyası ve satın alma yolunda üç davranış değişikliği var.
+
+**GERÇEK CİHAZDA YAKALANAN HATA — para alınıp ürün verilmiyordu.** Test satın alması
+Play'de "Ödeme başarılı" dedi, elmas gelmedi, uygulama yeniden açılınca da gelmedi.
+Sebep: `iap.gd` eklentiden gelen satın alma sözlüğünde ürün listesini `products` diye
+okuyordu; eklentinin gerçek anahtarı **`product_ids`**. Ürün detaylarında da liste
+`product_details` altında geliyor, kod `product_details_list` arıyordu — bu yüzden
+fiyatlar hep yedek `$` etiketinde kalıyordu. Yanlış anahtar hata vermiyor,
+`Dictionary.get` sessizce varsayılanı döndürüyor. Üstelik tüketim de çalışmadığı için
+satın alma "sahipli" kalıyordu; Google lisans testçisi satın almalarını **3 dakika
+içinde tüketilmezse otomatik iade ediyor**, yani o alım geri alındı.
+
+**Testler bunu neden kaçırdı:** `tests/iap_check.gd` fixture'ları anahtar adlarını
+uydurmuştu. Test, eklentinin sözleşmesini değil kendi uydurduğunu doğruluyordu. Artık
+`tests/plugin_keys_check.gd` anahtarları **`.aar`'ın içinden** okuyor (aar → classes.jar
+→ sınıf sabit havuzu, bayt düzeyinde arama; metne çevirmek işe yaramıyor çünkü sınıf
+dosyaları NUL dolu ve `get_string_from_ascii()` ilk NUL'da duruyor).
+
+**Satın alma yolunda yeni davranışlar** (üçü de Google'ın kendi test yönergesinden):
+- Reddedilen satın almada bekleyen callback'ler kapanıyor ve `purchase_failed` yayılıyor;
+  oyuncunun kendi iptali hata sayılmıyor (mesaj gösterilmiyor).
+- Beklemede kalan satın alma `purchase_pending` ile duyuruluyor, ödül hâlâ yalnızca
+  PURCHASED'da veriliyor.
+- `query_purchases` sahip olunan tam listeyi yayınlıyor; listede olmayan KALICI ürün
+  (iade/geri alma) oyunda kapanıyor. Elmas paketleri tüketilebilir olduğu için bu
+  mutabakata girmiyor.
+
+**Yeni testler:** `parse_check` (src+tests altındaki 40 `.gd` dosyasını yükler — eklendiği
+gün benim yazdığım bir kapsam hatasını yakaladı), `plugin_keys_check` (26),
+`time_check` (28: gün/hafta sınırı, seri, dürtme hakkı, bonus penceresi),
+`offline_check` (14: 24 saat kapağı, hayalet yenileme yok, banka erimesi),
+`perf_test` artık bütçelerle pakette (6), `cloud_api_check`'e geri yüklemenin diske
+indiğini kanıtlayan bölüm eklendi (122).
+
+**`scroll_check` oynaklığı çözüldü.** Testler `set_process(false)` ile donduruyordu ama
+popup'ı yeniden kuran şey süreç değil SİNYAL: kuyrukta kalmış bir `state_changed`,
+bulut durumu ya da fiyat yanıtı sürükleme sırasında düşünce popup yeniden kuruluyor ve
+`scroll_vertical` sıfırlanıyordu — "sürükleme kaydırmadı" diye görünüyordu. Artık
+main'e giden yeniden kurulum bağlantıları test boyunca sökülüyor.
+
+**Play Console durumu:** 1.0.4 (kod 5) kapalı teste yüklendi ve **incelemede**. Elmas
+paketleri (`gems_small/medium/large`) canlı ve lisans testi açık; telefondaki
+crazything5341@gmail.com hem test kullanıcısı hem lisans testçisi. *Üretime başvur*
+butonu **aktif** — 14 günlük şart doldu; başvuru Google incelemesinden geçene kadar
+üretim kanalı kilitli kalıyor.
+
+**Sürüm düştüğünde cihazda doğrulanacaklar:** elmas 29 → 129; aynı paketin ikinci kez
+alınabilmesi (tüketim); fiyat etiketlerinin ₺'ye dönmesi; iptal edince hata mesajı
+ÇIKMAMASI.
+
+**Kalan:** AdMob vergi formları, tanıtım videosu kararı, dört zayıf mağaza görseli
+(02, 06, 07, 08), cihazın AdMob panelinde test cihazı olarak kaydı
+(`0CC228E543E790AFB7DD69E7A8021761`).
+
 ### START HERE — durum devri (2026-08-24 kapanışı)
 
 Paketin tamamı yeşil ve artık **REPORT kalmadı: 17 test, 2268 kontrol**
