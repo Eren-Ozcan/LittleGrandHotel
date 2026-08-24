@@ -39,6 +39,11 @@ aşımı vardır (sahne hiç yüklenemezse süreç asılıyor).
 | `tutorial_check` | Zorunlu açılış tutorial'ı: her adım, atlama, tekrar gelmeme | ✔ | 61 |
 | `ui_check` | `main.gd`: her popup, her sekme, her modal, iki dil, canlı etiketler | ✔ | 134 |
 | `scroll_check` | Popup/tepsi kaydırma: dokunma sürüklemesi, modal z-sırası | ✔ | 63 |
+| `parse_check` | `src` ve `tests` altındaki her `.gd` ayrıştırılıyor mu | — | 2 |
+| `plugin_keys_check` | Faturalandırma sözlük anahtarları eklentinin `.aar`'ıyla birebir mi | — | 26 |
+| `time_check` | Gün/hafta sınırı: günlük ödül serisi, dürtme hakkı, bonus penceresi | — | 28 |
+| `offline_check` | Çevrimdışı kapak, hayalet yenileme, bankadaki saatlerin erimesi | — | 14 |
+| `perf_test` | Yeniden kurulum ve kare süresi bütçeleri, walker sızıntısı | ✔ | 6 |
 | `store_compliance_check` | Elmas paketi ödülü, hak geri yükleme, silme yolunun dürüst hatası | — | 11 |
 | `unlink_check` | Hesap bağlantısını kaldırma: iki kez sorma, kimlik sıfırlama, yerel kayda dokunmama | — | 10 |
 
