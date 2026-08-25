@@ -748,9 +748,30 @@ okundu. Doğrusu, `assets/fonts/PixelifySans.ttf` ile rakam şablonu üretip eş
 bulundu: 325 / 425 / 525. Bir daha ekran görüntüsündeki sayaçtan çıplak gözle sonuç
 çıkarma.
 
-**Kalan:** AdMob vergi formları, tanıtım videosu kararı, dört zayıf mağaza görseli
-(02, 06, 07, 08), cihazın AdMob panelinde test cihazı olarak kaydı
-(`0CC228E543E790AFB7DD69E7A8021761`), *Üretime başvur* başvurusunun Google onayı.
+**Kalan işlerin durumu (2026-08-25 akşamı gözden geçirildi).**
+
+- **Test cihazı kaydı — YAPILDI.** AdMob → Ayarlar → Test cihazları'nda "Huawei POT-LX1
+  (test telefonu)" olarak eklendi. Dikkat: buradaki alan **reklam kimliğini (GAID, UUID
+  biçiminde)** istiyor, SDK'nın günlüğe bastığı karma değeri değil. Bu telefonun GAID'i
+  `f4fe06bb-ee9e-4f20-8b5b-8fd887ba8752`; SDK'nın önerdiği karma ise
+  `C4DDBB3980239CC1E9ECB1DFB97347CC` (ikisi birbirinin MD5'i değil, karıştırma). Eskiden
+  not düşülen `0CC228E543E790AFB7DD69E7A8021761` bu telefona ait değil ve zaten karma
+  biçiminde, forma girilemez — başka bir cihazsa onun GAID'iyle ayrıca eklenmeli.
+- **AdMob hesabı tuzağı:** admob.google.com varsayılan olarak **crazything5341@gmail.com**
+  (pub-7059956324408018) ile açılıyor; projenin hesabı **yilkgamesstudio@gmail.com /
+  pub-9709993577664180** ve konsolda `?authuser=5` altında. Bir şey değiştirmeden önce
+  sağ üstteki avatardan yayıncı kimliğini `ads.gd`dekiyle karşılaştır.
+- **Vergi formları — KULLANICIDA.** Ödeme profili (1959-2939-0520, Türkiye, bireysel,
+  EREN ÖZCAN) hazır ama **Tayvan, Türkiye ve ABD vergi bilgileri üçü de boş**. Bunlar
+  kimlik/vergi numarası ve yeminli beyan gerektiriyor; ajan dolduramaz, hesap sahibinin
+  kendisi girmeli. Ödeme doğrulaması ise henüz gerekmiyor ("kazanç eşiğine ulaşınca").
+- **Üretime başvur — HENÜZ GÖNDERİLMEMİŞ.** Önceki devirde "incelemede" yazıyordu, doğru
+  değil: Üretim sekmesi hâlâ "Henüz üretime erişiminiz yok" diyor ve başvuru formu boş.
+  Form üç adım (kapalı test, oyun, üretime hazırlık) ve **test kullanıcılarını nereden
+  buldun, testçi bulmak ne kadar kolaydı** gibi yalnızca hesap sahibinin bilebileceği
+  sorular soruyor. Uydurulamaz — cevaplar kullanıcıdan alınıp doldurulmalı.
+- **Kullanıcıya bırakılanlar (istek üzerine):** tanıtım videosu kararı ve dört zayıf
+  mağaza görseli (02, 06, 07, 08).
 
 ### Durum devri (2026-08-25 sabahı)
 
