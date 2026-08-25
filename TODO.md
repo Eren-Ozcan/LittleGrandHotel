@@ -698,6 +698,24 @@ device. Setup, reasoning and the remaining manual step: `docs/cloud-save-setup.m
 
 ### START HERE — durum devri (2026-08-25 kapanışı, 1.0.5)
 
+**SIRADAKİ OTURUM BURADAN VE MAĞAZA GÖRSELLERİNDEN BAŞLIYOR** (2026-08-25'te kararlaştı).
+İlk iş, sekiz mağaza görselinden zayıf kalan dördünü yeniden üretmek: **02 (dekorasyon),
+06 (görevler), 07 (inşa/kilit açma), 08 (imparatorluk)**. Dördü de popup ekranı ve
+küçük boyutta çoğunlukla boş krem/koyu panel gibi görünüyor; dürüst ekran görüntüleri
+ama setin zayıf yarısı. Yapılacak: daha dolu bir oyun durumu kurup (yüksek seviye,
+dolu otel, aktif vardiya) `tests/showcase.tscn` ile yeniden render etmek — elle kayıt
+alınmıyor, README'ye bak.
+
+Nereye gidecekleri: 1080x1920 orijinaller `docs/store-assets-originals/play/` (en-US) ve
+`docs/store-assets-originals/play-tr/` (tr-TR, varsayılan liste), ayrıca private
+`C:\Projects\pictures\LittleGrandHotel\` kopyası. **Bu dosyalar public repoya
+commit'lenmez** (tek istisna `docs/media/` README seti). Ve unutma: mağaza listesinde
+yapılan her değişiklik listeyi yeniden incelemeye sokuyor — kaydetmek yetmiyor, *Yayın
+özeti*'nden gönderilmesi gerekiyor.
+
+Görseller bittikten sonra sırada, ikisi de kullanıcının kendi bilgisini isteyen iki iş
+var: AdMob vergi formları ve *Üretime başvur* formu (aşağıdaki "Kalan işlerin durumu").
+
 **Paket: 22 test, 2371 kontrol, hepsi yeşil** (`pwsh tests/run_all.ps1`).
 
 Bu oturum, aynı sabah yazılan devirden sonra fiyat hatasının **kalan iki katmanını**
@@ -979,10 +997,11 @@ oyun durumunda yeniden render edilmesi.
       default language is Turkish. And en-US had **no set of its own**: it was inheriting
       the default listing's images, so English users would have seen Turkish caption
       bands. Both fixed.
-      **The remaining step is the user's:** Play Console ▸ Yayın özeti still shows
-      *"2 değişikliği incelemeye gönder"*. Saving only queues a change; nothing reaches
-      review until that button is pressed. Left unpressed on purpose — it was a recorded
-      decision that an upload sends the listing back through review.
+      **Since submitted.** This entry used to end "Yayın özeti still shows *2 değişikliği
+      incelemeye gönder*". As of 2026-08-25 that page reads *"Yayınlanmamış değişiklik
+      yok"* and the app's last publish date is 25 Ağustos 2026, so the queued listing
+      changes went through. The rule behind the note still holds: saving only queues a
+      change, and a listing edit sends the listing back through review.
       Also noted: the app is in **Kapalı test** with 12 testers, 10 of the required 14
       continuous days done, so *Üretime başvur* unlocks around 2026-08-25.
       One judgement call worth a second opinion: four of the eight shots (02 decorate,
