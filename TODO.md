@@ -727,9 +727,26 @@ edildi: **Kapalı test - Alpha kanalında 6 (1.0.5), 25 Ağu 05:13'te kullanıma
 177 ülke/bölge, yayınlanmamış değişiklik yok. Yeniden derlemeye veya yüklemeye gerek yok;
 sıradaki iş cihazda doğrulama.
 
-**Sürüm cihaza düştüğünde doğrulanacaklar:** fiyat etiketlerinin ₺'ye dönmesi (artık iki
-ayrı sebeple beklenen sonuç bu); elmas 29 → 129; aynı paketin ikinci kez alınabilmesi
-(tüketim); iptal edince hata mesajı ÇIKMAMASI.
+**CİHAZDA DOĞRULANDI (2026-08-25 17:05-17:10, POT-LX1 / Android 9).** 1.0.5 Play'den
+güncellendi (kod 6 kuruldu, `lastUpdateTime` 17:05) ve dört maddenin dördü de geçti:
+
+1. **Fiyatlar ₺.** Elmas sekmesi ₺114,99 / ₺289,99 / ₺859,99; Premium sekmesi ₺59,99 ve
+   ₺119,99. Beş üründe de tire ya da dolar yok — yani hem liste anahtarı hem yedek etiket
+   düzeltmesi gerçek cihazda çalışıyor.
+2. **Satın alma ödülü veriyor.** Küçük paket alındı, elmas 325 → 425.
+3. **Tüketim çalışıyor.** Aynı paket ikinci kez alındı, Play "zaten sahipsiniz" demedi ve
+   elmas 425 → 525. Yani ilk satın alma tüketilmiş.
+4. **İptalde hata mesajı yok.** Play sayfası geri tuşuyla kapatıldı; mağazaya dönüldü,
+   3 ve 6 saniye sonraki ekran görüntülerinde toast yok, elmas sayısı sabit.
+
+Play ödeme sayfası "Test kartı, her zaman onaylanır" ve "Bu bir test siparişidir, sizden
+ödeme alınmayacaktır" diyordu — lisans testi doğru kurulmuş, gerçek tahsilat olmadı.
+
+**Ekran görüntüsünden sayı okuma tuzağı:** HUD sayaçları `PixelifySans` ile çiziliyor ve
+bu fontta **5 ile 9 neredeyse aynı görünüyor** — sayılar önce yanlışlıkla 329/429 diye
+okundu. Doğrusu, `assets/fonts/PixelifySans.ttf` ile rakam şablonu üretip eşleyerek
+bulundu: 325 / 425 / 525. Bir daha ekran görüntüsündeki sayaçtan çıplak gözle sonuç
+çıkarma.
 
 **Kalan:** AdMob vergi formları, tanıtım videosu kararı, dört zayıf mağaza görseli
 (02, 06, 07, 08), cihazın AdMob panelinde test cihazı olarak kaydı
