@@ -696,7 +696,42 @@ device. Setup, reasoning and the remaining manual step: `docs/cloud-save-setup.m
       `android/RELEASE_KEYSTORE_SECRETS.txt` (gitignored) — it belongs in a password manager,
       because one gitignored file is exactly how it went missing the first time.
 
-### START HERE — durum devri (2026-08-25)
+### START HERE — durum devri (2026-08-25 kapanışı, 1.0.5)
+
+**Paket: 22 test, 2371 kontrol, hepsi yeşil** (`pwsh tests/run_all.ps1`).
+
+Bu oturum, aynı sabah yazılan devirden sonra fiyat hatasının **kalan iki katmanını**
+kapattı ve sürümü 1.0.5'e taşıdı.
+
+**Fiyat hatasının ikinci katmanı (`1725a1e`).** Anahtar adları düzeltildikten sonra ürün
+detayları gelmeye başladı ama fiyat hâlâ yedek `$` etiketindeydi. Cihaz günlüğü sebebi
+gösterdi: fiyat `one_time_purchase_offer_details_list` altında bir **liste** olarak
+geliyor, `iap.gd` ise tekil `one_time_purchase_offer_details` sözlüğünü okuyordu. Artık
+önce liste biçimi okunuyor, tekil adlar yedek olarak duruyor ve liste adı
+`plugin_keys_check` içinde `.aar`'a karşı sabitlendi.
+
+**Fiyat hatasının üçüncü katmanı (`bd57add`).** Mağaza yanıtı gelmeden önce elmas
+kutuları ve iki premium satır sabit dolar etiketine düşüyordu. Türkiye'deki oyuncunun
+telefonda gerçekten gördüğü şey buydu: Play'in ₺114,99 çektiği paketin yanında "$1.99" —
+hem para birimi yanlış hem sayı otuz kat sapmış. Yedek etiket artık nötr bir tire; gerçek
+fiyat Play'in `formatted_price` alanından, oyuncunun kendi ülkesine göre biçimlenmiş
+hâlde geliyor ve yanıt düşer düşmez tirenin yerini alıyor.
+
+**Sürüm ve derleme.** `export_presets.cfg` 1.0.5 / kod 6. İmzalı AAB
+`build/android/little-grand-hotel.aab` olarak **2026-08-25 04:19'da üretildi** (62 MB) —
+son commit'ten sonra. **Bu AAB'nin Play Console'a yüklendiği doğrulanmadı**; oturum tam
+orada kapandı. Devam etmeden önce konsoldan kapalı test kanalında kod 6'nın olup
+olmadığına bakılmalı, yoksa mevcut AAB yüklenmeli (yeniden derlemeye gerek yok).
+
+**Sürüm cihaza düştüğünde doğrulanacaklar:** fiyat etiketlerinin ₺'ye dönmesi (artık iki
+ayrı sebeple beklenen sonuç bu); elmas 29 → 129; aynı paketin ikinci kez alınabilmesi
+(tüketim); iptal edince hata mesajı ÇIKMAMASI.
+
+**Kalan:** AdMob vergi formları, tanıtım videosu kararı, dört zayıf mağaza görseli
+(02, 06, 07, 08), cihazın AdMob panelinde test cihazı olarak kaydı
+(`0CC228E543E790AFB7DD69E7A8021761`), *Üretime başvur* başvurusunun Google onayı.
+
+### Durum devri (2026-08-25 sabahı)
 
 **Paket: 22 test, 2370 kontrol, hepsi yeşil** (`pwsh tests/run_all.ps1`).
 Dünden bu yana beş yeni test dosyası ve satın alma yolunda üç davranış değişikliği var.
