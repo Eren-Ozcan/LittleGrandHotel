@@ -243,12 +243,18 @@ const WEEKLY_THEMES := [
 ## Play Console'da yönetilen ürün olarak (bu kez tüketilebilir/consumable
 ## türünde) oluşturulmalı — bkz. docs/store/in-app-products.md.
 ## price alanı YEDEK etikettir — gerçek fiyat IAP.price_for() ile mağazadan
-## gelir ve oyuncunun ülkesine/para birimine göre değişir. Yedek yalnızca
-## mağazaya ulaşılamadığında görünür.
+## gelir ve oyuncunun ülkesine/para birimine göre değişir (Play'in
+## `formatted_price` dizesi; Türkiye'de ₺, Almanya'da €, ABD'de $).
+##
+## Yedek artık bir DOLAR TUTARI DEĞİL. Mağaza yanıtı gelene kadar ya da hiç
+## gelmezse "—" gösteriliyor: Türkiye'deki bir oyuncuya "$1.99" yazmak yanlış
+## para biriminde yanlış bir sayı göstermek demekti (2026-08-25'te cihazda
+## böyle görüldü). Boş bir etiket, yanlış bir etiketten iyidir; gerçek fiyat
+## zaten satın alma ekranında da yazıyor.
 const GEM_PACKS := [
-	{ "product": "gems_small", "gems": 100, "price": "$1.99" },
-	{ "product": "gems_medium", "gems": 350, "price": "$4.99" },
-	{ "product": "gems_large", "gems": 1200, "price": "$14.99" },
+	{ "product": "gems_small", "gems": 100, "price": "—" },
+	{ "product": "gems_medium", "gems": 350, "price": "—" },
+	{ "product": "gems_large", "gems": 1200, "price": "—" },
 ]
 
 var coins_label: Label
@@ -5105,7 +5111,7 @@ func _add_premium_rows(c: VBoxContainer) -> void:
 			"✓", false, PALETTE.green_deep)
 	else:
 		var no_ads_b := _buy_row(c, "res://assets/ui/ad_video.png", "Remove Ads",
-			"One-time purchase", IAP.price_for(IAP.PRODUCT_REMOVE_ADS, "$4.99"))
+			"One-time purchase", IAP.price_for(IAP.PRODUCT_REMOVE_ADS, "—"))
 		no_ads_b.pressed.connect(func():
 			IAP.purchase(IAP.PRODUCT_REMOVE_ADS, func(ok: bool):
 				if ok:
@@ -5119,7 +5125,7 @@ func _add_premium_rows(c: VBoxContainer) -> void:
 			tr("Active — income ×%.1f") % Game.permanent_income_mult, "✓", false, PALETTE.green_deep)
 	else:
 		var x2_b := _buy_row(c, "res://assets/ui/dollar.png", "Double Your Earnings",
-			"Permanent ×2, offline included", IAP.price_for(IAP.PRODUCT_INCOME_2X, "$9.99"))
+			"Permanent ×2, offline included", IAP.price_for(IAP.PRODUCT_INCOME_2X, "—"))
 		x2_b.pressed.connect(func():
 			IAP.purchase(IAP.PRODUCT_INCOME_2X, func(ok: bool):
 				if ok:
