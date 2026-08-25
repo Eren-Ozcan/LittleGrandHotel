@@ -717,11 +717,15 @@ hem para birimi yanlış hem sayı otuz kat sapmış. Yedek etiket artık nötr 
 fiyat Play'in `formatted_price` alanından, oyuncunun kendi ülkesine göre biçimlenmiş
 hâlde geliyor ve yanıt düşer düşmez tirenin yerini alıyor.
 
-**Sürüm ve derleme.** `export_presets.cfg` 1.0.5 / kod 6. İmzalı AAB
-`build/android/little-grand-hotel.aab` olarak **2026-08-25 04:19'da üretildi** (62 MB) —
-son commit'ten sonra. **Bu AAB'nin Play Console'a yüklendiği doğrulanmadı**; oturum tam
-orada kapandı. Devam etmeden önce konsoldan kapalı test kanalında kod 6'nın olup
-olmadığına bakılmalı, yoksa mevcut AAB yüklenmeli (yeniden derlemeye gerek yok).
+**Sürüm ve derleme — YÜKLENDİ VE CANLI.** `export_presets.cfg` 1.0.5 / kod 6. İmzalı AAB
+`build/android/little-grand-hotel.aab` 2026-08-25 04:19'da üretildi (62 MB), son
+commit'ten sonra; içeriği doğrulandı (paketteki `iap.gdc` liste anahtarını taşıyor,
+`main.gdc` içinde sabit dolar etiketi kalmamış, manifest `versionCode=6` /
+`versionName=1.0.5`, imza `CN=Yilk Games` SHA1 `B1:00:9A:…:89:AF`). Konsoldan teyit
+edildi: **Kapalı test - Alpha kanalında 6 (1.0.5), 25 Ağu 05:13'te kullanıma sunuldu ve
+"Belirli test kullanıcıları tarafından kullanılabilir" durumunda** — inceleme geçmiş,
+177 ülke/bölge, yayınlanmamış değişiklik yok. Yeniden derlemeye veya yüklemeye gerek yok;
+sıradaki iş cihazda doğrulama.
 
 **Sürüm cihaza düştüğünde doğrulanacaklar:** fiyat etiketlerinin ₺'ye dönmesi (artık iki
 ayrı sebeple beklenen sonuç bu); elmas 29 → 129; aynı paketin ikinci kez alınabilmesi
