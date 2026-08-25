@@ -108,6 +108,21 @@ func price_for(product_id: String, fallback: String) -> String:
 ## kalınır. Gerçek yanıt yalnızca Play imzalı bir kurulumda döndüğü için bu yol
 ## masaüstünde/emülatörde doğrulanamıyor — gelen ham yapıyı bir kez logluyoruz
 ## ki cihazda bakan kişi anahtarları görebilsin.
+## Bir ürün kaydından tek seferlik teklif sözlüğünü çıkarır.
+##
+## Eklenti teklifi bir LİSTE olarak veriyor: `one_time_purchase_offer_details_list`
+## (2026-08-25'te cihaz günlüğünden okundu — tek elemanlı, içinde
+## `formatted_price`, `price_amount_micros`, `price_currency_code`). Tekil
+## sözlük adları eski sürümler için yedekte. Liste birden fazla teklif
+## taşırsa ilki alınır: satın alma seçeneği başına tek teklif tanımlı.
+func _offer_of(item: Dictionary) -> Dictionary:
+	var offers: Array = item.get("one_time_purchase_offer_details_list", [])
+	if not offers.is_empty() and offers[0] is Dictionary:
+		return offers[0]
+	return item.get("one_time_purchase_offer_details",
+		item.get("oneTimePurchaseOfferDetails", {}))
+
+
 func _on_query_product_details_response(response: Dictionary) -> void:
 	if response.get("response_code", -1) != BillingClient.BillingResponseCode.OK:
 		return
@@ -122,9 +137,7 @@ func _on_query_product_details_response(response: Dictionary) -> void:
 	var found := 0
 	for item: Dictionary in list:
 		var pid: String = item.get("product_id", item.get("productId", ""))
-		var offer: Dictionary = item.get(
-			"one_time_purchase_offer_details", item.get("oneTimePurchaseOfferDetails", {})
-		)
+		var offer: Dictionary = _offer_of(item)
 		var price: String = offer.get("formatted_price", offer.get("formattedPrice", ""))
 		if pid != "" and price != "":
 			_prices[pid] = price

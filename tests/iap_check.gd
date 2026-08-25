@@ -317,16 +317,21 @@ func _test_prices() -> void:
 	var sig := func(): updated[0] += 1
 	IAP.prices_updated.connect(sig)
 
-	# Eklentinin GERÇEK biçimi (aar'dan: `product_details`).
+	# Eklentinin GERÇEK biçimi (cihaz günlüğünden: `product_details` +
+	# teklif tekil sözlük değil LİSTE).
 	IAP._on_query_product_details_response({
 		"response_code": OK_CODE,
 		"product_details": [{
 			"product_id": IAP.PRODUCT_REMOVE_ADS,
-			"one_time_purchase_offer_details": {"formatted_price": "₺149,99"},
+			"one_time_purchase_offer_details_list": [{
+				"formatted_price": "₺149,99",
+				"price_amount_micros": 149990000,
+				"price_currency_code": "TRY",
+			}],
 		}],
 	})
 	check(IAP.price_for(IAP.PRODUCT_REMOVE_ADS, "₺--") == "₺149,99",
-		"eklentinin gerçek anahtarı (product_details) okundu")
+		"eklentinin gerçek biçimi (product_details + teklif listesi) okundu")
 
 	# Aynı eklentinin camelCase biçimi — sürüme göre değişiyor, ikisi de
 	# desteklenmezse cihazda fiyat sessizce yedek etikette kalır.
@@ -350,7 +355,7 @@ func _test_prices() -> void:
 		}],
 	})
 	check(IAP.price_for(IAP.PRODUCT_GEMS_SMALL, "$--") == "₺114,99",
-		"eski product_details_list anahtarı yedekte çalışıyor")
+		"eski anahtarlar (tekil teklif sözlüğü dahil) yedekte çalışıyor")
 
 	# Bozuk/eksik yanıtlar sinyal yaymamalı ve mevcut fiyatı bozmamalı.
 	var before: int = updated[0]

@@ -31,7 +31,7 @@ const REQUIRED_KEYS := [
 	"product_ids",
 	"product_details",
 	"product_id",
-	"one_time_purchase_offer_details",
+	"one_time_purchase_offer_details_list",
 	"formatted_price",
 ]
 
@@ -40,6 +40,7 @@ const REQUIRED_KEYS := [
 ## demek — sessizce silinip sonra geri eklenmesinler diye.
 const LEGACY_FALLBACK_KEYS := [
 	"products",
+	"one_time_purchase_offer_details",
 	"product_details_list",
 	"productDetailsList",
 ]
