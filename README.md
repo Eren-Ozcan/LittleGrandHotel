@@ -31,6 +31,19 @@ depends on someone's save file.
 ```
 tools\Godot_v4.7-stable_win64_console.exe --path . res://tests/showcase.tscn -- shots
 tools\Godot_v4.7-stable_win64_console.exe --path . res://tests/showcase.tscn -- video
+python scripts/make_store_shots.py            # store frames, en-US
+python scripts/make_store_shots.py tr         # ... and tr-TR
+```
+
+Both write into Godot's user data folder (`%APPDATA%\Godot\app_userdata\Little Grand
+Hotel\media`). `-- video` leaves a numbered PNG sequence there, plus the game's
+own procedural effects and lobby music as WAV and an `audio_cues.json` saying which
+frame each effect belongs to — the capture loop writes a PNG per frame, so it is far
+from real time and the sound cannot be recorded off the running game. The clip and
+the GIF above are assembled from all of that with:
+
+```
+python scripts/make_promo_video.py
 ```
 
 ## Status: Full release — core + late game + long-term content

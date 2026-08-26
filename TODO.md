@@ -696,6 +696,78 @@ device. Setup, reasoning and the remaining manual step: `docs/cloud-save-setup.m
       `android/RELEASE_KEYSTORE_SECRETS.txt` (gitignored) — it belongs in a password manager,
       because one gitignored file is exactly how it went missing the first time.
 
+### Play Console — 2026-08-26 oturumunda konsolda yapılanlar
+
+- **tr-TR ve en-US mağaza girişleri**: sekiz yeni telefon karesi yüklendi. en-US'te
+  **uygulama simgesi ve özellik grafiği boştu** (ikisi de zorunlu) — "Bazı dillerde hata
+  var" uyarısının sebebi buydu; `icon_512_v2.png` ve `feature_graphic_1024x500_v2.png`
+  yüklenip taslak kaydedildi, uyarı kalktı. Not: canlıdaki özellik grafiği 25 Tem
+  tarihli eski sürümmüş, yereldeki v2 hiç yüklenmemişti.
+- **Uygulama içi ürünlerin en-US çevirileri eklendi** (5 ürünün beşi de). Varsayılan dil
+  **tr-TR**; eksik olan İngilizceydi. Girilen metinler:
+  | ürün | ad | açıklama |
+  |---|---|---|
+  | `remove_ads` | Remove Ads | Removes every ad in Little Grand Hotel, permanently. |
+  | `income_2x` | Double Your Earnings | Permanently doubles your hotel's income, offline earnings included. |
+  | `gems_small` | Small Gem Pack | 100 gems. Spend them on finishing shifts instantly and on premium furniture. |
+  | `gems_medium` | Medium Gem Pack | 350 gems. Spend them on finishing shifts instantly and on premium furniture. |
+  | `gems_large` | Large Gem Pack | 1,200 gems. Spend them on finishing shifts instantly and on premium furniture. |
+  Türkçe metinler olduğu gibi duruyor. Konsol yolu: **Ürünler → Tek seferlik ürünler →
+  ürün → Tek seferlik ürün ayrıntılarını düzenle → Çevirileri yönet**. Dil arama kutusu
+  "ingilizce" yazınca eşleşmiyor, **`en-US`** yazmak gerekiyor.
+- **Kalan**: mağaza girişini *Yayın özeti*'nden incelemeye göndermek.
+
+### START HERE — mağaza görselleri yenilendi (2026-08-26)
+
+**Sekiz mağaza karesi de iki dilde yeniden üretildi.** Yalnızca zayıf dördü değil:
+23 Ağustos'ta arayüzün tipografisi baştan değişti (`969f53e` + `83d4c4b` — Figtree
+gövde, PixelifySans sayaçlar), yani 18-19 Ağustos'ta çekilen sekiz karenin sekizi de
+oyunun artık kullanmadığı yazı tipini gösteriyordu. Bunun yanında mağaza/vardiya
+blokları (`e77ec96`), buton dili (`e8dc520`), altın vurgular (`87537ef`), çentik
+boşluğu (`4499b40`), modal kaydırma ve fiyat etiketleri (`bd57add`) da değişmişti.
+
+**Zayıf dördün sebebi "yetersiz oyun durumu" değilmiş.** `make_store_shots.py`
+elle yazılmış `keep_top` oranlarıyla popup'ları kırpıyordu; kırpılan kare hedeften
+kısa kalınca `fit()` geri kalanını **panelin kendi kremiyle dolduruyordu**. 06 ve 08
+karelerinin yarısı, 02 ve 07'nin de dörtte biri bu yüzden boş kutuydu. Artık
+`content_bottom()` her karenin gerçekten nerede bittiğini ölçüyor, altyazı şeridi
+(`BAND_MAX = 700`) artan boşluğu üstleniyor ve hiçbir karede krem dolgu kalmıyor.
+
+Üç kare de içerik olarak değişti:
+- **06** artık Görevler sekmesi değil, **aynı popup'ın Başarımlar sekmesi**
+  (`10_achievements`): Görevler sekmesi bir kahraman kartı + dört "sıradaki" satırdan
+  ibaret, ekranın yarısını bile doldurmuyor. Altyazı ikisini de anıyor:
+  "20 QUESTS, 13 ACHIEVEMENTS" / "20 GÖREV, 13 BAŞARIM" — dosya adı da değişti
+  (`06_20_quests_13_achievements.png`).
+- **04** artık tüm bina değil, **tesis katlarına zoomlanmış kare** (`11_facilities`).
+  Zoom-out `_effective_zoom_min()`'e kırpıldığı ve varsayılan zoom onun iki tık
+  üstünde olduğu için 01 ile 04 neredeyse aynı görüntüydü — iki ayrı mağaza karesi
+  aynı resmi gösteriyordu.
+- **08** (İstatistik) artık dolu: `showcase.gd` 12 satırlık bir vardiya geçmişi
+  kuruyor. Eskiden ekran hem "Başlatılan vardiya 84" hem "Henüz vardiya başlatılmadı"
+  diyordu.
+Başarımlar da artık listedeki ilk beş yerine **gerçekten hak edilenler** açık; eskiden
+"20 / 20" yazan satır kilitli görünüyordu.
+
+**Yakalama sırasında bulut kaydı kapatılıyor (`disable_for_capture()`).** İlk denemede
+"Hangi kayıt devam etsin?" çakışma ekranı iki karenin ortasına bindi. Asıl tehlike
+görsel değil: `showcase.gd` Game'i sahte bir otelle dolduruyor, bulut açıkken o sahte
+durum geliştiricinin gerçek kaydının üstüne yazılabilirdi. Anahtar tek yönlü, açan eşi
+yok.
+
+**Dosyalar.** 1080x1920 orijinaller `docs/store-assets-originals/play/` (en-US) ve
+`play-tr/` (tr-TR); ham render'lar aynı klasörün kökünde ve `tr/` altında. Private
+yedek `C:\Projects\pictures\LittleGrandHotel\` içinde `store-2026-08-26/`,
+`store-tr-2026-08-26/`, `screenshots-2026-08-26/` — **kopyalandı, henüz commit
+edilmedi.** README'nin `docs/media/` içindeki dört 540x960 karesi de yeni render'dan
+tazelendi, klip de yenilendi (aşağıya bak).
+
+**Paket: 22 test, 2371 kontrol, hepsi yeşil.**
+
+Sırada: kareleri Play Console'a yükleyip listeyi **Yayın özeti**'nden göndermek
+(kaydetmek yetmiyor, liste yeniden incelemeye giriyor), sonra kullanıcının kendi
+bilgisini isteyen iki iş — AdMob vergi formları ve *Üretime başvur*.
+
 ### START HERE — durum devri (2026-08-25 kapanışı, 1.0.5)
 
 **SIRADAKİ OTURUM BURADAN VE MAĞAZA GÖRSELLERİNDEN BAŞLIYOR** (2026-08-25'te kararlaştı).
@@ -1018,14 +1090,48 @@ oyun durumunda yeniden render edilmesi.
       tax/ID number; a US W-8BEN with TIN and the treaty claim), so they can only be filled
       by the account holder — not something to hand off. Nothing is blocked by it today at
       ₺0 earnings; it blocks the first payout.
-- [ ] **Promo video — deferred by decision (2026-08-20).** Two edits were rejected and
-      the reasons were never written down (the `[[store-listing-and-media-state]]` link
-      this entry used to point at does not exist), so a third blind edit would most likely
-      be rejected as well. A Play listing publishes fine without a video. Picked back up
-      after the store launch, and only with a stated criterion — tempo, which screens,
-      music/captions. The raw material is ready either way: frames from
-      `tests/showcase.tscn -- video`, and the current cut is
-      `docs/store-assets-originals/demo.mp4` (1.9 MB, 2026-08-18).
+- [~] **Tanıtım klibi yeniden kurgulandı, uzatıldı ve SESLİ (2026-08-26).**
+      24,4 sn / 732 kare. `docs/store-assets-originals/demo.mp4` (720x1280, 30 fps,
+      AAC mono, 3,26 MB) ve README için sessiz `docs/media/demo.gif` (320x568, 10 fps,
+      2,35 MB). 18 Ağustos kurgusu `demo-cut-2026-08-18.mp4` olarak duruyor. Tek komut:
+      `python scripts/make_promo_video.py`.
+
+      **Ses nasıl konuyor.** Yakalama gerçek zamanlı değil — her kare diske PNG olarak
+      yazılıyor — yani sesi çalışan oyundan kaydetmek mümkün değil. Bunun yerine
+      `showcase.gd` her ses olayının **kare numarasını** `audio_cues.json`'a yazıyor ve
+      oyunun kendi prosedürel efektlerini + lobi müziğini WAV olarak dışa aktarıyor;
+      `make_promo_video.py` bunları ffmpeg `adelay` ile tam saniyesine yerleştirip
+      miksliyor. Dışarıdan tek bir ses dosyası gelmiyor. `amix ... normalize=0` toplamı
+      -33 dB ortalamada bırakıyordu (telefonda duyulmaz); `loudnorm=I=-16:TP=-1.5`
+      eklendi, sonuç -21,3 dB ortalama / -1,5 dB tepe.
+
+      **`SFX_STEPS` main.gd'nin `_init_sfx()` tablosunun kopyası** — kayarsa klipteki ses
+      oyundakinden farklı olur, oyunun davranışı değişmez.
+
+      **Kurgu:** geniş otel + toplama → odaya yakın plan, eşya eşya döşeme → **YENİ**
+      kirli oda + temizlik → boş katın odalarla dolması → **YENİ** görev tamamlandı
+      toast'ı → yeni kat, kamera yukarı → geniş finale dönüş + toplama.
+
+      **Kat satın alma sıçraması — sebep benim eklediğim kamera hareketiydi.** 17,2
+      saniyede bina tek karede aşağı kayıp lobi ve sokak ekrandan çıkıyordu. İlk teşhis
+      yanlıştı: `buy_floor()` satırları yeniden numaralandırıyor (`row_y` en üst kattan
+      aşağı sayıyor) ama `_clamp_pan()` binayı viewport'un tabanına sabitlediği için
+      pan aynı miktarda ters yöne gidiyor (ölçüldü: pan 464 → 296, tuval 680 → 792) —
+      yani mevcut katlar zaten yerinde kalıyor, telafi eklemek gereksiz. Asıl sebep,
+      yeni katı ortalamak için eklediğim `clamped=false` glide'ıydı: ZOOM_MAX'ta beş
+      katlı otel viewport'a zaten sığdığı için clamp'lı hâlde kameranın gidecek yeri
+      yok, clamp kapatılınca da bina ekranın altına itiliyordu. O beat artık kamerayı
+      hiç oynatmıyor; yeni kat olması gereken yerde, **en üstte** beliriyor.
+
+      **Kirli oda tuzağı:** ilk denemede temizlik beat'i sessizce yok oldu. Showcase
+      otelinde **Kat Hizmetleri** odası vardı ve kamera odaya süzülürken odayı kendi
+      kendine temizliyordu; `clean_room()` yapacak iş bulamayıp `false` dönüyordu. Video
+      modunda o oda layout'tan çıkarıldı.
+
+      **Mağaza (Play) videosu hâlâ yüklenmedi ve karar kullanıcıda.** Play bu alana dosya
+      değil **YouTube bağlantısı** istiyor (herkese açık ya da liste dışı, reklamsız, yaş
+      kısıtlamasız). Liste videosuz da yayınlanıyor.
+
 - [x] **What the repo may carry is already settled** — CLAUDE.md's `docs/media/` exception
       answers it: the README set (`demo.gif` plus the 540x960 stills, a couple of MB) lives
       in the repo, and `demo.mp4`, the 1080x1920 originals, the feature graphic and the icon
