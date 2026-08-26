@@ -97,6 +97,9 @@ var _google_signin: GoogleSignIn
 ## bekleniyor" durumunu çizebilmesini sağlar (bkz. main.gd _build_cloud_section).
 var _linking := false
 
+## bkz. disable_for_capture()
+var _capture_mode := false
+
 
 func _ready() -> void:
 	_auth = FirebaseAuthRest.new()
@@ -150,7 +153,19 @@ func _notification(what: int) -> void:
 ## kayıt zaten tarayıcının kendi deposunda tutuluyor ve telefon derlemesine
 ## taşınmıyor, yani kaybedilen bir yetenek yok.
 func is_enabled() -> bool:
-	return FirebaseConfig.is_configured() and not OS.has_feature("demo")
+	return _capture_mode == false \
+		and FirebaseConfig.is_configured() and not OS.has_feature("demo")
+
+
+## Pazarlama yakalama aracının (tests/showcase.gd) kapattığı anahtar. O araç
+## Game'i sahte bir otelle dolduruyor: bulut açık kalırsa o sahte durum
+## geliştiricinin gerçek kaydının üstüne yazılabilir, ve yazılmadığı durumda da
+## çakışma ekranı ("Hangi kayıt devam etsin?") mağaza karelerinin ortasına
+## biniyor — 2026-08-26'da iki karede tam olarak bu oldu. Yalnızca kapatır;
+## açan bir eşi bilerek yok.
+func disable_for_capture() -> void:
+	_capture_mode = true
+	set_process(false)
 
 
 func has_conflict() -> bool:
