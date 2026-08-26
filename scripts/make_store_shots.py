@@ -25,29 +25,58 @@ ASSETS = Path(__file__).resolve().parent.parent / "docs" / "store-assets-origina
 
 W, H = 1080, 1920
 BAND_H = 330
+# The band grows for screens that are shorter than the frame, so the leftover
+# never shows up as a slab of empty cream. Past this height it would dwarf the
+# gameplay, so anything taller is cropped instead.
+BAND_MAX = 700
 PLUM = (58, 44, 77)
 GOLD = (246, 184, 60)
 CREAM = (253, 246, 227)
 
 TITLE_FONT = r"C:\Windows\Fonts\seguibl.ttf"
 
-# (source image, English caption, Turkish caption, character cut-out or None,
-# keep-top fraction). Menu screens are cropped to their top portion: the popups
-# are short, so the full 1080x1920 frame would be mostly empty cream.
+# (source image, English caption, Turkish caption, character cut-out or None).
+# Menu screens are cropped to where their content actually ends — see
+# `content_bottom()`. The hand-tuned keep-top fractions this used to carry were
+# guesses, and every one of them was wrong in the same direction: they cut the
+# panel above its last row, and `fit()` then padded the rest of the frame with
+# the panel's own cream, so half of four screenshots was an empty box.
 #
 # The Turkish captions are written already upper-cased by hand — Python's
 # str.upper() is locale-independent and turns "i" into "I", which is wrong in
 # Turkish (the same trap the game hit in `_to_upper()`).
 SHOTS = [
-    ("01_hotel.png", "BUILD YOUR GRAND HOTEL", "BÜYÜK OTELİNİ KUR", "pose_point.png", 1.0),
-    ("03_room.png", "DECORATE EVERY ROOM", "HER ODAYI DÖŞE", None, 0.62),
-    ("before_after_art.jpg", "TURN EMPTY ROOMS INTO SUITES", "BOŞ ODALARI SÜİTE ÇEVİR", None, 1.0),
-    ("02_full_building.png", "POOL, CINEMA, SPA & MORE", "HAVUZ, SİNEMA, SPA VE DAHASI", "pose_point.png", 1.0),
-    ("08_offline.png", "EARN WHILE YOU'RE AWAY", "SEN YOKKEN DE KAZAN", "pose_coins.png", 1.0),
-    ("05_quests.png", "20 QUESTS TO CHASE", "PEŞİNDEN KOŞULACAK 20 GÖREV", None, 0.45),
-    ("04_build.png", "BUILD, UNLOCK, EXPAND", "İNŞA ET, AÇ, BÜYÜT", "pose_broom.png", 0.62),
-    ("06_stats.png", "GROW INTO AN EMPIRE", "BİR İMPARATORLUĞA DÖNÜŞTÜR", "pose_coins.png", 0.45),
+    ("01_hotel.png", "BUILD YOUR GRAND HOTEL", "BÜYÜK OTELİNİ KUR", "pose_point.png"),
+    ("03_room.png", "DECORATE EVERY ROOM", "HER ODAYI DÖŞE", None),
+    ("before_after_art.jpg", "TURN EMPTY ROOMS INTO SUITES", "BOŞ ODALARI SÜİTE ÇEVİR", None),
+    # Zoomed in on the facility floors, not the whole building: 01 already is
+    # the whole building, and the two framings render almost identically.
+    ("11_facilities.png", "POOL, CINEMA, SPA & MORE", "HAVUZ, SİNEMA, SPA VE DAHASI", "pose_point.png"),
+    ("08_offline.png", "EARN WHILE YOU'RE AWAY", "SEN YOKKEN DE KAZAN", "pose_coins.png"),
+    # The Quests *tab* is four rows tall and made the worst shot in the set, so
+    # this is the Achievements tab of the same popup — its tab bar still reads
+    # "Quests | Achievements", and the caption names both.
+    ("10_achievements.png", "20 QUESTS, 13 ACHIEVEMENTS", "20 GÖREV, 13 BAŞARIM", None),
+    ("04_build.png", "BUILD, UNLOCK, EXPAND", "İNŞA ET, AÇ, BÜYÜT", "pose_broom.png"),
+    ("06_stats.png", "GROW INTO AN EMPIRE", "BİR İMPARATORLUĞA DÖNÜŞTÜR", "pose_coins.png"),
 ]
+
+
+def content_bottom(img: Image.Image) -> int:
+    """The last row that still shows something, in a screen that ends in blank.
+
+    A popup paints its own background all the way down, so "where does the
+    screen end" is not the image height — it is the last row that differs from
+    the colour filling the bottom edge. Photographic sources (the hand-painted
+    before/after art) have no such flat tail and come back as the full height.
+    """
+    px = img.convert("RGB").load()
+    tail = px[img.width // 2, img.height - 1]
+    for y in range(img.height - 1, -1, -1):
+        row = [px[x, y] for x in range(0, img.width, 8)]
+        if max(abs(c - t) for p in row for c, t in zip(p, tail)) > 12:
+            return min(img.height, y + 24)
+    return img.height
 
 
 def fit(img: Image.Image, w: int, h: int) -> Image.Image:
@@ -89,21 +118,24 @@ def source_path(source: str, lang: str) -> Path:
     return ASSETS / source
 
 
-def build(source: str, caption: str, slug: str, pose: str | None, keep_top: float,
+def build(source: str, caption: str, slug: str, pose: str | None,
           index: int, lang: str) -> Path:
     raw = Image.open(source_path(source, lang)).convert("RGB")
-    if keep_top < 1.0:
-        raw = raw.crop((0, 0, raw.width, round(raw.height * keep_top)))
-    shot = fit(raw, W, H - BAND_H)
+    bottom = content_bottom(raw)
+    raw = raw.crop((0, 0, raw.width, bottom))
+    # A screen shorter than the frame gives its leftover to the caption band
+    # instead of padding it with cream.
+    band_h = min(BAND_MAX, max(BAND_H, H - round(bottom * W / raw.width)))
+    shot = fit(raw, W, H - band_h)
     canvas = Image.new("RGB", (W, H), PLUM)
     canvas.paste(shot, (0, 0))
     draw = ImageDraw.Draw(canvas)
-    draw.rectangle([0, H - BAND_H, W, H - BAND_H + 7], fill=GOLD)
+    draw.rectangle([0, H - band_h, W, H - band_h + 7], fill=GOLD)
 
     text_left = 40
     if pose:
         cut = Image.open(ASSETS / pose).convert("RGBA")
-        target_h = BAND_H + 90          # the character overhangs the band on purpose
+        target_h = band_h + 90          # the character overhangs the band on purpose
         cut = cut.resize((round(cut.width * target_h / cut.height), target_h), Image.LANCZOS)
         canvas.paste(cut, (25, H - target_h), cut)
         text_left = 25 + cut.width + 24
@@ -118,7 +150,7 @@ def build(source: str, caption: str, slug: str, pose: str | None, keep_top: floa
         size -= 4
     line_h = size * 1.12
     total = line_h * len(lines)
-    y = H - BAND_H + (BAND_H - total) / 2 - 6
+    y = H - band_h + (band_h - total) / 2 - 6
     for line in lines:
         draw.text((text_left, y), line, font=font, fill=CREAM)
         y += line_h
@@ -132,12 +164,12 @@ def build(source: str, caption: str, slug: str, pose: str | None, keep_top: floa
 
 def main() -> None:
     lang = sys.argv[1] if len(sys.argv) > 1 else "en"
-    for i, (source, en, tr, pose, keep_top) in enumerate(SHOTS, start=1):
+    for i, (source, en, tr, pose) in enumerate(SHOTS, start=1):
         # The file name always comes from the English caption, so the two sets
         # line up row by row when they are uploaded side by side.
         slug = en.lower().replace(" ", "_").replace(",", "").replace("'", "")[:28]
         caption = en if lang == "en" else tr
-        print("wrote", build(source, caption, slug, pose, keep_top, i, lang).name)
+        print("wrote", build(source, caption, slug, pose, i, lang).name)
 
 
 if __name__ == "__main__":
