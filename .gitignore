@@ -43,3 +43,6 @@ docs/store-assets-originals/
 # /graphify skill çıktısı: kod tabanının bilgi grafiği + AST önbelleği.
 # Tamamı üretilmiş dosya (~4 MB) ve her çalıştırmada yenilenir.
 graphify-out/
+
+# Python bytecode from the promo scripts
+scripts/__pycache__/
