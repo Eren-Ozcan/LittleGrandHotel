@@ -669,6 +669,32 @@ device. Setup, reasoning and the remaining manual step: `docs/cloud-save-setup.m
 
 ## To do
 
+### Üretime başvuru gönderildi — 2026-08-27
+
+**Üretim erişimi başvurusu 2026-08-27 19:26'da gönderildi.** Kontrol panelinde
+artık "Üretim erişimi başvurunuzu aldık · Başvuru formunuz incelenmektedir ·
+genellikle 7 gün veya daha kısa" kutusu var; sonuç hesap sahibine e-postayla
+gelecek, Üretim kanalı inceleme geçene kadar kilitli.
+
+Aynı gün Console taramasıyla doğrulanan, aşağıdaki eski notları geçersiz kılan
+durum:
+
+- **`gems_small` / `gems_medium` / `gems_large` VAR ve üçü de Etkin** (24 Ağu),
+  `income_2x` + `remove_ads` ile birlikte — "elmas paketleri Play Console'da yok"
+  maddesi (aşağıda ve `docs/store/in-app-products.md`) kapandı.
+- **8 mağaza karesi iki dilde de yayında** (8/8), taslak beklemiyor.
+- **Console tarafında bekleyen vergi/AdMob aksiyonu yok** — ödeme profili banka
+  hesaplı, "Tamamlanmayı bekleyen beyan yok". ABD vergi formu (W-8/W-9) durumu
+  yalnızca gömülü `payments.google.com` içinde görünüyor; oradan doğrulanabilir
+  ama Console hiçbir bekleyen iş göstermiyor.
+- **Android geliştirici doğrulaması TAMAM** — hesap bazında, dört paket de
+  "Kayıtlı". Ayrıntı `C:\Projects\pictures\STUDIO.md`.
+
+Başvuru formu cevapları (hedef kitle 13+, ilk yıl 0-10 bin yükleme, kapalı test
+değişiklikleri: ödeme alınıp ürün verilmeyen eklenti-anahtarı hatası + Android
+13+ ses arabelleği çökmesi + iptal edilen satın almada hata gösterilmemesi) üç
+oyun için tutarlı yazıldı; tam metin reefy release-prep memory'sinde.
+
 ### Blockers — both now closed
 
 - [x] **The Android 13+ crash was already fixed** — `09941a7` (2026-08-08), and this entry
