@@ -581,7 +581,7 @@ func star_rating() -> int:
 		for r in guests:
 			avg_tier += room_tier(r)
 		avg_tier /= guests.size()
-	var max_tier := float(eco.tier_names.size() - 1)
+	var max_tier := maxf(1.0, float(eco.tier_names.size() - 1))
 	var score := 0.5 * (avg_tier / max_tier) \
 		+ 0.3 * (minf(facility_diversity(), 5.0) / 5.0) \
 		+ 0.2 * clean_fraction()
@@ -992,6 +992,8 @@ func collect() -> int:
 ## oyuncu hiç vardiya başlatamayan bir çıkmaza girebilir.
 func min_shift_reserve(extra_rooms: int = 0) -> int:
 	var staff := maxi(1, ceili((rooms.size() + extra_rooms) * float(eco.staff_per_room)))
+	if not eco.shift_rates.has("1"):
+		return 0
 	return staff * int(eco.shift_rates["1"])
 
 
