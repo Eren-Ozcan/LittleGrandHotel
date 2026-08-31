@@ -1,6 +1,8 @@
 # Godot
 .godot/
 
+.claude/
+
 # Motor ikili dosyaları (repo'ya girmez, tools/ altına indirilir)
 tools/
 
