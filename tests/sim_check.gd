@@ -183,8 +183,10 @@ func _initialize() -> void:
 			idx_cafe = i
 	check(idx_cafe > 0, "kafe bulundu")
 	var cafe_id: String = String(g.rooms[idx_cafe].id)
-	check(g.buy_floor(), "taşıma testi için yeni (boş) kat alındı")
-	var empty_floor: int = g.floors
+	# 2. kat, 1. kat dolu olduğu için kat sırası kuralına göre hedef olabilir
+	# (bkz. Game._floor_has_room) — henüz hiç oda içermediğinden "boş kat" testi
+	# için uygun, ekstra buy_floor()'a gerek yok.
+	var empty_floor: int = 2
 	check(g.move_room_to(cafe_id, empty_floor, 0), "kafe boş bir hücreye taşındı")
 	check(int(g.rooms[idx_cafe].floor) == empty_floor and int(g.rooms[idx_cafe].col) == 0,
 		"taşıma sonrası konum doğru")
@@ -208,6 +210,12 @@ func _initialize() -> void:
 	var rooms_s: int = g.rooms.size()
 	check(g.sell_room(idx_cafe), "kafe satıldı")
 	check(g.rooms.size() == rooms_s - 1 and g.coins >= coins_s + sv, "iade coin'e işlendi")
+
+	# 12a) Kat sırası kuralı: alt kat boşken üst kata oda konulamaz.
+	check(g.floors >= 3, "kat sırası testi için en az 3 kat var")
+	check(g.can_place_room("cafe", 2, 0), "2. kat boş ama 1. kat dolu — yerleştirme uygun")
+	check(not g.can_place_room("cafe", 3, 0), "3. kat reddedilir çünkü 2. kat henüz boş")
+	check(not g.place_room("cafe", 3, 0), "place_room da aynı şekilde reddeder")
 
 	# 12b) place_room/can_place_room (mağaza rafından sürükle-bırak yerleştirme)
 	g.coins += 100000

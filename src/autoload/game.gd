@@ -352,6 +352,14 @@ func floor_open_width(floor_i: int) -> int:
 	return int(floor_blocks[floor_i - 1])
 
 
+## floor_i'de en az bir oda var mı (kat sırası kontrolü için: bkz. _room_fits).
+func _floor_has_room(floor_i: int) -> bool:
+	for r in rooms:
+		if int(r.floor) == floor_i:
+			return true
+	return false
+
+
 ## Toplam açık blok sayısı — eski "max_slots" (oda sayısı kapasitesi) yerine
 ## artık toplam blok kapasitesi; footprint'i büyük odalar birden fazla blok
 ## tüketir. Varsayılan (DEFAULT_FLOOR_OPEN_WIDTH) genişlik her yeni katla
@@ -364,10 +372,13 @@ func max_slots() -> int:
 
 
 ## Bir odanın (type) belirtilen kat/sütuna SIĞIP SIĞMADIĞI — fiyat/seviye
-## kontrolü YOK, yalnızca geometri (açık genişlik + diğer odalarla çakışma).
+## kontrolü YOK, yalnızca geometri (açık genişlik + diğer odalarla çakışma)
+## + kat sırası (alt kat boşken üst kata oda konulamaz, bkz. _floor_has_room).
 func _room_fits(type: String, floor_i: int, col: int) -> bool:
 	var d := room_def(type)
 	if not has_room_type(type) or floor_i < 1 or floor_i > floors:
+		return false
+	if floor_i > 1 and not _floor_has_room(floor_i - 1):
 		return false
 	var w := int(d.get("footprint_w", 1))
 	if w <= 0 or col < 0 or col + w > floor_open_width(floor_i):
