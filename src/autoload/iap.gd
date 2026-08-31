@@ -132,7 +132,7 @@ func _on_query_product_details_response(response: Dictionary) -> void:
 	var list: Array = response.get("product_details",
 		response.get("product_details_list", response.get("productDetailsList", [])))
 	if list.is_empty():
-		print("[IAP] ürün detayı yanıtı boş/tanınmadı: ", response.keys())
+		print("[IAP] product details response empty/unrecognized: ", response.keys())
 		return
 	var found := 0
 	for item: Dictionary in list:
@@ -143,7 +143,7 @@ func _on_query_product_details_response(response: Dictionary) -> void:
 			_prices[pid] = price
 			found += 1
 	if found == 0:
-		print("[IAP] fiyat alanı bulunamadı, örnek kayıt: ", list[0])
+		print("[IAP] price field not found, sample record: ", list[0])
 		return
 	prices_updated.emit()
 
@@ -259,7 +259,7 @@ func _apply_purchase(p: Dictionary) -> void:
 		# Sessizce dönmek 2026-08-25'te yakalanan hatanın ta kendisiydi: ödeme
 		# alınıyor, ürün verilmiyordu. Anahtar adı yine değişirse bu satır
 		# cihaz günlüğünde görünür.
-		print("[IAP] satın alma kaydında ürün kimliği yok, anahtarlar: ", p.keys())
+		print("[IAP] purchase record has no product id, keys: ", p.keys())
 		return
 	var consumable := products.any(func(pid): return _CONSUMABLE_PRODUCTS.has(pid))
 	if consumable:
