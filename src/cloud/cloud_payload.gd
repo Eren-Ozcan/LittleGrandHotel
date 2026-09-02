@@ -23,8 +23,13 @@ extends RefCounted
 ## altında durur (bkz. firestore.rules), yani bir paylaşım vektörü değildir.
 const ENTITLEMENT_KEYS := ["remove_ads", "permanent_income_mult"]
 
-## Firestore doküman tavanı 1 MiB; kurallardaki sınırla (firestore.rules) aynı.
-const MAX_PAYLOAD_BYTES := 400000
+## payload tavanı — Firestore'un 1 MiB doküman sınırından bilerek çok daha dar.
+## Gerçekçi en büyük kayıt (dolu otel + tüm dekor + tüm başarımlar) ~24 KB
+## (bkz. tests/cloud_save_check.gd test 8); 60 KB ~2.5× içerik büyüme payı
+## bırakır ve kötüye kullanan bir hesabın tek yazmada park edebileceği veriyi
+## sınırlar. Sunucudaki eş sınır: firestore.rules'daki payload.size() —
+## iki değer birlikte güncellenmeli.
+const MAX_PAYLOAD_BYTES := 60000
 
 # --- Senkron kararı (saf) ----------------------------------------------
 
@@ -76,7 +81,7 @@ static func build(game) -> String:
 
 ## Çakışma ekranının payload'ı açmadan gösterebildiği özet. Bulut dokümanında
 ## ayrı alanlar olarak saklanır, böylece "Bulut / Bu cihaz" karşılaştırması
-## 400 KB'lık payload'ı ayrıştırmadan çizilebilir.
+## payload'ı ayrıştırmadan çizilebilir.
 static func summary(game) -> Dictionary:
 	return {
 		"level": game.level(),

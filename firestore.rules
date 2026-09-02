@@ -18,10 +18,16 @@ service cloud.firestore {
       allow get: if request.auth != null && request.auth.uid == uid;
       allow list: if false;
 
+      // payload tavanı Firestore'un 1 MiB doküman sınırından ÇOK daha dar
+      // tutulur: gerçekçi en büyük kayıt (dolu otel + tüm dekor + tüm
+      // başarımlar) ~24 KB (tests/cloud_save_check.gd test 8). 60 KB ~2.5×
+      // içerik büyüme payı bırakır ve kötüye kullanan bir hesabın tek yazmada
+      // park edebileceği veriyi 400 KB'den düşürür. İstemcideki eş sınır:
+      // CloudPayload.MAX_PAYLOAD_BYTES — iki değer birlikte güncellenmeli.
       allow create: if request.auth != null
                     && request.auth.uid == uid
                     && request.resource.data.payload is string
-                    && request.resource.data.payload.size() <= 400000
+                    && request.resource.data.payload.size() <= 60000
                     && request.resource.data.rev is int
                     && request.resource.data.rev > 0
                     && request.resource.data.schemaVersion is int;
@@ -35,7 +41,7 @@ service cloud.firestore {
       allow update: if request.auth != null
                     && request.auth.uid == uid
                     && request.resource.data.payload is string
-                    && request.resource.data.payload.size() <= 400000
+                    && request.resource.data.payload.size() <= 60000
                     && request.resource.data.rev is int
                     && request.resource.data.schemaVersion is int
                     && request.resource.data.rev > resource.data.rev;
