@@ -163,7 +163,8 @@ func _initialize() -> void:
 	var big_price: int = g.floor_price()
 	check(big_price == 15000, "3. kat fiyatı 15000")
 	check(g.buy_floor(), "3. kat alındı")
-	check(g.floor_price() == int(15000 * 2.2), "4. kat fiyatı ×2,2")
+	check(g.floor_price() == int(15000 * float(g.eco.building.floor_mult)),
+		"4. kat fiyatı ×%.1f (kat fiyat çarpanı)" % float(g.eco.building.floor_mult))
 	check(g.max_slots() == 12, "yuva kapasitesi 12'ye çıktı")
 
 	# 10) Görev zinciri ilerliyor

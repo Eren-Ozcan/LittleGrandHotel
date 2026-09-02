@@ -5,10 +5,10 @@
     "start_floors": 2,
     "max_floors": 8,
     "floor_price": 15000,
-    "floor_mult": 2.2,
+    "floor_mult": 1.8,
     "grid_cols": 8,
-    "block_price": 400,
-    "block_price_mult": 1.12
+    "block_price": 2000,
+    "block_price_mult": 1.25
   },
 
   "shift_rates": { "1": 8, "4": 8, "8": 8, "24": 8 },
@@ -31,11 +31,11 @@
 
   "room_types": {
     "standard": { "name": "Standard Room", "category": "guest", "base_income": 30, "price": 1200, "unlock_level": 1, "stay_hours": 2, "footprint_w": 1 },
-    "deluxe":   { "name": "Deluxe Room", "category": "guest", "base_income": 75, "price": 6500, "unlock_level": 8, "stay_hours": 3.5, "footprint_w": 2 },
-    "suite":    { "name": "Suite", "category": "guest", "base_income": 180, "price": 22000, "unlock_level": 18, "stay_hours": 5, "footprint_w": 2 },
+    "deluxe":   { "name": "Deluxe Room", "category": "guest", "base_income": 90, "price": 3800, "unlock_level": 8, "stay_hours": 3.5, "footprint_w": 2 },
+    "suite":    { "name": "Suite", "category": "guest", "base_income": 220, "price": 14000, "unlock_level": 18, "stay_hours": 5, "footprint_w": 2 },
 
     "cafe":     { "name": "Cafe", "category": "facility", "base_income": 40, "price": 3000, "unlock_level": 3, "capacity": 4, "footprint_w": 1 },
-    "gym":      { "name": "Gym", "category": "facility", "base_income": 55, "price": 5200, "unlock_level": 6, "capacity": 2, "footprint_w": 1 },
+    "gym":      { "name": "Gym", "category": "facility", "base_income": 55, "price": 4200, "unlock_level": 6, "capacity": 2, "footprint_w": 1 },
     "pool":     { "name": "Pool", "category": "facility", "base_income": 90, "price": 12000, "unlock_level": 12, "capacity": 3, "footprint_w": 2 },
     "cinema":   { "name": "Cinema", "category": "facility", "base_income": 120, "price": 18000, "unlock_level": 16, "capacity": 5, "footprint_w": 2 },
     "spa":      { "name": "Spa", "category": "facility", "base_income": 150, "price": 26000, "unlock_level": 20, "capacity": 3, "footprint_w": 2 },
