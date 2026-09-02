@@ -9,7 +9,7 @@ signal achievement_unlocked(achievement: Dictionary)
 signal leveled_up(new_level: int)
 
 const SAVE_PATH := "user://save.json"
-const SAVE_VERSION := 16
+const SAVE_VERSION := 17
 ## Göçle yükseltilebilen en eski kayıt sürümü
 const MIN_SAVE_VERSION := 2
 ## v11 öncesi (sabit "N kat × 4 slot" ızgarası) her katın açık genişliği —
@@ -65,6 +65,10 @@ var unlocked_achievements: Array = []
 
 ## Prestij: devretme sayısı. new_game() ile sıfırlanmaz — kalıcıdır.
 var prestige_level: int = 0
+
+## Kazanılmış yıldız (cırcır tabanı, bkz. star_rating). new_game() ile
+## sıfırlanır — devir sonrası otel yine 1 yıldızdan başlar.
+var star_earned: int = 1
 
 ## Prestij puanı: gelir çarpanını taşıyan asıl değer. Devretme sayısından
 ## ayrıdır çünkü ödül artık "kaç kez devrettin" değil "o turda ne kazandın"
@@ -287,6 +291,7 @@ func new_game() -> void:
 	offline_earned = 0
 	offline_seconds = 0.0
 	staff_tier = 0
+	star_earned = 1
 	boost_end_unix = 0.0
 	boost_mult = 1.0
 	tutorial_seen = false
@@ -578,19 +583,61 @@ func clean_fraction() -> float:
 	return float(clean) / guests.size()
 
 
+## Kademe ortalaması, EN DÜŞÜK kademeli birkaç oda hariç tutularak hesaplanır:
+## "tadilattaki odalar puanı düşürmez". Düz ortalama, yeni bir oda inşa etmeyi
+## doğrudan cezalandırıyordu — oyuncu genişledikçe yıldızı düşüyor, yani oyunun
+## en görünür başarı göstergesi en temel eylemiyle çatışıyordu (simde 3
+## yıldızdan 2'ye gerileme ölçüldü). Muafiyet oda sayısının %20'si ve en fazla
+## 3 oda: birkaç boş oda affedilir, boş bir kule affedilmez.
+func _tier_grace(count: int) -> int:
+	return mini(3, int(floor(float(count) * 0.2)))
+
+
+## Kazanılmış yıldız, düşmez: bir kez 4 yıldıza çıkan otel, yeni bir boş oda
+## eklendi diye 3'e inmez. Ham puan kaçınılmaz olarak dalgalanıyor (inşa
+## kaliteyi düşürür, dekor geri çıkarır) ve bu, simde yıldızın her session
+## ileri geri oynaması olarak görünüyordu — oyuncu için "ceza" gibi okunan,
+## kontrol edemediği bir titreme. Devirde (new_game) sıfırlanır.
 func star_rating() -> int:
-	# GDD §4.4: ortalama kademe %50 + tesis çeşitliliği %30 + hizmet %20
+	return maxi(star_earned, _star_computed())
+
+
+## Ham (anlık) yıldız puanı — cırcır uygulanmadan.
+func _star_computed() -> int:
+	# GDD §4.4: kademe + tesis çeşitliliği + hizmet (ağırlıklar star_weights)
 	var guests := guest_rooms()
 	var avg_tier := 0.0
 	if not guests.is_empty():
+		var tiers := []
 		for r in guests:
-			avg_tier += room_tier(r)
-		avg_tier /= guests.size()
+			tiers.append(room_tier(r))
+		tiers.sort()  # artan: en düşük kademeler başta
+		var skip := _tier_grace(tiers.size())
+		var counted := tiers.slice(skip)
+		for t in counted:
+			avg_tier += float(t)
+		avg_tier /= float(counted.size())
+		# TAM kademeye indir. Sürekli bir ortalama, eşiğin tam üstünde
+		# gezinirken tek bir odanın değişmesiyle yıldızı ileri geri oynatıyordu
+		# (simde 4<->5 titremesi ölçüldü). Ayrık değer bunu imkânsız kılar ve
+		# hedefi de okunur hale getirir: "odaların %80'i Şık ise 4 yıldız".
+		avg_tier = floor(avg_tier)
 	var max_tier := maxf(1.0, float(eco.tier_names.size() - 1))
-	var score := 0.5 * (avg_tier / max_tier) \
-		+ 0.3 * (minf(facility_diversity(), 5.0) / 5.0) \
-		+ 0.2 * clean_fraction()
-	return clampi(1 + roundi(score * 4.0), 1, 5)
+	var w: Dictionary = eco.star_weights
+	var score := float(w.tier) * (avg_tier / max_tier) \
+		+ float(w.diversity) * (minf(facility_diversity(), 5.0) / 5.0) \
+		+ float(w.clean) * clean_fraction()
+	# Eşik listesi, eski `1 + round(score * 4)` yuvarlamasının yerini aldı.
+	# Yuvarlama tam .5 sınırında oturduğunda tek bir oda yıldızı ileri geri
+	# oynatıyordu (simde 4<->5 titremesi ölçüldü); eşikler bunu bitiriyor.
+	# Ağırlıklar da yeniden dağıtıldı: eskiden çeşitlilik+temizlik tek başına
+	# puanın yarısını verip 3 yıldızı bedavaya taban yapıyordu ve beş yıldızın
+	# tamamı yalnızca son iki kademeye sıkışıyordu.
+	var star := 1
+	for t in eco.star_thresholds:
+		if score >= float(t):
+			star += 1
+	return clampi(star, 1, 5)
 
 
 # --- Gelir ve vardiya (GDD §5.2) ---------------------------------------
@@ -1381,6 +1428,7 @@ func _check_achievements() -> void:
 
 
 func _check_progress() -> void:
+	star_earned = maxi(star_earned, _star_computed())
 	_check_quests()
 	_check_achievements()
 
@@ -1447,6 +1495,7 @@ func _save_dict() -> Dictionary:
 		"unlocked_achievements": unlocked_achievements,
 		"prestige_level": prestige_level,
 		"prestige_points": prestige_points,
+		"star_earned": star_earned,
 		"time_scale": time_scale,
 		"sound_on": sound_on,
 		"music_on": music_on,
@@ -1611,6 +1660,12 @@ func _migrate_save(data: Dictionary) -> Dictionary:
 				# 2 × devir, göçen oyuncunun çarpanını birebir korur.
 				if not data.has("prestige_points"):
 					data["prestige_points"] = int(data.get("prestige_level", 0)) * 2
+			16:
+				# v17: yıldız artık cırcır (kazanılan düşmez). Taban 1 ile
+				# eklenir; yükleme sonundaki _check_progress() zaten mevcut
+				# otelin hak ettiği yıldıza kadar yükseltir.
+				if not data.has("star_earned"):
+					data["star_earned"] = 1
 		v += 1
 		data["save_version"] = v
 	return data
@@ -1728,7 +1783,7 @@ func _validate_save_dict(data: Dictionary) -> bool:
 	var numeric_fields := ["coins", "gems", "xp", "floors", "shift_end_unix",
 		"pending_income", "last_sim_unix", "quest_index", "stat_shifts",
 		"stat_collects", "stat_collected_total", "stat_cleans", "prestige_level",
-		"prestige_points",
+		"prestige_points", "star_earned",
 		"next_room_id", "last_shift_hours", "daily_streak", "last_daily_claim_day",
 		"poke_day", "poke_count", "staff_tier", "boost_end_unix", "boost_mult",
 		"permanent_income_mult"]
@@ -1789,6 +1844,7 @@ func _load_from_dict(parsed) -> bool:
 	unlocked_achievements = parsed.get("unlocked_achievements", [])
 	prestige_level = int(parsed.get("prestige_level", 0))
 	prestige_points = int(parsed.get("prestige_points", 0))
+	star_earned = int(parsed.get("star_earned", 1))
 	# time_scale artık oyuncu seçimi değil, her zaman sabit 60.0 (kullanıcı
 	# isteği: "1 dakika = 1 saat") — kaydedilmiş değer (eski ×1/×60/×3600
 	# seçiminden kalma olabilir) yok sayılır.

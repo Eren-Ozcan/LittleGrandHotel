@@ -306,6 +306,18 @@ func _test_progression_tables() -> void:
 	check(float(pr.get("points_exp", 0.0)) > 0.0 and float(pr.get("points_exp", 1.0)) < 1.0,
 		"prestij puan üssü (0,1) aralığında — azalan getiri")
 
+	var sw: Dictionary = eco.get("star_weights", {})
+	var wsum := float(sw.get("tier", 0.0)) + float(sw.get("diversity", 0.0)) + float(sw.get("clean", 0.0))
+	check(absf(wsum - 1.0) < 0.001, "yıldız ağırlıkları 1.0 topluyor (şu an %.3f)" % wsum)
+	check(float(sw.get("tier", 0.0)) > float(sw.get("diversity", 0.0)) + float(sw.get("clean", 0.0)),
+		"kademe ağırlığı diğer ikisinin toplamından büyük — yıldız dekorasyonla kazanılıyor")
+	var st: Array = eco.get("star_thresholds", [])
+	check(st.size() == 4, "dört yıldız eşiği tanımlı (2,3,4,5 için)")
+	var prev_t := 0.0
+	for t in st:
+		check(float(t) > prev_t and float(t) <= 1.0, "yıldız eşikleri artan ve <= 1.0 (%.2f)" % float(t))
+		prev_t = float(t)
+
 	var dif := float(eco.get("dirty_income_frac", -1.0))
 	check(dif > 0.0 and dif < 1.0, "kirli oda gelir oranı (0,1) aralığında — sıfır DEĞİL")
 	check(float(eco.infest.after_hours) > float(eco.room_types.standard.stay_hours) * 4.0,

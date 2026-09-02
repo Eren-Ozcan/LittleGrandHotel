@@ -29,7 +29,10 @@ func _initialize() -> void:
 	# 1) Başlangıç durumu
 	check(g.coins == 3000 and g.gems == 25, "başlangıç bakiyesi (3000c / 25e)")
 	check(g.rooms.size() == 2 and g.floors == 2, "başlangıç: 2 oda, 2 kat")
-	check(g.star_rating() == 2, "başlangıç yıldızı 2")
+	# Yıldız ağırlıkları yeniden dağıtıldıktan sonra çıplak bir otel 1 yıldız:
+	# çeşitlilik+temizlik artık tek başına 3 yıldızı taban yapmıyor, beş
+	# yıldızın tamamı dekorasyonla kazanılıyor (bkz. star_weights).
+	check(g.star_rating() == 1, "başlangıç yıldızı 1 (çıplak otel)")
 	check(g.max_slots() == 8, "başlangıç yuva kapasitesi 8")
 	check(g.tutorial_seen == false, "yeni oyunda tutorial henüz gösterilmemiş")
 	check(g.cheapest_item_price() == 80, "dürtme eşiği: en ucuz eşya 80 (Masa Lambası)")
@@ -101,7 +104,7 @@ func _initialize() -> void:
 	check(g.room_score(g.rooms[0]) == 155, "SP toplamı 155")
 	check(g.room_tier(g.rooms[0]) == 2, "SP 155 → Şık (kademe 2)")
 	var star_now: int = g.star_rating()
-	check(star_now >= 3, "dekorasyon + tesis → yıldız 3+ (şu an %d)" % star_now)
+	check(star_now >= 2, "dekorasyon + tesis → yıldız 2+ (şu an %d)" % star_now)
 
 	# 8) Toplama, XP, seviye (görev ödülleri de coin ekleyebilir → >= kontrolü)
 	var coins_before: int = g.coins
