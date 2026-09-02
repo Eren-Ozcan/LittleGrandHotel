@@ -26,8 +26,8 @@
   "tier_mult": [1.0, 1.2, 1.45, 1.75, 2.1],
 
   "room_types": {
-    "standard": { "name": "Standard Room", "category": "guest", "base_income": 30, "price": 1200, "unlock_level": 1, "stay_hours": 3, "footprint_w": 1 },
-    "deluxe":   { "name": "Deluxe Room", "category": "guest", "base_income": 75, "price": 6500, "unlock_level": 8, "stay_hours": 4, "footprint_w": 2 },
+    "standard": { "name": "Standard Room", "category": "guest", "base_income": 30, "price": 1200, "unlock_level": 1, "stay_hours": 2, "footprint_w": 1 },
+    "deluxe":   { "name": "Deluxe Room", "category": "guest", "base_income": 75, "price": 6500, "unlock_level": 8, "stay_hours": 3.5, "footprint_w": 2 },
     "suite":    { "name": "Suite", "category": "guest", "base_income": 180, "price": 22000, "unlock_level": 18, "stay_hours": 5, "footprint_w": 2 },
 
     "cafe":     { "name": "Cafe", "category": "facility", "base_income": 40, "price": 3000, "unlock_level": 3, "capacity": 4, "footprint_w": 1 },
