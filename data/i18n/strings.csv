@@ -172,7 +172,7 @@ Level,Seviye
 Income per hour (now),Saatlik gelir (şu an)
 %.0f coins,%.0f altın
 Prestige multiplier,Prestij çarpanı
-×%.2f (prestige %d),×%.2f (prestij %d)
+"×%.2f (%d points, %d rounds)","×%.2f (%d puan, %d tur)"
 Daily login streak,Günlük giriş serisi
 Shift history (last %d),Vardiya geçmişi (son %d)
 No shift has been started yet.,Henüz hiç vardiya başlatılmadı.
@@ -181,11 +181,12 @@ Account,Hesap
 Prestige,Prestij
 Stats,İstatistik
 ⚙ Settings,⚙ Ayarlar
-Prestige — multiplier ×%.2f (round %d),Prestij — çarpan ×%.2f (%d. tur)
+"Prestige — multiplier ×%.2f (%d points, round %d)","Prestij — çarpan ×%.2f (%d puan, %d. tur)"
 Prestige requires level %d (you are %d).,Prestij için seviye %d gerekir (sen %d'sin).
+Earn more this round before prestiging — right now it would award no points.,Prestij yapmadan önce bu turda daha çok kazan — şu an hiç puan vermez.
 Level %d of %d,Seviye %d / %d
 Prestige the hotel,Oteli prestije gönder
-New multiplier ×%.2f,Yeni çarpan ×%.2f
++%d points → multiplier ×%.2f,+%d puan → çarpan ×%.2f
 Prestiged! New income multiplier: ×%.2f,Prestij yapıldı! Yeni gelir çarpanı: ×%.2f
 Tap again to prestige,Prestij için tekrar dokun
 Progress will be reset,İlerlemen sıfırlanacak

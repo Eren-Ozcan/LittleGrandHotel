@@ -4750,7 +4750,7 @@ func _add_stats_rows(c: VBoxContainer) -> void:
 		["Star rating", "%d / 5" % Game.star_rating()],
 		["Level", "%d (XP %s)" % [Game.level(), _fmt(Game.xp)]],
 		["Income per hour (now)", tr("%.0f coins") % Game.hourly_income()],
-		["Prestige multiplier", tr("×%.2f (prestige %d)") % [Game.prestige_mult(), Game.prestige_level]],
+		["Prestige multiplier", tr("×%.2f (%d points, %d rounds)") % [Game.prestige_mult(), Game.prestige_points, Game.prestige_level]],
 		["Daily login streak", _count(Game.daily_streak, "day")],
 	]
 	# Prototipteki gruplu tablo: tek beyaz kutu, satırlar ince çizgiyle ayrık.
@@ -4804,16 +4804,22 @@ func _add_account_rows(c: VBoxContainer) -> void:
 
 func _add_prestige_rows(c: VBoxContainer) -> void:
 	var v := _card(c)
-	v.add_child(_label(tr("Prestige — multiplier ×%.2f (round %d)") % [
-		Game.prestige_mult(), Game.prestige_level], 14, PALETTE.wood_dark))
+	v.add_child(_label(tr("Prestige — multiplier ×%.2f (%d points, round %d)") % [
+		Game.prestige_mult(), Game.prestige_points, Game.prestige_level], 14, PALETTE.wood_dark))
 	var min_lv := int(Game.eco.prestige.min_level)
-	if not Game.can_prestige():
+	if Game.level() < min_lv:
 		v.add_child(_label(tr("Prestige requires level %d (you are %d).") % [min_lv, Game.level()], 11, PALETTE.muted))
 		_bar(c, float(Game.level()) / maxf(1.0, float(min_lv)))
 		c.add_child(_label(tr("Level %d of %d") % [Game.level(), min_lv], 11, PALETTE.muted))
 		return
-	var next_mult: float = Game.prestige_mult() + float(Game.eco.prestige.mult_gain)
-	var p_b := _action(c, "Prestige the hotel", tr("New multiplier ×%.2f") % next_mult, true, "primary")
+	# Ödül bu turda kazanılan coin'e bağlı: oyuncu devretmeden ÖNCE tam olarak
+	# ne alacağını görmeli, yoksa "ilerlememi neden sileyim" sorusunun cevabı yok.
+	var gain := Game.prestige_gain()
+	if gain < 1:
+		v.add_child(_label(tr("Earn more this round before prestiging — right now it would award no points."), 11, PALETTE.muted))
+		return
+	var next_mult: float = Game.prestige_mult_after()
+	var p_b := _action(c, "Prestige the hotel", tr("+%d points → multiplier ×%.2f") % [gain, next_mult], true, "primary")
 	p_b.pressed.connect(func():
 		if p_b.get_meta("armed", false):
 			Game.do_prestige()
