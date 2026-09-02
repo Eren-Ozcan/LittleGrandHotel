@@ -59,7 +59,7 @@
     { "id": "rug_wool",     "name": "Wool Rug",      "sp": 30, "price": 350, "unlock_level": 5,  "anchor": "floor_rug" },
     { "id": "wardrobe_oak", "name": "Oak Wardrobe", "sp": 55, "price": 720, "unlock_level": 8,  "anchor": "floor_side" },
     { "id": "mirror_gold",  "name": "Gilded Mirror",  "sp": 70, "price": 1100, "unlock_level": 10, "anchor": "wall" },
-    { "id": "sofa_velvet",  "name": "Velvet Sofa", "sp": 90, "price": 1600, "unlock_level": 13, "anchor": "floor_side" },
+    { "id": "sofa_velvet",  "name": "Velvet Sofa", "sp": 90, "price": 1600, "unlock_level": 11, "anchor": "floor_side" },
     { "id": "chandelier",   "name": "Crystal Chandelier", "sp": 120, "price": 2600, "unlock_level": 16, "anchor": "ceiling" },
     { "id": "statue_gold",    "name": "Golden Statue",       "sp": 200, "price": 0, "gem_price": 15, "unlock_level": 6,  "anchor": "floor_side" },
     { "id": "aquarium_royal", "name": "Royal Aquarium", "sp": 280, "price": 0, "gem_price": 25, "unlock_level": 12, "anchor": "floor_side" }
