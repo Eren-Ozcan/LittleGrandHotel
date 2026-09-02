@@ -194,6 +194,36 @@ func _beat_analysis(run1: Dictionary) -> void:
 	print("")
 	print("  longest silent stretch: %d sessions (from session %d)" % [worst, worst_at])
 
+	_level_pacing(log)
+
+
+## Sessions spent per level. The milestone table only samples a few levels, so
+## a single-level cliff in the XP curve hides inside a multi-level "gap". This
+## breaks it down and prints the XP cost of each level next to it, so a jump in
+## wait time can be attributed to the curve rather than to prices.
+func _level_pacing(log: Array) -> void:
+	var g = GameScript.new()
+	g.eco = g.load_json("res://data/economy.json")
+	print("")
+	print("LEVEL PACING - sessions spent on each level, and its XP cost")
+	print("%7s %10s %12s %12s %10s" % ["level", "reached", "sessions", "xp cost", "vs prev"])
+	print("-".repeat(56))
+	var prev_lvl := 1
+	var since := 0
+	for e in log:
+		var lvl := int(e.lvl)
+		if lvl == prev_lvl:
+			continue
+		for l in range(prev_lvl, lvl):
+			var cost: int = g.xp_for_level(l + 1) - g.xp_for_level(l)
+			var prev_cost: int = g.xp_for_level(l) - g.xp_for_level(maxi(1, l - 1))
+			var ratio := float(cost) / maxf(1.0, float(prev_cost))
+			print("%7d %10d %12d %12d %10s" % [l, since, int(e.s) - since, cost,
+				"x%.2f" % ratio if l > 1 else "-"])
+		since = int(e.s)
+		prev_lvl = lvl
+	g.free()
+
 
 ## The prestige sawtooth: how many points a run of a given length awards, and
 ## how much a head start of N points shortens the NEXT run. A healthy reset
