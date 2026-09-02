@@ -9,7 +9,7 @@ signal achievement_unlocked(achievement: Dictionary)
 signal leveled_up(new_level: int)
 
 const SAVE_PATH := "user://save.json"
-const SAVE_VERSION := 15
+const SAVE_VERSION := 16
 ## Göçle yükseltilebilen en eski kayıt sürümü
 const MIN_SAVE_VERSION := 2
 ## v11 öncesi (sabit "N kat × 4 slot" ızgarası) her katın açık genişliği —
@@ -65,6 +65,11 @@ var unlocked_achievements: Array = []
 
 ## Prestij: devretme sayısı. new_game() ile sıfırlanmaz — kalıcıdır.
 var prestige_level: int = 0
+
+## Prestij puanı: gelir çarpanını taşıyan asıl değer. Devretme sayısından
+## ayrıdır çünkü ödül artık "kaç kez devrettin" değil "o turda ne kazandın"
+## ile ölçülüyor (bkz. prestige_points_for). Kalıcı.
+var prestige_points: int = 0
 
 ## Personel kalitesi kademesi: coin ile alınan, sıradan bir oda/eşya gibi
 ## new_game() ile sıfırlanan (prestij gibi KALICI DEĞİL) bir yükseltme.
@@ -1256,20 +1261,48 @@ func add_xp(amount: int) -> void:
 
 # --- Prestij: kalıcı gelir çarpanı karşılığında devretme -----------------
 
-## Her prestij, gelire kalıcı bir çarpan ekler (bileşik değil, toplamsal).
+## Devretmenin ödülü artık sabit değil, O TURDA kazanılan coin'e bağlı
+## (stat_collected_total devirde sıfırlanır, yani "son devirden bu yana").
+## Karekök eğrisi, puanı ikiye katlamak için ~4 kat kazanç ister — türün
+## standart bandı (AdVenture Capitalist sqrt, Cookie Clicker küp kök).
+## Eşdeğer turlar eşdeğer öder, geçmişten bağımsız: 24 saatlik çevrimdışı
+## tavanı olan bir oyunda doğru olan model budur.
+func prestige_points_for(collected: int) -> int:
+	var base := float(eco.prestige.points_base)
+	if collected <= 0 or base <= 0.0:
+		return 0
+	return int(pow(float(collected) / base, float(eco.prestige.points_exp)))
+
+
+## Şimdi devredilirse kazanılacak puan — arayüz bunu "devretmeden önce ne
+## alacağım" önizlemesi olarak gösterir.
+func prestige_gain() -> int:
+	return prestige_points_for(stat_collected_total)
+
+
+## Her prestij puanı gelire kalıcı bir çarpan ekler (bileşik değil, toplamsal).
 func prestige_mult() -> float:
-	return 1.0 + float(eco.prestige.mult_gain) * prestige_level
+	return 1.0 + float(eco.prestige.mult_per_point) * prestige_points
 
 
+## Devir sonrası çarpanın ne olacağı (arayüz önizlemesi).
+func prestige_mult_after() -> float:
+	return 1.0 + float(eco.prestige.mult_per_point) * (prestige_points + prestige_gain())
+
+
+## Seviye kilidi TEK başına yetmez: hiç puan kazandırmayan bir devir, oyuncuya
+## ilerlemesini bedavaya sildirirdi.
 func can_prestige() -> bool:
-	return level() >= int(eco.prestige.min_level)
+	return level() >= int(eco.prestige.min_level) and prestige_gain() >= 1
 
 
-## Oteli devreder: prestige_level kalıcı olarak artar, ilerlemenin geri
+## Oteli devreder: kazanılan puan kalıcı olarak eklenir, ilerlemenin geri
 ## kalanı (coin, oda, görev, başarım vb.) new_game() ile sıfırlanır.
 func do_prestige() -> bool:
 	if not can_prestige():
 		return false
+	simulate_to(now())
+	prestige_points += prestige_gain()
 	prestige_level += 1
 	new_game()
 	return true
@@ -1358,6 +1391,7 @@ func reset_game() -> void:
 	if FileAccess.file_exists(SAVE_PATH):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
 	prestige_level = 0
+	prestige_points = 0
 	new_game()
 	save_game()
 
@@ -1412,6 +1446,7 @@ func _save_dict() -> Dictionary:
 		"shift_history": shift_history,
 		"unlocked_achievements": unlocked_achievements,
 		"prestige_level": prestige_level,
+		"prestige_points": prestige_points,
 		"time_scale": time_scale,
 		"sound_on": sound_on,
 		"music_on": music_on,
@@ -1569,6 +1604,13 @@ func _migrate_save(data: Dictionary) -> Dictionary:
 				# yani göçen oyuncular bugüne kadarki davranışı korur.
 				if not data.has("language"):
 					data["language"] = ""
+			15:
+				# v16: prestij ödülü "devir sayısı × 0.2" yerine o turda
+				# kazanılan coin'e bağlı bir PUAN oldu (bkz. prestige_points_for).
+				# Eski çarpan 1 + 0.2·devir, yenisi 1 + 0.1·puan: puan =
+				# 2 × devir, göçen oyuncunun çarpanını birebir korur.
+				if not data.has("prestige_points"):
+					data["prestige_points"] = int(data.get("prestige_level", 0)) * 2
 		v += 1
 		data["save_version"] = v
 	return data
@@ -1686,6 +1728,7 @@ func _validate_save_dict(data: Dictionary) -> bool:
 	var numeric_fields := ["coins", "gems", "xp", "floors", "shift_end_unix",
 		"pending_income", "last_sim_unix", "quest_index", "stat_shifts",
 		"stat_collects", "stat_collected_total", "stat_cleans", "prestige_level",
+		"prestige_points",
 		"next_room_id", "last_shift_hours", "daily_streak", "last_daily_claim_day",
 		"poke_day", "poke_count", "staff_tier", "boost_end_unix", "boost_mult",
 		"permanent_income_mult"]
@@ -1745,6 +1788,7 @@ func _load_from_dict(parsed) -> bool:
 	shift_history = parsed.get("shift_history", [])
 	unlocked_achievements = parsed.get("unlocked_achievements", [])
 	prestige_level = int(parsed.get("prestige_level", 0))
+	prestige_points = int(parsed.get("prestige_points", 0))
 	# time_scale artık oyuncu seçimi değil, her zaman sabit 60.0 (kullanıcı
 	# isteği: "1 dakika = 1 saat") — kaydedilmiş değer (eski ×1/×60/×3600
 	# seçiminden kalma olabilir) yok sayılır.

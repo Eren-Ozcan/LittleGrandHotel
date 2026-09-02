@@ -367,19 +367,34 @@ func _initialize() -> void:
 	check(not g7.do_prestige(), "eşik altı devretme reddedilir")
 	g7.add_xp(g7.xp_for_level(20) - g7.xp)
 	check(g7.level() >= 20, "seviye 20'ye ulaşıldı")
-	check(g7.can_prestige(), "seviye 20'de devretme açık")
+	# Ödül artık O TURDA toplanan coin'e bağlı: seviye eşiği tek başına
+	# yetmez, hiç kazanç yoksa devretme puan vermez ve reddedilir.
+	g7.stat_collected_total = 0
+	check(g7.prestige_gain() == 0, "kazanç yokken devir puanı 0")
+	check(not g7.can_prestige(), "puan kazandırmayan devir reddedilir (bedava ilerleme silme yok)")
+	# Karekök eğrisi: puanı ikiye katlamak ~4 kat kazanç ister.
+	var base_p := int(g7.eco.prestige.points_base)
+	check(g7.prestige_points_for(base_p * 4) == 2, "4× taban kazanç = 2 puan")
+	check(g7.prestige_points_for(base_p * 16) == 4, "16× taban kazanç = 4 puan (ikiye katlamak 4 kat ister)")
+	g7.stat_collected_total = base_p * 25  # 5 puanlık bir tur
+	check(g7.prestige_gain() == 5, "devir önizlemesi 5 puan")
+	check(absf(g7.prestige_mult_after() - 1.5) < 0.001, "devir sonrası çarpan önizlemesi ×1.5")
+	check(g7.can_prestige(), "kazançlı turda devretme açık")
 	g7.coins = 50000
 	g7.buy_room("cafe")
 	check(g7.do_prestige(), "oteli devretme başarılı")
 	check(g7.prestige_level == 1, "devir sayısı arttı")
-	check(absf(g7.prestige_mult() - 1.2) < 0.001, "devir sonrası çarpan ×1.2")
+	check(g7.prestige_points == 5, "kazanılan puan kalıcı olarak eklendi")
+	check(absf(g7.prestige_mult() - 1.5) < 0.001, "devir sonrası çarpan ×1.5")
 	check(g7.coins == int(g7.eco.start.coins) and g7.rooms.size() == 2, "devir sonrası ilerleme sıfırlandı")
+	check(g7.stat_collected_total == 0, "tur kazancı sayacı devirde sıfırlandı")
 	var mult_after_prestige: float = g7.prestige_mult()
 	check(mult_after_prestige > 1.0, "devir çarpanı kalıcı")
 	# reset_game() gerçek user://save.json dosyasına yazdığı için burada
-	# doğrudan çağrılmaz; aynı sıfırlama mantığı (prestige_level = 0 + new_game())
+	# doğrudan çağrılmaz; aynı sıfırlama mantığı (prestij alanları + new_game())
 	# diske dokunmadan doğrulanır.
 	g7.prestige_level = 0
+	g7.prestige_points = 0
 	g7.new_game()
 	check(g7.prestige_level == 0 and absf(g7.prestige_mult() - 1.0) < 0.001, "tam sıfırlama mantığı prestiji de sıfırlar")
 	g7.free()

@@ -301,7 +301,10 @@ func _test_progression_tables() -> void:
 
 	var pr: Dictionary = eco.prestige
 	check(int(pr.get("min_level", 0)) > 1, "prestij en az 2. seviyeyi şart koşuyor")
-	check(float(pr.get("mult_gain", 0.0)) > 0.0, "prestij çarpan kazancı pozitif")
+	check(float(pr.get("mult_per_point", 0.0)) > 0.0, "prestij puan başına çarpan kazancı pozitif")
+	check(float(pr.get("points_base", 0.0)) > 0.0, "prestij puan tabanı pozitif")
+	check(float(pr.get("points_exp", 0.0)) > 0.0 and float(pr.get("points_exp", 1.0)) < 1.0,
+		"prestij puan üssü (0,1) aralığında — azalan getiri")
 
 	var dif := float(eco.get("dirty_income_frac", -1.0))
 	check(dif > 0.0 and dif < 1.0, "kirli oda gelir oranı (0,1) aralığında — sıfır DEĞİL")

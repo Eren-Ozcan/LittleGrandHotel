@@ -197,20 +197,26 @@ func _check_prestige_payoff() -> void:
 	g.add_xp(g.xp_for_level(20) - g.xp)
 	for t in ["deluxe", "cafe", "gym", "housekeeping"]:
 		g.buy_room(t)
+	# Devir ödülü o turda toplanan coin'e bağlı olduğu için rapor da gerçekçi
+	# bir tur kazancı varsayar (seviye 20 civarı bir oyuncunun topladığı kadar).
+	g.stat_collected_total = 250000
 	var pre_income: float = g.hourly_income()
 	print("  Prestij ÖNCESİ (seviye 20, çarpan x%.2f): saatlik gelir %.0f" % [g.prestige_mult(), pre_income])
+	print("  Tur kazancı %d coin -> devir önizlemesi +%d puan (çarpan x%.2f)" % [
+		g.stat_collected_total, g.prestige_gain(), g.prestige_mult_after()])
 	check_prestige_result(g)
 
 
 func check_prestige_result(g) -> void:
+	var gain: int = g.prestige_gain()
 	var ok: bool = g.do_prestige()
 	print("  do_prestige() sonucu: %s  (yeni çarpan x%.2f, coin sıfırlandı mı: %s)" % [
 		ok, g.prestige_mult(), g.coins == int(eco.start.coins)])
 	print("  BULGU: prestij sonrası oyuncu 3000 coin + 2 standart odayla sıfırdan başlıyor,")
-	print("         yalnızca kalıcı +%%%d gelir çarpanı korunuyor. Seviye 20'ye tekrar ulaşmak" % int(eco.prestige.mult_gain * 100))
-	print("         için gereken oyun-süresi (grinding) ile kazanılan %%%d'lik kalıcı bonusun" % int(eco.prestige.mult_gain * 100))
-	print("         karşılaştırması: ilk 0->20 ilerlemenin ne kadar sürdüğü otomatik ölçülmüyor,")
-	print("         bu ölçüm elle/log ile yapılmalı (aşağıdaki not).")
+	print("         kalıcı olan tek şey kazanılan %d prestij puanı (puan başına +%%%d gelir)." % [
+		gain, int(float(eco.prestige.mult_per_point) * 100.0)])
+	print("         Ödül tura bağlı olduğu için daha uzun/zengin bir tur daha çok puan verir;")
+	print("         karekök eğrisinde puanı ikiye katlamak ~4 kat kazanç ister.")
 	g.free()
 
 

@@ -75,7 +75,7 @@
     "income_boost_pct": 0.05
   },
 
-  "prestige": { "min_level": 20, "mult_gain": 0.2 },
+  "prestige": { "min_level": 20, "points_base": 10000, "points_exp": 0.5, "mult_per_point": 0.1 },
 
   "infest": { "after_hours": 24, "clean_cost": 150 },
   "poke": { "daily_cap": 20, "chance": 0.25, "base": 40, "per_star": 15 },
