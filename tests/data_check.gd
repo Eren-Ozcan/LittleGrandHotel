@@ -303,6 +303,11 @@ func _test_progression_tables() -> void:
 	check(int(pr.get("min_level", 0)) > 1, "prestij en az 2. seviyeyi şart koşuyor")
 	check(float(pr.get("mult_gain", 0.0)) > 0.0, "prestij çarpan kazancı pozitif")
 
+	var dif := float(eco.get("dirty_income_frac", -1.0))
+	check(dif > 0.0 and dif < 1.0, "kirli oda gelir oranı (0,1) aralığında — sıfır DEĞİL")
+	check(float(eco.infest.after_hours) > float(eco.room_types.standard.stay_hours) * 4.0,
+		"istila eşiği konaklama süresinin en az 4 katı (ön planda dakikalar içinde tetiklenmemeli)")
+
 	var poke: Dictionary = eco.poke
 	check(int(poke.get("daily_cap", 0)) > 0, "günlük dürtme hakkı var")
 	check(int(poke.get("base", 0)) > 0, "dürtme taban ödülü pozitif")

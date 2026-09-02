@@ -601,11 +601,14 @@ func hourly_income() -> float:
 		if d.category == "facility":
 			total += float(d.base_income)
 		elif d.category == "guest":
-			if r.dirty and not hk:
-				continue
 			var rate := float(d.base_income) * float(eco.tier_mult[room_tier(r)])
 			if hk:
 				rate *= float(d.stay_hours) / (float(d.stay_hours) + float(eco.auto_clean_hours))
+			elif r.dirty:
+				# Kirli oda ARTIK sıfır üretmiyor (bkz. _advance): idle bir
+				# oyunda gelirin tamamen durması, telefonu bırakan oyuncuyu
+				# cezalandırıyordu. İstilaya dönen oda hâlâ sıfır.
+				rate *= 0.0 if room_infested(r) else float(eco.dirty_income_frac)
 			total += rate
 	return total * smult * occ * prestige_mult() * staff_income_mult() * permanent_income_mult * income_boost_mult()
 
@@ -861,7 +864,17 @@ func _advance(game_hours: float, full_efficiency: bool = false) -> void:
 				if r.dirty:
 					# Kirli bırakılan oda zamanla istilaya döner (Hotel City'deki
 					# hamamböceği): eşik aşımında temizlik paralı hale gelir.
+					#
+					# Kirli oda ARTIK gelirin tamamını kesmiyor, dirty_income_frac
+					# kadarını üretmeye devam ediyor. Sıfır üretim, ön planda
+					# duran ama dokunmayan oyuncunun gelirini iki dakikada
+					# tamamen durduruyordu — idle bir oyunda ters bir teşvik,
+					# üstelik arka planda (full_efficiency) oda hiç kirlenmediği
+					# için "uzaklaş" ödüllendirilip "izle" cezalandırılıyordu.
+					# Temizlik hâlâ değerli: dokunmak geliri 4 katına çıkarır.
 					var before_inf := room_infested(r)
+					if not before_inf:
+						pending_income += rate * game_hours * float(eco.dirty_income_frac)
 					r["dirty_hours"] = float(r.get("dirty_hours", 0.0)) + game_hours
 					if room_infested(r) != before_inf:
 						_rooms_changed_in_sim = true
@@ -873,7 +886,11 @@ func _advance(game_hours: float, full_efficiency: bool = false) -> void:
 					r.dirty = true
 					# Tek büyük ilerletmede (çevrimdışı) kirlenme anından sonra
 					# kalan saatler de kirli geçmiştir — istila birikimine say.
-					r["dirty_hours"] = float(r.get("dirty_hours", 0.0)) + (game_hours - earn_h)
+					# O saatler de kirli oranıyla üretir (istilaya dönene kadar).
+					var dirty_h := game_hours - earn_h
+					var inf_at := float(eco.infest.after_hours)
+					pending_income += rate * minf(dirty_h, inf_at) * float(eco.dirty_income_frac)
+					r["dirty_hours"] = float(r.get("dirty_hours", 0.0)) + dirty_h
 					_rooms_changed_in_sim = true
 
 

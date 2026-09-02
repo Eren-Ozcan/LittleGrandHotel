@@ -53,13 +53,18 @@ func _initialize() -> void:
 	g.time_scale = 3600.0
 	check(g.start_shift(8), "8 saatlik vardiya başladı")
 	check(g.shift_history.size() == 1 and int(g.shift_history[0].hours) == 8, "vardiya geçmişe yazıldı")
+	var clean_rate: float = g.hourly_income()  # odalar HENÜZ temizken
 	g.last_sim_unix -= 4.0  # 4 oyun-saati geçmiş gibi
 	g.simulate_to(g.now())
 	check(g.rooms[0].dirty and g.rooms[1].dirty, "odalar 3 saat sonra kirlendi")
 	var stuck: float = g.pending_income
 	g.last_sim_unix -= 2.0
 	g.simulate_to(g.now())
-	check(absf(g.pending_income - stuck) < 0.001, "kirli oda gelir üretmiyor")
+	# Kirli oda ARTIK sıfır üretmiyor, dirty_income_frac kadarını üretiyor —
+	# ön planda duran ama dokunmayan oyuncunun geliri tamamen durmasın diye.
+	var dirty_gain: float = g.pending_income - stuck
+	check(dirty_gain > 0.0, "kirli oda azaltılmış oranla üretmeye devam ediyor")
+	check(dirty_gain < clean_rate * 2.0 * 0.5, "kirli oda geliri temiz orandan belirgin düşük (%.1f < %.1f)" % [dirty_gain, clean_rate])
 
 	# 4) Temizleme geliri geri açar
 	check(g.clean_room(0), "oda temizlendi")
@@ -534,10 +539,15 @@ func _initialize() -> void:
 	g14.achievements = []
 	g14.auto_renew_hours_left = 0.0
 	check(g14.start_shift(24), "istila testi: 24 saatlik vardiya başladı")
-	g14.last_sim_unix -= 12.0  # 12 oyun-saati geçmiş gibi: 3'te kirlenir, 9 saat kirli kalır
-	g14.simulate_to(g14.now())
+	g14.shift_end_unix = g14.now() + 1000.0  # vardiya tüm ilerletmeyi kapsasın
+	# infest.after_hours 24'e çıkarıldı (6 oyun-saati = 6 gerçek dakika, ön
+	# planda duran oyuncu için tuzaktı). Tek bir ilerletme çevrimdışı tavanıyla
+	# (24 oyun-saati) sınırlı, o yüzden eşiği aşmak için birkaç tur döndürülüyor.
+	for _inf_i in 3:
+		g14.last_sim_unix -= 20.0
+		g14.simulate_to(g14.now())
 	check(g14.rooms[0].dirty, "oda kirlendi")
-	check(float(g14.rooms[0].dirty_hours) >= 6.0, "kirli saat birikti (şu an %.1f)" % float(g14.rooms[0].dirty_hours))
+	check(float(g14.rooms[0].dirty_hours) >= float(g14.eco.infest.after_hours), "kirli saat birikti (şu an %.1f)" % float(g14.rooms[0].dirty_hours))
 	check(g14.room_infested(g14.rooms[0]), "oda istilaya döndü")
 	check(g14.clean_cost(0) == 150, "istila temizliği 150 coin")
 	var coins_inf: int = g14.coins
