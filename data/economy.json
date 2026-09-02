@@ -39,7 +39,7 @@
     "restaurant":  { "name": "Restaurant", "category": "facility", "base_income": 200, "price": 34000, "unlock_level": 24, "capacity": 3, "footprint_w": 3 },
     "roof_garden": { "name": "Roof Garden", "category": "facility", "base_income": 260, "price": 45000, "unlock_level": 28, "capacity": 4, "footprint_w": 2 },
 
-    "housekeeping": { "name": "Housekeeping", "category": "functional", "base_income": 0, "price": 1500, "unlock_level": 2, "footprint_w": 1 }
+    "housekeeping": { "name": "Housekeeping", "category": "functional", "base_income": 0, "price": 600, "unlock_level": 1, "footprint_w": 1 }
   },
 
   "items": [

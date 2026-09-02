@@ -74,7 +74,10 @@ func _initialize() -> void:
 	check(g.pending_income > stuck, "temiz oda yeniden kazandırıyor")
 
 	# 5) Temizlik Odası otomasyonu (önce seviye kilidini aç)
-	check(not g.can_buy_room("housekeeping"), "seviye kilidi çalışıyor (Sv.1'de Temizlik Odası kapalı)")
+	# Temizlik Odası artık 1. seviyeden ve 600 coin: ilk oturumda alınabilir
+	# olması gerekiyor, yoksa yeni oyuncunun geliri iki dakikada dörtte bire iner.
+	check(int(g.room_def("housekeeping").unlock_level) == 1, "Temizlik Odası 1. seviyeden açık")
+	check(g.can_buy_room("housekeeping"), "Temizlik Odası ilk oturumda satın alınabilir")
 	g.coins = 100000
 	g.add_xp(g.xp_for_level(10) - g.xp)  # seviye 10'a çıkar
 	check(g.level() == 10, "seviye 10'a yükseltildi")
