@@ -669,6 +669,17 @@ device. Setup, reasoning and the remaining manual step: `docs/cloud-save-setup.m
 
 ## To do
 
+### Yeni AAB gerekli — is_pristine sertleştirildi (2026-09-03)
+
+- [ ] **Yeni imzalı AAB derle + kapalı teste yükle.** `CloudPayload.is_pristine`
+  (`src/cloud/cloud_payload.gd`) 8 sinyalden ~25 sinyale genişletildi; reefy
+  `hasProgress()` paritesine getirildi (ekonomi tam eşleşme, prestij puanı,
+  başarım, vardiya geçmişi, günlük ödül, blok satın alma, oda kirlilik/eşya,
+  otel adı vs.). Entitlement + zamana bağlı geçici durum bilerek dışarıda.
+  `tests/cloud_save_check.gd` 93 kontrol geçiyor. Sürüm/kod bump gerekir
+  (`export_presets.cfg` şu an 1.0.6 / kod 7 → 1.0.7 / kod 8). Headless export
+  yolu: bkz. bir önceki AAB derleme notları.
+
 ### Üretime başvuru gönderildi — 2026-08-27
 
 **Üretim erişimi başvurusu 2026-08-27 19:26'da gönderildi.** Kontrol panelinde
