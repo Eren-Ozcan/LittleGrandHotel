@@ -1270,24 +1270,76 @@ func sell_room(index: int) -> bool:
 
 # --- XP / seviye (GDD §5.3) --------------------------------------------
 
-## Geç eğrinin (seam sonrası) ham değeri — offset hesaplamak için ayrı tutulur.
-func _xp_late_raw(n: int) -> float:
-	return float(eco.xp_curve.base) * pow(n - 1, float(eco.xp_curve.exp))
+const XP_TABLE_LEVELS := 400
+
+## Cumulative XP per level, built once from the two curves. Cached because the
+## curve is defined by per-level costs and level() walks it from the bottom.
+var _xp_table: Array = []
+
+## Cost of a single level on either raw curve. The curve is authored as a
+## cumulative formula, so a level's own price is the difference of neighbours.
+func _xp_step_early(n: int) -> float:
+	var b := float(eco.xp_curve_early.base)
+	var e := float(eco.xp_curve_early.exp)
+	return b * (pow(n - 1, e) - pow(n - 2, e))
+
+
+func _xp_step_late(n: int) -> float:
+	var b := float(eco.xp_curve.base)
+	var e := float(eco.xp_curve.exp)
+	return b * (pow(n - 1, e) - pow(n - 2, e))
 
 
 ## İki parçalı eğri: seviye ~1-10 hızlı/düz (anlık tatmin), seam_level'dan
-## sonra mevcut dik eğri (xp_curve) aynen devam eder — geç eğri seam noktasında
-## sürekli olacak şekilde bir sabitle kaydırılır, böylece seam sonrası
-## seviye-başı XP artışı DEĞİŞMEZ, yalnızca daha düşük bir toplama bağlanır.
+## sonra dik eğri (xp_curve) devam eder.
+##
+## Eğri SEVİYE BAŞI maliyet üzerinden kuruluyor, kümülatif formülden değil.
+## Sebebi: kümülatifi seam'de birleştirmek toplamı sürekli yapar ama türevi
+## yapmaz — seviye başı maliyet 163'ten 1577'ye tek adımda sıçrıyordu (×9.67)
+## ve süreksizliğin tamamı tek bir seviyeye biniyordu (ölçüm: seviye 11 tek
+## başına 5 session, komşuları 1).
+##
+## `blend_levels` seam'den sonraki N seviyede iki eğrinin maliyetlerini
+## harmanlar. Harman LOGARİTMİK: XP maliyetleri çarpımsal büyüdüğü için
+## doğrusal lerp bandın başında yine bir sıçrama bırakır, log uzayında lerp ise
+## farkı seviye başına eşit ORANA böler. Band bitince geç eğrinin seviye başı
+## maliyeti aynen devam eder, yalnızca daha düşük bir toplama bağlanır.
+##
+## `blend_levels: 0` eski davranışı birebir üretir (migration_check bunu bekler).
+func _build_xp_table() -> void:
+	var seam := int(eco.xp_curve_early.seam_level)
+	var blend := maxi(0, int(eco.xp_curve_early.get("blend_levels", 0)))
+	_xp_table = [0, 0]  # index 0 unused, level 1 costs nothing
+	var total := 0.0
+	for n in range(2, XP_TABLE_LEVELS + 1):
+		var step := 0.0
+		if n <= seam:
+			step = _xp_step_early(n)
+		elif n > seam + blend:
+			step = _xp_step_late(n)
+		else:
+			var t := float(n - seam) / float(blend)
+			var lo := maxf(1.0, _xp_step_early(n))
+			var hi := maxf(1.0, _xp_step_late(n))
+			step = exp(lerp(log(lo), log(hi), t))
+		total += step
+		_xp_table.append(int(total))
+
+
 func xp_for_level(n: int) -> int:
 	if n <= 1:
 		return 0
-	var seam := int(eco.xp_curve_early.seam_level)
-	if n <= seam:
-		return int(float(eco.xp_curve_early.base) * pow(n - 1, float(eco.xp_curve_early.exp)))
-	var seam_early := float(eco.xp_curve_early.base) * pow(seam - 1, float(eco.xp_curve_early.exp))
-	var offset := seam_early - _xp_late_raw(seam)
-	return int(_xp_late_raw(n) + offset)
+	if _xp_table.is_empty():
+		_build_xp_table()
+	if n < _xp_table.size():
+		return int(_xp_table[n])
+	# Beyond the table the late curve is pure power law; extend from the last
+	# tabulated level so a runaway save still gets a monotonic answer.
+	var last := int(_xp_table[_xp_table.size() - 1])
+	var top := _xp_table.size() - 1
+	var b := float(eco.xp_curve.base)
+	var e := float(eco.xp_curve.exp)
+	return last + int(b * (pow(n - 1, e) - pow(top - 1, e)))
 
 
 func level() -> int:
