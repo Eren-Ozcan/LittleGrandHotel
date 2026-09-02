@@ -70,6 +70,17 @@ func _initialize() -> void:
 		print("%10.2f %10d %12d %16s" % [xe, r.sessions, worst, wname.substr(0, 16)])
 
 	print("")
+	print("TUNING SWEEP - xp_curve_early.blend_levels (how far the seam is spread)")
+	print("%8s %10s %12s %12s %14s %12s" % ["blend", "sessions", "worst level",
+		"its cost", "step ratio", "silent run"])
+	print("-".repeat(74))
+	for bl in [0, 2, 3, 4, 6, 8]:
+		var rb := simulate_playthrough(false, {"blend_levels": bl})
+		print("%8d %10d %12d %12d %14s %12d" % [bl, rb.sessions,
+			rb.worst_level, rb.worst_level_cost, "x%.2f" % rb.worst_level_ratio,
+			rb.silent_run])
+
+	print("")
 	print("Sessions to fully max out: %d" % res.sessions)
 	print("")
 	print("Real-world calendar time, by how often the player checks in:")
@@ -266,6 +277,8 @@ func simulate_playthrough(verbose: bool, overrides: Dictionary) -> Dictionary:
 		g.eco.xp_curve["exp"] = float(overrides.xp_exp)
 	if overrides.has("seam_level"):
 		g.eco.xp_curve_early["seam_level"] = int(overrides.seam_level)
+	if overrides.has("blend_levels"):
+		g.eco.xp_curve_early["blend_levels"] = int(overrides.blend_levels)
 	g.new_game()
 	decorate_as_you_go = int(overrides.get("decorate_as_you_go", 0))
 	spend_log = {}
@@ -340,9 +353,58 @@ func simulate_playthrough(verbose: bool, overrides: Dictionary) -> Dictionary:
 	if verbose:
 		_print_report(g, milestones, log, session)
 
+	var slowest := _slowest_level(g, log)
+	var out := {"sessions": session, "milestones": milestones, "log": log,
+		"spend": spend_log.duplicate(), "silent_run": _silent_run(log)}
+	out.merge(slowest)
 	g.free()
-	return {"sessions": session, "milestones": milestones, "log": log,
-		"spend": spend_log.duplicate()}
+	return out
+
+
+## The single level the player sits on longest, with that level's XP price and
+## how many times steeper it is than the level before it. A wall that lands on
+## one level is invisible in the milestone table, so summarise it per run.
+func _slowest_level(g, log: Array) -> Dictionary:
+	var since := 0
+	var prev_lvl := 1
+	var worst := 0
+	var worst_lvl := 1
+	for e in log:
+		var lvl := int(e.lvl)
+		if lvl == prev_lvl:
+			continue
+		var each := int(e.s) - since
+		for l in range(prev_lvl, lvl):
+			if each > worst:
+				worst = each
+				worst_lvl = l
+		since = int(e.s)
+		prev_lvl = lvl
+	var cost: int = g.xp_for_level(worst_lvl + 1) - g.xp_for_level(worst_lvl)
+	var prev_cost: int = g.xp_for_level(worst_lvl) - g.xp_for_level(maxi(1, worst_lvl - 1))
+	return {"worst_level": worst_lvl, "worst_level_sessions": worst,
+		"worst_level_cost": cost,
+		"worst_level_ratio": float(cost) / maxf(1.0, float(prev_cost))}
+
+
+## Longest run of consecutive sessions in which nothing visible happened.
+func _silent_run(log: Array) -> int:
+	var prev := {"lvl": 1, "quests": 0, "achievements": 0, "star": 2}
+	var worst := 0
+	var runlen := 0
+	for e in log:
+		var n := 0
+		n += maxi(0, int(e.lvl) - int(prev.lvl))
+		n += maxi(0, int(e.quests) - int(prev.quests))
+		n += maxi(0, int(e.achievements) - int(prev.achievements))
+		n += absi(int(e.star) - int(prev.star))
+		prev = {"lvl": e.lvl, "quests": e.quests, "achievements": e.achievements, "star": e.star}
+		if n == 0:
+			runlen += 1
+			worst = maxi(worst, runlen)
+		else:
+			runlen = 0
+	return worst
 
 
 ## One spending pass with a phased, save-toward-next-goal policy.
