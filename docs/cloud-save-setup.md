@@ -86,6 +86,14 @@ adding a native plugin later changes that one call and nothing else.
    the earlier version answered the in-app "Delete account data" button with
    `403 PERMISSION_DENIED`, breaking the deletion promise in the privacy policy.
    Verified end to end afterwards with `tests/store_compliance_check.tscn`.
+
+   Republished on 2026-09-03: the `payload` size ceiling dropped from 400000 to
+   **60000**. The public Web API key plus open anonymous auth means anyone can mint
+   accounts and write a `saves/{uid}` document; the real fix for that is App Check
+   attestation (deferred — see TODO.md *Medium term*), but tightening the ceiling to
+   ~2.5× the realistic worst-case save (~24 KB, `tests/cloud_save_check.gd` test 8)
+   shrinks how much one abusive write can park. The client-side twin,
+   `CloudPayload.MAX_PAYLOAD_BYTES`, was lowered to match — change both together.
 7. ⬜ **Create the OAuth client for Google sign-in.** *This is the only step still
    waiting on a human, and until it is done account linking cannot be tried at all.*
    Google Cloud console → APIs & Services → Credentials → Create credentials → OAuth

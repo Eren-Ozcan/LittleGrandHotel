@@ -1185,6 +1185,40 @@ oyun durumunda yeniden render edilmesi.
       is an open question — see the entry in *Medium term*.
 
 ### Medium term
+- [ ] **Firebase App Check — deferred on purpose, decided 2026-09-03.** The Web API key
+      is committed in `src/cloud/firebase_config.gd` (safe by Google's own docs — it only
+      names the project) but combined with open anonymous auth it lets anyone who copies
+      it from this public repo mint unlimited anonymous accounts and write a `saves/{uid}`
+      document each. `firestore.rules` already blocks every read of another player's save,
+      caps one document per uid, and enforces monotonic `rev`, so the exposure is a
+      **low-severity availability nuisance** — worst case an attacker burns the 20K/day
+      Spark write quota and cloud save stops for a day; local saves, confidentiality and
+      billing are untouched (Spark cannot overspend). Not why Google rejected the app
+      (that was tester count).
+
+      The only real fix is **App Check attestation** (Play Integrity on Android, App
+      Attest on iOS), so a request is accepted only from the genuine signed app. It is
+      deferred because it cannot ship over pure REST: a Play Integrity token needs GMS,
+      i.e. a native Kotlin plugin — the same native-plugin cost the Google sign-in entry
+      below already parked on — and iOS needs its own provider, with no iOS export preset
+      yet. Enforcing App Check on Firestore/Auth before a real provider ships would lock
+      out every live client.
+
+      **Plan when the iOS port / native sign-in pass happens, as one bundle:** App Check
+      GDScript plumbing (an `app_check.gd` autoload, token cache, `X-Firebase-AppCheck`
+      header on every Identity Toolkit + Firestore REST call, a `set_app_check_token_provider()`
+      seam mirroring `set_google_id_token_provider()`, a debug-token provider for CI) +
+      the native Play Integrity plugin + the iOS App Attest provider, then flip
+      enforcement on. Rejected alternatives: Blaze + a `beforeCreate` blocking Cloud
+      Function (changes the billing posture for a nuisance-level risk); restricting the
+      browser key by Android app / referrer (the Godot `HTTPRequest` client is neither a
+      signed Android caller nor a referrer — see setup doc step 8).
+
+      Done now as the one cheap, concrete step: the `payload` ceiling in `firestore.rules`
+      and `CloudPayload.MAX_PAYLOAD_BYTES` dropped 400000 → 60000 (~2.5× the realistic
+      worst-case save), shrinking how much one abusive write can park and adding a
+      server-enforced invariant the client guard alone could not.
+
 - [x] **The web demo no longer talks to Firebase** (2026-08-20) — `CloudSave.is_enabled()`
       was `FirebaseConfig.is_configured()` with no platform check, so every visitor to the
       public Pages build created an anonymous Firebase account and a Firestore document:
