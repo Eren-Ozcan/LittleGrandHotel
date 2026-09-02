@@ -120,8 +120,56 @@ static func apply(game, payload: String) -> bool:
 ## geri yüklenebilir. reefy'de canlı görülen sorun: taze kurulumda oyuncu birkaç
 ## saniye içinde kaydı "değişmiş" saydırıyor ve kod kendi başına taraf seçmediği
 ## için gereksiz bir çakışma ekranı açılıyordu. Burada o hızlı yol var.
+##
+## Liste, reefy'deki `hasProgress()` ile aynı felsefede TUTULUR (iki oyunda ayrı
+## elle bakım — ortak kod yok): varsayılandan HERHANGİ bir sapma "el değmiş"
+## sayılır. Yalnızca iki istisna bilerek göz ardı edilir:
+##   * Entitlement'lar (remove_ads / permanent_income_mult) — buluttan gelmez,
+##     cihaz/mağaza değeri kazanır (bkz. yukarıdaki not). Taze kayda reklamsız
+##     alan bir oyuncu yine de bulut geri yüklemesini hak eder.
+##   * Zamana bağlı geçici durum (shift_end_unix, pending_income, boost_*,
+##     last_sim_unix, offline_*) — ilerleme değil, sadece "ne zaman"dır.
 static func is_pristine(game) -> bool:
-	return game.stat_shifts == 0 and game.stat_collects == 0 \
-		and game.stat_cleans == 0 and game.quest_index == 0 \
-		and game.prestige_level == 0 and game.rooms.size() <= 2 \
-		and game.floors <= 2 and game.xp == 0
+	# Sayaçlar / görev / prestij — aktif oynanışın birincil izleri.
+	if game.stat_shifts != 0 or game.stat_collects != 0 \
+			or game.stat_collected_total != 0 or game.stat_cleans != 0 \
+			or game.quest_index != 0:
+		return false
+	if game.prestige_level != 0 or game.prestige_points != 0 \
+			or game.star_earned > 1 or game.staff_tier != 0:
+		return false
+	# Ekonomi — başlangıç değerinden tam sapma (idle gelir bile bunu bozar).
+	if game.xp != 0 or game.coins != int(game.eco.start.coins) \
+			or game.gems != int(game.eco.start.gems):
+		return false
+	# Bina — kat sayısı ve her kattaki açık blok genişliği varsayılanda mı.
+	if game.floors != int(game.eco.building.start_floors):
+		return false
+	for w in game.floor_blocks:
+		if int(w) != game.DEFAULT_FLOOR_OPEN_WIDTH:
+			return false
+	# Odalar — tam olarak iki başlangıç odası, tipi standart, içine hiç eşya
+	# konmamış ve hiç kirlenmemiş.
+	if game.rooms.size() != 2:
+		return false
+	for r in game.rooms:
+		if String(r.get("type", "")) != "standard":
+			return false
+		if not (r.get("items", []) as Array).is_empty():
+			return false
+		if bool(r.get("dirty", false)):
+			return false
+	# Tek seferlik ödüller / günlük döngü / geçmiş / sosyal.
+	if not (game.unlocked_achievements as Array).is_empty():
+		return false
+	if not (game.shift_history as Array).is_empty():
+		return false
+	if game.daily_streak != 0 or game.last_daily_claim_day != -1:
+		return false
+	if game.poke_count != 0 or game.auto_renew_count != 0:
+		return false
+	# Kişiselleştirme — otel adının değiştirilmesi de bilinçli bir etkileşim
+	# (reefy `isDefaultPlayerName` ile aynı).
+	if game.hotel_name != "Little Grand Hotel":
+		return false
+	return true

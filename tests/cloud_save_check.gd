@@ -291,6 +291,46 @@ func _test_pristine_detection() -> void:
 	_check(not CloudPayload.is_pristine(played), "vardiya başlatılmış kayıt el değmemiş değil")
 	played.free()
 
+	# Varsayılandan her tekil sapma "el değmiş" saymalı (reefy hasProgress paritesi).
+	var cases := {
+		"coin harcaması": func(g): g.coins -= 1,
+		"elmas kazancı": func(g): g.gems += 1,
+		"xp": func(g): g.xp = 5,
+		"toplama sayacı": func(g): g.stat_collects = 1,
+		"toplam toplanan": func(g): g.stat_collected_total = 1,
+		"temizlik": func(g): g.stat_cleans = 1,
+		"görev ilerlemesi": func(g): g.quest_index = 1,
+		"prestij puanı": func(g): g.prestige_points = 1,
+		"yıldız": func(g): g.star_earned = 2,
+		"personel kademesi": func(g): g.staff_tier = 1,
+		"başarım": func(g): g.unlocked_achievements = ["first_room"],
+		"vardiya geçmişi": func(g): g.shift_history = [{"hours": 4, "cost": 100, "at": 0}],
+		"günlük ödül alındı": func(g): g.last_daily_claim_day = g.daily_day_index(),
+		"otel adı değişti": func(g): g.hotel_name = "Palace",
+		"blok satın alındı": func(g): g.floor_blocks[0] += 1,
+		"oda kirlendi": func(g): g.rooms[0]["dirty"] = true,
+		"odaya eşya kondu": func(g): (g.rooms[0]["items"] as Array).append({"id": "lamp"}),
+		"oda silindi": func(g): g.rooms.pop_back(),
+	}
+	for name in cases:
+		var g = _new_game()
+		cases[name].call(g)
+		_check(not CloudPayload.is_pristine(g), "%s → el değmemiş DEĞİL" % name)
+		g.free()
+
+	# Entitlement ve zamana bağlı geçici durum el değmemişliği BOZMAMALI.
+	var keeps := {
+		"remove_ads": func(g): g.remove_ads = true,
+		"permanent_income_mult": func(g): g.permanent_income_mult = 2.0,
+		"boost aktif": func(g): g.boost_end_unix = g.now() + 3600.0,
+		"bekleyen gelir": func(g): g.pending_income = 500.0,
+	}
+	for name in keeps:
+		var g = _new_game()
+		keeps[name].call(g)
+		_check(CloudPayload.is_pristine(g), "%s → hâlâ el değmemiş" % name)
+		g.free()
+
 
 # --- 8) Payload doküman tavanına sığıyor --------------------------------
 
