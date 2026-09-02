@@ -297,6 +297,9 @@ func _test_progression_tables() -> void:
 	check(float(xe.get("exp", 9.0)) < float(xc.get("exp", 0.0)),
 		"erken eğri geç eğriden DAHA YUMUŞAK (%s < %s) — açılış hızlı"
 			% [xe.get("exp", 0), xc.get("exp", 0)])
+	var blend := int(xe.get("blend_levels", 0))
+	check(blend >= 0, "xp_curve_early.blend_levels negatif değil")
+	check(blend > 0, "seam harmanlanıyor — süreksizlik tek seviyeye binmiyor")
 	check(int(eco.levelup_gems) > 0, "seviye atlama elmas veriyor")
 
 	var pr: Dictionary = eco.prestige

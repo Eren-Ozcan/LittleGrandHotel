@@ -14,6 +14,55 @@ func check(cond: bool, label: String) -> void:
 		printerr("  FAIL ", label)
 
 
+## XP eğrisi: seam'in kendisi. Eskiden burada "seam sonrası artış eski dik
+## eğriyle birebir aynı" diye bir kontrol vardı — o hatanın ta kendisiydi:
+## kümülatif sürekliydi ama seviye başı maliyet seam'de ×9.67 sıçrıyordu.
+func _check_xp_curve() -> void:
+	var GameScript := load("res://src/autoload/game.gd")
+
+	# blend_levels: 0 eski formülü birebir üretmeli — mevcut kayıtlar için
+	# eğriyi harmanlamanın geriye dönük olarak güvenli olduğunun kanıtı.
+	var g0 = GameScript.new()
+	g0.eco = g0.load_json("res://data/economy.json")
+	g0.eco.xp_curve_early["blend_levels"] = 0
+	var seam: int = int(g0.eco.xp_curve_early.seam_level)
+	var b_e: float = float(g0.eco.xp_curve_early.base)
+	var e_e: float = float(g0.eco.xp_curve_early.exp)
+	var b_l: float = float(g0.eco.xp_curve.base)
+	var e_l: float = float(g0.eco.xp_curve.exp)
+	var offset: float = b_e * pow(seam - 1, e_e) - b_l * pow(seam - 1, e_l)
+	var legacy_ok := true
+	for n in range(2, 60):
+		var want: int = int(b_e * pow(n - 1, e_e)) if n <= seam \
+			else int(b_l * pow(n - 1, e_l) + offset)
+		if absi(g0.xp_for_level(n) - want) > 1:  # 1 XP kümülatif yuvarlama payı
+			legacy_ok = false
+	check(legacy_ok, "XP eğrisi: blend_levels 0 eski iki parçalı formülü birebir veriyor")
+	g0.free()
+
+	# Yayındaki ayarla: eğri artan olmalı ve hiçbir seviye bir öncekinin
+	# katbekat üstüne çıkmamalı — duvarın tek seviyeye binmesini engelleyen şart.
+	var g1 = GameScript.new()
+	g1.eco = g1.load_json("res://data/economy.json")
+	var mono := true
+	var worst_ratio := 0.0
+	var worst_at := 0
+	for n in range(2, 60):
+		var step: int = g1.xp_for_level(n) - g1.xp_for_level(n - 1)
+		if step <= 0:
+			mono = false
+		if n > 2:
+			var prev: int = g1.xp_for_level(n - 1) - g1.xp_for_level(n - 2)
+			var ratio := float(step) / maxf(1.0, float(prev))
+			if ratio > worst_ratio:
+				worst_ratio = ratio
+				worst_at = n - 1
+	check(mono, "XP eğrisi: her seviye bir öncekinden pahalı (artan)")
+	check(worst_ratio <= 2.5, "XP eğrisi: en sert seviye adımı ×%.2f (seviye %d), sınır ×2.5"
+		% [worst_ratio, worst_at])
+	g1.free()
+
+
 func _initialize() -> void:
 	print("Little Grand Hotel — simülasyon testi v2")
 	var GameScript := load("res://src/autoload/game.gd")
@@ -112,8 +161,7 @@ func _initialize() -> void:
 	check(got > 0 and g.coins >= coins_before + got, "toplama coin'e işlendi")
 	check(int(g.pending_income) == 0, "birikim sıfırlandı")
 	check(g.xp_for_level(2) == 55, "XP eğrisi (erken/hızlı parça): seviye 2 = 55")
-	check(g.xp_for_level(12) - g.xp_for_level(11) == int(g._xp_late_raw(12)) - int(g._xp_late_raw(11)),
-		"XP eğrisi: seam sonrası artış eski dik eğriyle birebir aynı")
+	_check_xp_curve()
 	var gems_before: int = g.gems
 	g.add_xp(g.xp_for_level(g.level() + 1) - g.xp + 1)  # tam bir seviye atlat
 	check(g.gems > gems_before, "seviye atlama elmas verdi")
